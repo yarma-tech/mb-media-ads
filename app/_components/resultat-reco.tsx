@@ -33,8 +33,8 @@ function metricsFor(reco: Recommandation): MetricDesc[] {
 }
 
 const BUT: Record<Recommandation["objectifPrincipal"], string> = {
-  notoriete: "pour maximiser la couverture efficace (personnes vues 3 fois ou plus)",
-  lead: "pour maximiser les inscriptions",
+  notoriete: "pour maximiser la couverture efficace",
+  lead: "pour maximiser les leads",
   vente: "pour maximiser les ventes",
 };
 
@@ -65,10 +65,7 @@ export function ResultatReco({ reco }: { reco: Recommandation }) {
   const primary = metrics[0];
   const secondary = metrics.slice(1);
 
-  const cadre =
-    reco.mode === "goal"
-      ? "Pour atteindre votre objectif, voici le budget estimé et le résultat attendu."
-      : "Dans votre budget, voici le résultat attendu et ce qu'il vous coûte.";
+  const cadre = reco.mode === "goal" ? "Pour atteindre votre objectif." : "Dans votre budget.";
 
   return (
     <div className="reco">
@@ -98,8 +95,7 @@ export function ResultatReco({ reco }: { reco: Recommandation }) {
                 <div className="answer-value">{eur(reco.budgetTotal)}</div>
                 <div className="answer-sub">budget total, commission incluse</div>
                 <p className="answer-note">
-                  Commission MB Média {pct(reco.tauxCommission)} ({eur(reco.commission)}), prélevée dans le budget. Rien à
-                  payer au-delà.
+                  Commission {pct(reco.tauxCommission)} ({eur(reco.commission)}) incluse. Rien en plus.
                 </p>
               </div>
             </div>
@@ -127,8 +123,7 @@ export function ResultatReco({ reco }: { reco: Recommandation }) {
           </section>
 
           <p className="muted reco-disclaimer">
-            Couverture efficace = personnes uniques exposées au moins 3 fois. Les fourchettes traduisent l'incertitude du
-            modèle ; les valeurs restent illustratives.
+            Couverture efficace = personnes vues 3 fois ou plus. Valeurs illustratives.
           </p>
 
           {/* Niveau 2 : le raisonnement */}

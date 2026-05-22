@@ -1,36 +1,42 @@
 :root {
-  /* Neutres tièdes (hue ~70) */
-  --paper: oklch(0.985 0.006 75);
-  --surface: oklch(0.998 0.004 75);
-  --surface-2: oklch(0.965 0.008 70);
-  --ink: oklch(0.24 0.02 60);
-  --ink-soft: oklch(0.44 0.02 60);
-  --muted: oklch(0.56 0.015 65);
-  --border: oklch(0.9 0.01 70);
-  --border-strong: oklch(0.82 0.012 70);
+  /* Base claire et fraîche (hue ~258) : calme, propre, confiante */
+  --paper: oklch(0.98 0.004 258);
+  --surface: oklch(0.995 0.003 258);
+  --surface-2: oklch(0.965 0.006 258);
+  --ink: oklch(0.25 0.02 262);
+  --ink-soft: oklch(0.46 0.018 262);
+  --muted: oklch(0.58 0.014 262);
+  --border: oklch(0.91 0.008 262);
+  --border-strong: oklch(0.84 0.011 262);
 
-  /* Accent bleu profond (hue ~225) : couleur de confiance, identité de la marque.
-     Bleu-vert penchant bleu ; ni le rouge cliché des médias, ni le bleu SaaS générique. */
-  --accent: oklch(0.54 0.1 225);
-  --accent-strong: oklch(0.45 0.11 226); /* sur texte / emphase, AA sur papier */
-  --accent-wash: oklch(0.95 0.025 225); /* fond d'état sélectionné */
+  /* Bleu de confiance, affirmé (hue ~248) */
+  --accent: oklch(0.52 0.13 248);
+  --accent-strong: oklch(0.45 0.14 250); /* sur texte / KPI, AA sur clair */
+  --accent-wash: oklch(0.95 0.03 248); /* fond d'état sélectionné */
 
-  /* Action primaire = bleu profond */
-  --primary: oklch(0.44 0.095 226);
-  --primary-hover: oklch(0.38 0.1 227);
-  --on-primary: var(--paper);
+  /* Surface héros = bleu nuit (le moment de confiance) */
+  --hero: oklch(0.3 0.07 258);
+  --on-hero: oklch(0.97 0.006 258);
+  --on-hero-soft: oklch(0.78 0.02 258);
+  --on-hero-line: color-mix(in oklch, white 16%, transparent);
+  --hero-accent: oklch(0.78 0.12 240); /* chiffre clé lumineux sur bleu nuit */
+
+  /* Action primaire = bleu affirmé */
+  --primary: oklch(0.47 0.14 250);
+  --primary-hover: oklch(0.41 0.15 252);
+  --on-primary: oklch(0.99 0.004 258);
 
   /* États sémantiques (mats) */
-  --success: oklch(0.52 0.11 150);
-  --success-wash: oklch(0.95 0.03 150);
-  --warn: oklch(0.62 0.12 75);
+  --success: oklch(0.55 0.13 155);
+  --success-wash: oklch(0.95 0.04 155);
+  --warn: oklch(0.64 0.13 75);
   --warn-wash: oklch(0.95 0.04 80);
-  --danger: oklch(0.52 0.17 27);
+  --danger: oklch(0.54 0.18 27);
   --danger-wash: oklch(0.95 0.03 30);
 
-  --radius: 12px;
-  --radius-sm: 8px;
-  --shadow: 0 1px 2px rgba(40, 30, 20, 0.06), 0 10px 30px rgba(40, 30, 20, 0.05);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(18, 22, 38, 0.06), 0 12px 32px rgba(18, 22, 38, 0.08);
   --maxw: 960px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -119,15 +125,15 @@ a:hover {
 
 /* ---------- Typographie ---------- */
 h1 {
-  font-size: 38px;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
+  font-size: 48px;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
   font-weight: 700;
-  margin: 0 0 12px;
+  margin: 0 0 14px;
 }
 h2 {
-  font-size: 22px;
-  letter-spacing: -0.015em;
+  font-size: 25px;
+  letter-spacing: -0.02em;
   font-weight: 600;
   margin: 0 0 16px;
 }
@@ -162,7 +168,7 @@ h3 {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 26px;
+  padding: 28px;
 }
 .panel + .panel {
   margin-top: 20px;
@@ -399,12 +405,13 @@ h3 {
 .btn {
   font: inherit;
   font-weight: 600;
+  font-size: 15px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 11px 20px;
+  gap: 9px;
+  min-height: 48px;
+  padding: 13px 24px;
   border-radius: var(--radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
@@ -491,87 +498,104 @@ h3 {
 
 /* Niveau 1 : la réponse (vous obtenez / vous payez) — surface dominante. */
 .answer {
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
+  background: var(--hero);
+  color: var(--on-hero);
   border-radius: var(--radius);
-  padding: 36px;
+  padding: 48px 44px;
 }
 .answer-eyebrow {
-  font-size: 14px;
-  color: var(--ink-soft);
-  margin: 0 0 22px;
-  max-width: 56ch;
+  font-size: 15px;
+  color: var(--on-hero-soft);
+  margin: 0 0 32px;
+  max-width: 52ch;
 }
 .answer-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
 }
 .answer-side:first-child {
-  padding-right: 32px;
+  padding-right: 40px;
 }
 .answer-side + .answer-side {
-  padding-left: 32px;
-  border-left: 1px solid var(--border);
+  padding-left: 40px;
+  border-left: 1px solid var(--on-hero-line);
 }
 .answer-label {
   font-size: 12px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--on-hero-soft);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 .answer-value {
-  font-size: 48px;
-  line-height: 1.02;
+  font-size: 64px;
+  line-height: 0.98;
   font-weight: 700;
-  letter-spacing: -0.03em;
-  margin: 10px 0 4px;
+  letter-spacing: -0.035em;
+  margin: 14px 0 6px;
   font-variant-numeric: tabular-nums;
 }
 .answer-side:first-child .answer-value {
-  color: var(--accent-strong);
+  color: var(--hero-accent);
+}
+.answer-side:last-child .answer-value {
+  color: var(--on-hero);
 }
 .answer-sub {
   font-size: 13px;
-  color: var(--muted);
+  color: var(--on-hero-soft);
 }
 .answer-note {
   font-size: 13px;
-  color: var(--ink-soft);
-  margin: 8px 0 0;
+  color: var(--on-hero-soft);
+  margin: 10px 0 0;
 }
 .answer-breakdown {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--on-hero-line);
   font-size: 13px;
-  color: var(--ink-soft);
+  color: var(--on-hero-soft);
 }
 .answer-breakdown span[aria-hidden] {
-  color: var(--muted);
+  color: color-mix(in oklch, white 40%, transparent);
+}
+/* Confiance dans le héros bleu nuit */
+.answer .conf-label {
+  color: var(--on-hero);
+}
+.answer .conf-head .mono {
+  color: var(--on-hero-soft);
+}
+.answer .conf-bar {
+  background: color-mix(in oklch, white 14%, transparent);
+  border-color: transparent;
+}
+.answer .conf-bar > span {
+  background: var(--hero-accent);
 }
 @media (max-width: 620px) {
   .answer {
-    padding: 22px;
+    padding: 32px 24px;
   }
   .answer-grid {
     grid-template-columns: 1fr;
   }
   .answer-side:first-child {
     padding-right: 0;
-    padding-bottom: 22px;
+    padding-bottom: 28px;
   }
   .answer-side + .answer-side {
     padding-left: 0;
-    padding-top: 22px;
+    padding-top: 28px;
     border-left: 0;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--on-hero-line);
   }
   .answer-value {
-    font-size: 38px;
+    font-size: 48px;
   }
 }
 

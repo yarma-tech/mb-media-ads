@@ -18,10 +18,7 @@ export default async function AdminPage() {
     <>
       <p className="eyebrow">Espace MB Média</p>
       <h1>Demandes de partenariat</h1>
-      <p className="subtitle">
-        File de traitement, priorisée par lead-score (propension à convertir, prédite). Acceptez ou refusez, puis envoyez la
-        convention et le lien de paiement.
-      </p>
+      <p className="subtitle">File priorisée par lead-score. Acceptez, refusez, envoyez la convention.</p>
       {demandes.length > 0 ? (
         <>
           <div className="pipeline">

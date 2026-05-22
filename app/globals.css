@@ -268,16 +268,24 @@ h3 {
   transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
 }
 .segmented button .seg-title {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-weight: 600;
   color: var(--ink);
   font-size: 14px;
+}
+.segmented button .seg-title svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  flex-shrink: 0;
 }
 .segmented button .seg-desc {
   display: block;
   font-size: 12px;
   color: var(--muted);
-  margin-top: 2px;
+  margin-top: 3px;
 }
 .segmented button[aria-pressed="true"] {
   border-color: var(--accent);
@@ -285,6 +293,105 @@ h3 {
 }
 .segmented button[aria-pressed="true"] .seg-title {
   color: var(--accent-strong);
+}
+.segmented button[aria-pressed="true"] .seg-title svg {
+  color: var(--accent-strong);
+}
+
+/* ---------- Stepper (formulaire 2 étapes) ---------- */
+.stepper {
+  display: flex;
+  align-items: center;
+  list-style: none;
+  margin: 0 0 26px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--border);
+}
+.stepper li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+}
+.stepper li + li::before {
+  content: "";
+  width: 32px;
+  height: 1px;
+  background: var(--border-strong);
+  margin: 0 14px;
+}
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.step-num svg {
+  width: 15px;
+  height: 15px;
+}
+.step-label {
+  color: var(--muted);
+}
+.stepper li.is-active .step-num {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--accent-strong);
+}
+.stepper li.is-active .step-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+.stepper li.is-done .step-num {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+.stepper li.is-done .step-label {
+  color: var(--ink-soft);
+}
+
+/* ---------- Navigation du formulaire ---------- */
+.form-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ---------- Résumé de demande (résultat occupe la scène) ---------- */
+.demande-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  margin-bottom: 26px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.demande-summary > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ds-name {
+  font-weight: 600;
+}
+.ds-meta {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Buttons ---------- */
@@ -730,6 +837,61 @@ td.num {
   display: block;
   height: 100%;
   background: var(--ink-soft);
+}
+.score-niveau {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+/* ---------- Admin : cockpit de triage ---------- */
+.pipeline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 28px;
+}
+@media (max-width: 620px) {
+  .pipeline {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.pipeline-stat {
+  background: var(--surface);
+  padding: 18px 20px;
+}
+.ps-value {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.ps-value.accent {
+  color: var(--accent-strong);
+}
+.ps-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+.admin-section + .admin-section {
+  margin-top: 36px;
+}
+.admin-section h2 {
+  font-size: 17px;
+  margin-bottom: 12px;
+}
+.admin-section h2 .count {
+  color: var(--muted);
+  font-weight: 500;
 }
 
 /* ---------- Empty state ---------- */

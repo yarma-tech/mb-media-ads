@@ -1,4 +1,5 @@
 import { listDemandes } from "@/lib/demandes";
+import { eur } from "@/lib/format";
 import { AdminTable } from "./_table";
 
 // État en mémoire / Supabase : toujours recalculer.
@@ -6,16 +7,43 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const demandes = await listDemandes();
+  const aTraiter = demandes.filter((d) => d.etat === "soumise").length;
+  const enCours = demandes.filter((d) => d.etat === "acceptee" || d.etat === "convention_envoyee").length;
+  const payees = demandes.filter((d) => d.etat === "payee").length;
+  const commission = demandes
+    .filter((d) => d.etat !== "refusee")
+    .reduce((s, d) => s + d.recommandation.commission, 0);
+
   return (
     <>
       <p className="eyebrow">Espace MB Média</p>
       <h1>Demandes de partenariat</h1>
       <p className="subtitle">
-        Triées par lead-score (propension à convertir, prédite). Acceptez ou refusez, puis envoyez la
+        File de traitement, priorisée par lead-score (propension à convertir, prédite). Acceptez ou refusez, puis envoyez la
         convention et le lien de paiement.
       </p>
       {demandes.length > 0 ? (
-        <AdminTable demandes={demandes} />
+        <>
+          <div className="pipeline">
+            <div className="pipeline-stat">
+              <div className="ps-value accent">{aTraiter}</div>
+              <div className="ps-label">À traiter</div>
+            </div>
+            <div className="pipeline-stat">
+              <div className="ps-value">{enCours}</div>
+              <div className="ps-label">En cours</div>
+            </div>
+            <div className="pipeline-stat">
+              <div className="ps-value">{payees}</div>
+              <div className="ps-label">Payées</div>
+            </div>
+            <div className="pipeline-stat">
+              <div className="ps-value mono">{eur(commission)}</div>
+              <div className="ps-label">Commission potentielle</div>
+            </div>
+          </div>
+          <AdminTable demandes={demandes} />
+        </>
       ) : (
         <div className="panel">
           <div className="empty">

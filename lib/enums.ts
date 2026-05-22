@@ -42,7 +42,7 @@ export const OBJECTIF_LABEL: Record<ObjectifPrincipal, string> = {
   vente: "Vente",
 };
 export const OBJECTIF_DESC: Record<ObjectifPrincipal, string> = {
-  notoriete: "Être vu et mémorisé — couverture efficace (vu 3+ fois)",
+  notoriete: "Être vu et mémorisé : couverture efficace (vu 3+ fois)",
   lead: "Générer des inscriptions / contacts",
   vente: "Générer des achats",
 };

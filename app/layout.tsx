@@ -11,7 +11,7 @@ const hanken = Hanken_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "MB Média Ads — la campagne idéale",
+  title: "MB Média Ads : la campagne idéale",
   description:
     "Plateforme d'agence média multi-média opérée par MB Média. Décrivez votre projet, obtenez la campagne idéale.",
 };

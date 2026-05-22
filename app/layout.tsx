@@ -1,14 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Hanken_Grotesk } from "next/font/google";
 import "./globals.css";
-
-const hanken = Hanken_Grotesk({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-sans",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "MB Média Ads : la campagne idéale",
@@ -18,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className={hanken.variable}>
+    <html lang="fr">
       <body>
         <header className="topbar">
           <div className="topbar-inner">

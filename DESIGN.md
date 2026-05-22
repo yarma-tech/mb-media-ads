@@ -2,7 +2,7 @@
 
 ## Theme
 
-Clair et chaud. Fond = papier ivoire tiède (jamais `#fff`), texte = encre chaude profonde (jamais `#000`). Ambiance « studio média » : sobre, posée, lisible en plein jour. Stratégie couleur **Restrained** : neutres tièdes + un seul accent argile en très petites doses. Les boutons primaires sont en **encre**, pas en couleur, pour éviter le réflexe « bouton SaaS coloré ».
+Clair et chaud. Fond = papier ivoire tiède (jamais `#fff`), texte = encre chaude profonde (jamais `#000`). Ambiance « studio média » : sobre, posée, lisible en plein jour. Stratégie couleur **Restrained** : neutres tièdes + un seul accent **bleu profond** (couleur de confiance), porté avec assurance — y compris sur les boutons primaires et le KPI clé. Le contraste chaud/froid (ivoire + bleu) évite à la fois le **rouge** cliché des médias et le **bleu SaaS** générique.
 
 ## Color (OKLCH)
 
@@ -16,12 +16,12 @@ Neutres tièdes (hue ~70) :
 - `--muted` `oklch(0.56 0.015 65)` — labels / tertiaire
 - `--border` `oklch(0.90 0.01 70)` ; `--border-strong` `oklch(0.82 0.012 70)`
 
-Accent argile / persimmon (hue ~40), réservé : liens, état actif, anneau de focus, petites emphases, le « Ads » du logo :
-- `--accent` `oklch(0.56 0.16 40)`
-- `--accent-strong` `oklch(0.48 0.17 38)` — accent sur texte (AA sur papier)
-- `--accent-wash` `oklch(0.95 0.03 45)` — fond d'état sélectionné
+Accent **bleu profond** (hue ~225, bleu-vert penchant bleu) : liens, état actif, anneau de focus, KPI clé, boutons primaires, stepper, le « Ads » du logo :
+- `--accent` `oklch(0.54 0.1 225)`
+- `--accent-strong` `oklch(0.45 0.11 226)` — sur texte / KPI (AA sur papier)
+- `--accent-wash` `oklch(0.95 0.025 225)` — fond d'état sélectionné
 
-Action primaire = encre : `--primary` = `--ink`, texte `--paper`, hover `oklch(0.31 0.02 60)`.
+Action primaire = accent bleu : `--primary` `oklch(0.44 0.095 226)`, texte `--paper`, hover `oklch(0.38 0.1 227)`.
 
 États sémantiques (mats, jamais néon ; toujours accompagnés d'une icône + texte) :
 - success `oklch(0.52 0.11 150)` · warn `oklch(0.62 0.12 75)` · danger `oklch(0.52 0.17 27)`
@@ -30,8 +30,8 @@ Action primaire = encre : `--primary` = `--ink`, texte `--paper`, hover `oklch(0
 
 Une seule famille : **Hanken Grotesk** (via `next/font/google`), grotesque humaniste, sobre et un brin médiatique (pas l'Inter par défaut). Chiffres tabulaires pour les données (`font-variant-numeric: tabular-nums`). Fallback : `system-ui, sans-serif`.
 
-- Échelle rem fixe, ratio ~1.2 : 12 / 13 / 15 (corps) / 18 / 22 / 28 / 36 px.
-- Poids : 400 corps, 500 labels/UI, 600–700 titres. Hiérarchie par **taille + poids**, jamais par couleur.
+- Échelle rem fixe, ratio ~1.2 : 12 / 13 / 15 (corps) / 18 / 22 / 28 / 38 (titres) / 48 (chiffre héros) px.
+- Poids : 400 corps, 500 labels/UI, 600–700 titres. Hiérarchie par **taille + poids** ; le bleu accentue le KPI clé et les actions, sans jamais porter une information à lui seul.
 - Prose ≤ 70ch ; tableaux et données peuvent être denses.
 
 ## Spacing & Layout
@@ -47,7 +47,7 @@ Quasi plat. Séparation par **bordures** et légères teintes de surface, pas pa
 
 ## Components
 
-Boutons (primary = encre, ghost = bordure, danger = contour), champs (fond papier, bordure, focus = anneau accent 3px), segmented control (mode / objectif), badges d'état (icône + texte + teinte), métriques avec barre de confiance, tableau admin (lignes, hover, tri par lead-score). Chaque composant porte ses états : default / hover / focus / active / disabled / loading / error. Skeletons pour le chargement (pas de spinner centré). États vides pédagogiques.
+Boutons (primary = accent bleu, ghost = bordure, danger = contour rouge), champs (fond papier, bordure, focus = anneau accent 3px), segmented control (mode / objectif), badges d'état (icône + texte + teinte), métriques avec barre de confiance, tableau admin (lignes, hover, tri par lead-score). Chaque composant porte ses états : default / hover / focus / active / disabled / loading / error. Skeletons pour le chargement (pas de spinner centré). États vides pédagogiques.
 
 ## Motion
 

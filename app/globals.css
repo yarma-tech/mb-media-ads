@@ -9,14 +9,15 @@
   --border: oklch(0.9 0.01 70);
   --border-strong: oklch(0.82 0.012 70);
 
-  /* Accent argile / persimmon (hue ~40) — réservé, petites doses */
-  --accent: oklch(0.56 0.16 40);
-  --accent-strong: oklch(0.48 0.17 38);
-  --accent-wash: oklch(0.95 0.03 45);
+  /* Accent bleu profond (hue ~225) : couleur de confiance, identité de la marque.
+     Bleu-vert penchant bleu ; ni le rouge cliché des médias, ni le bleu SaaS générique. */
+  --accent: oklch(0.54 0.1 225);
+  --accent-strong: oklch(0.45 0.11 226); /* sur texte / emphase, AA sur papier */
+  --accent-wash: oklch(0.95 0.025 225); /* fond d'état sélectionné */
 
-  /* Action primaire = encre */
-  --primary: var(--ink);
-  --primary-hover: oklch(0.31 0.02 60);
+  /* Action primaire = bleu profond */
+  --primary: oklch(0.44 0.095 226);
+  --primary-hover: oklch(0.38 0.1 227);
   --on-primary: var(--paper);
 
   /* États sémantiques (mats) */
@@ -118,11 +119,11 @@ a:hover {
 
 /* ---------- Typographie ---------- */
 h1 {
-  font-size: 34px;
-  line-height: 1.12;
-  letter-spacing: -0.025em;
+  font-size: 38px;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
   font-weight: 700;
-  margin: 0 0 10px;
+  margin: 0 0 12px;
 }
 h2 {
   font-size: 22px;
@@ -493,7 +494,7 @@ h3 {
   background: var(--surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
-  padding: 32px;
+  padding: 36px;
 }
 .answer-eyebrow {
   font-size: 14px;
@@ -520,12 +521,15 @@ h3 {
   letter-spacing: 0.04em;
 }
 .answer-value {
-  font-size: 40px;
-  line-height: 1.04;
+  font-size: 48px;
+  line-height: 1.02;
   font-weight: 700;
-  letter-spacing: -0.025em;
-  margin: 8px 0 4px;
+  letter-spacing: -0.03em;
+  margin: 10px 0 4px;
   font-variant-numeric: tabular-nums;
+}
+.answer-side:first-child .answer-value {
+  color: var(--accent-strong);
 }
 .answer-sub {
   font-size: 13px;
@@ -567,7 +571,7 @@ h3 {
     border-top: 1px solid var(--border);
   }
   .answer-value {
-    font-size: 32px;
+    font-size: 38px;
   }
 }
 
@@ -575,8 +579,8 @@ h3 {
 .metrics-sec {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin-top: 32px;
+  gap: 28px;
+  margin-top: 40px;
 }
 @media (max-width: 620px) {
   .metrics-sec {
@@ -614,7 +618,7 @@ h3 {
 
 /* Niveau 2 : le raisonnement (composition). */
 .reasoning {
-  margin-top: 40px;
+  margin-top: 48px;
 }
 .reasoning-lead {
   margin: -4px 0 14px;
@@ -644,7 +648,7 @@ h3 {
 .conf-bar > span {
   display: block;
   height: 100%;
-  background: var(--ink-soft);
+  background: var(--accent);
   border-radius: 999px;
 }
 
@@ -658,7 +662,7 @@ h3 {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 0;
+  padding: 18px 0;
   border-bottom: 1px solid var(--border);
 }
 .placement:last-child {
@@ -790,7 +794,7 @@ table {
 th,
 td {
   text-align: left;
-  padding: 13px 14px;
+  padding: 15px 16px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }

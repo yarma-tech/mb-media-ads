@@ -4,11 +4,13 @@ import {
   type MediaId,
   type ObjectifPrincipal,
   type Plateforme,
+  type Secteur,
   TAUX_COMMISSION,
   TYPES_PUB,
+  type TypeEntreprise,
   type TypePub,
 } from "./enums";
-import { dureeMois, fenetreCommerciale, moisRepresentatif } from "./saison";
+import { dureeMois, type Fenetre, fenetreCommerciale, moisRepresentatif } from "./saison";
 import {
   predictAudience,
   predictFrequence,
@@ -19,8 +21,10 @@ import {
 } from "./scoring";
 import type {
   Catalogue,
+  ConfigManuelle,
   DemandeInput,
   Estimation,
+  Media,
   PlacementChoisi,
   Recommandation,
   ScoringInput,
@@ -57,6 +61,51 @@ function valeurUnitaire(obj: ObjectifPrincipal, couvK: number, leads: number, ve
   return obj === "notoriete" ? couvK : obj === "lead" ? leads : ventes;
 }
 
+// ScoringInput d'une combinaison (mêmes clés catégorielles que les modèles).
+function comboScoringInput(
+  media: Media,
+  programmeNom: string,
+  plateforme: Plateforme,
+  typePub: TypePub,
+  cible: Cible,
+  secteur: Secteur,
+  typeEntreprise: TypeEntreprise,
+  fenetre: Fenetre,
+): ScoringInput {
+  return {
+    Media: media.id,
+    Programme: programmeNom,
+    Plateforme: plateforme,
+    Type_Pub: typePub,
+    Cible: cible,
+    Secteur: secteur,
+    Type_Entreprise: typeEntreprise,
+    Quality_Score: media.qsTypique,
+    Fenetre_Commerciale: fenetre,
+  };
+}
+
+// Métriques unitaires (1 insertion) d'une combinaison. Partagé entre l'optimiseur
+// (mode auto, scoré sur toutes les combinaisons) et predictTarif (mode manuel, une seule).
+type UnitScore = {
+  prixUnitaire: number;
+  audienceUnitK: number;
+  couvUnitK: number;
+  leadsUnit: number;
+  ventesUnit: number;
+};
+function scoreCombo(si: ScoringInput): UnitScore {
+  const audK = predictAudience(si).value;
+  const freq = predictFrequence(si).value;
+  return {
+    prixUnitaire: predictPrix(si).value,
+    audienceUnitK: audK,
+    couvUnitK: couvertureEff(audK, freq),
+    leadsUnit: audK * 1000 * predictTauxLead(si).value,
+    ventesUnit: audK * 1000 * predictTauxVente(si).value,
+  };
+}
+
 function buildCombos(input: DemandeInput, catalogue: Catalogue): Combo[] {
   const combos: Combo[] = [];
   const mois = moisRepresentatif(input.dateDebut, input.dateFin);
@@ -70,26 +119,18 @@ function buildCombos(input: DemandeInput, catalogue: Catalogue): Combo[] {
     for (const plateforme of prog.plateformes) {
       for (const typePub of TYPES_PUB) {
         for (const cible of CIBLES) {
-          const si: ScoringInput = {
-            Media: media.id,
-            Programme: prog.nom,
-            Plateforme: plateforme,
-            Type_Pub: typePub,
-            Cible: cible,
-            Secteur: input.secteur,
-            Type_Entreprise: input.typeEntreprise,
-            Quality_Score: media.qsTypique,
-            Fenetre_Commerciale: fenetre,
-          };
-          const prix = predictPrix(si).value;
-          const audK = predictAudience(si).value;
-          const freq = predictFrequence(si).value;
-          const tl = predictTauxLead(si).value;
-          const tv = predictTauxVente(si).value;
-          const couvK = couvertureEff(audK, freq);
-          const leads = audK * 1000 * tl;
-          const ventes = audK * 1000 * tv;
-          const valeur = valeurUnitaire(input.objectifPrincipal, couvK, leads, ventes);
+          const si = comboScoringInput(
+            media,
+            prog.nom,
+            plateforme,
+            typePub,
+            cible,
+            input.secteur,
+            input.typeEntreprise,
+            fenetre,
+          );
+          const u = scoreCombo(si);
+          const valeur = valeurUnitaire(input.objectifPrincipal, u.couvUnitK, u.leadsUnit, u.ventesUnit);
           combos.push({
             mediaId: media.id,
             mediaNom: media.nom,
@@ -98,13 +139,13 @@ function buildCombos(input: DemandeInput, catalogue: Catalogue): Combo[] {
             plateforme,
             typePub,
             cible,
-            prixUnitaire: prix,
-            audienceUnitK: audK,
-            couvUnitK: couvK,
-            leadsUnit: leads,
-            ventesUnit: ventes,
+            prixUnitaire: u.prixUnitaire,
+            audienceUnitK: u.audienceUnitK,
+            couvUnitK: u.couvUnitK,
+            leadsUnit: u.leadsUnit,
+            ventesUnit: u.ventesUnit,
             valeurUnit: valeur,
-            valeurParEuro: valeur / prix,
+            valeurParEuro: valeur / u.prixUnitaire,
           });
         }
       }
@@ -275,6 +316,91 @@ export function optimiser(input: DemandeInput, catalogue: Catalogue): Recommanda
     message: messageStatut(statut, input, combos),
   };
   return reco;
+}
+
+// Mode manuel : une configuration unique -> son tarif et le résultat attendu.
+// Réutilise le scoring par combinaison ; renvoie une Recommandation à un seul placement
+// pour réutiliser l'affichage existant (ResultatReco).
+export function predictTarif(
+  config: ConfigManuelle,
+  secteur: Secteur,
+  typeEntreprise: TypeEntreprise,
+  catalogue: Catalogue,
+): Recommandation {
+  const taux = TAUX_COMMISSION;
+  const media = catalogue.medias.find((m) => m.id === config.mediaId);
+  const prog = catalogue.programmes.find((p) => p.id === config.programmeId);
+  const insertions = Math.max(1, Math.floor(config.insertions || 1));
+
+  const base = {
+    mode: "budget" as const,
+    objectifPrincipal: config.objectifPrincipal,
+    tauxCommission: taux,
+    leadScore: predictLeadScore({ Type_Entreprise: typeEntreprise, Secteur: secteur }),
+  };
+
+  if (!media || !prog) {
+    return {
+      ...base,
+      placements: [],
+      audienceK: aggregate([], SIGMA.audience),
+      couvertureEfficaceK: aggregate([], SIGMA.couverture),
+      leads: aggregate([], SIGMA.leads),
+      ventes: aggregate([], SIGMA.ventes),
+      coutMediaNet: 0,
+      commission: 0,
+      budgetTotal: 0,
+      statut: "infaisable",
+      message: "Configuration invalide : média ou programme introuvable.",
+    };
+  }
+
+  const mois = moisRepresentatif(config.dateDebut, config.dateFin);
+  const fenetre = fenetreCommerciale(media.id, mois);
+  const si = comboScoringInput(
+    media,
+    prog.nom,
+    config.plateforme,
+    config.typePub,
+    config.cible,
+    secteur,
+    typeEntreprise,
+    fenetre,
+  );
+  const u = scoreCombo(si);
+
+  const placement: PlacementChoisi = {
+    mediaId: media.id,
+    mediaNom: media.nom,
+    programmeId: prog.id,
+    programmeNom: prog.nom,
+    plateforme: config.plateforme,
+    typePub: config.typePub,
+    cible: config.cible,
+    insertions,
+    prixUnitaire: u.prixUnitaire,
+    coutMediaNet: insertions * u.prixUnitaire,
+    audienceK: insertions * u.audienceUnitK,
+    leads: insertions * u.leadsUnit,
+    ventes: insertions * u.ventesUnit,
+    couvertureEfficaceK: insertions * u.couvUnitK,
+  };
+
+  const coutMediaNet = placement.coutMediaNet;
+  const budgetTotal = coutMediaNet / (1 - taux);
+
+  return {
+    ...base,
+    placements: [placement],
+    audienceK: aggregate([placement.audienceK], SIGMA.audience),
+    couvertureEfficaceK: aggregate([placement.couvertureEfficaceK], SIGMA.couverture),
+    leads: aggregate([placement.leads], SIGMA.leads),
+    ventes: aggregate([placement.ventes], SIGMA.ventes),
+    coutMediaNet,
+    commission: budgetTotal - coutMediaNet,
+    budgetTotal,
+    statut: "ok",
+  };
 }
 
 function messageStatut(statut: StatutReco, input: DemandeInput, combos: Combo[]): string | undefined {

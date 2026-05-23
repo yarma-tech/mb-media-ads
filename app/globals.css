@@ -125,6 +125,43 @@ a:hover {
   background: var(--fill);
   text-decoration: none;
 }
+.topbar-nav form {
+  display: inline-flex;
+  margin: 0;
+}
+.topbar-nav button.navlink {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink-soft);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 7px 13px;
+  border-radius: var(--radius-pill);
+  transition: background 0.18s var(--ease), color 0.18s var(--ease);
+}
+.topbar-nav button.navlink:hover {
+  color: var(--ink);
+  background: var(--fill);
+}
+
+/* ---------- Auth (connexion / inscription) ---------- */
+.auth {
+  max-width: 460px;
+  margin: 0 auto;
+}
+.auth-title {
+  font-size: 40px;
+}
+.auth .panel {
+  margin-top: 8px;
+}
+.auth-alt {
+  text-align: center;
+  font-size: 14px;
+  color: var(--muted);
+  margin: 18px 0 0;
+}
 
 /* ---------- Layout ---------- */
 .page {

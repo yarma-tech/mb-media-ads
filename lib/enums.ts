@@ -56,6 +56,14 @@ export const OBJECTIF_UNITE: Record<ObjectifPrincipal, string> = {
 export const MODES = ["budget", "goal"] as const;
 export type Mode = (typeof MODES)[number];
 
+// Canal d'une demande : achat self-service (Stripe) ou mise en relation avec un expert.
+export const CANAUX = ["self_service", "expert"] as const;
+export type Canal = (typeof CANAUX)[number];
+
+// Origine de la campagne : composée par l'optimiseur (auto) ou configurée à la main.
+export const TYPES_CAMPAGNE = ["auto", "manuel"] as const;
+export type TypeCampagne = (typeof TYPES_CAMPAGNE)[number];
+
 export const ETATS_DEMANDE = [
   "soumise",
   "acceptee",

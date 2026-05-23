@@ -1,10 +1,18 @@
 // Module serveur uniquement (utilise la clé service_role + l'optimiseur).
 import { loadCatalogue } from "./catalog";
 import { CATALOGUE_SEED } from "./catalog-seed";
-import type { EtatDemande } from "./enums";
+import type { Canal, EtatDemande, TypeCampagne } from "./enums";
 import { optimiser } from "./optimizer";
 import { getAdminClient, supabaseConfigured } from "./supabase";
-import type { Demande, DemandeInput } from "./types";
+import type { Demande, DemandeInput, Recommandation } from "./types";
+
+export type CreateDemandeOpts = {
+  reco?: Recommandation; // recommandation déjà calculée (mode manuel) ; sinon optimiser()
+  userId?: string | null;
+  canal?: Canal;
+  typeCampagne?: TypeCampagne;
+  stripeSessionId?: string;
+};
 
 // Données de démo (en mémoire) tant que Supabase n'est pas connecté : permettent à
 // /admin d'afficher des demandes réalistes. Les recommandations sont calculées par
@@ -50,8 +58,8 @@ export async function listDemandes(): Promise<Demande[]> {
   return [...store].sort((a, b) => b.leadScore - a.leadScore);
 }
 
-export async function createDemande(input: DemandeInput): Promise<Demande> {
-  const reco = optimiser(input, await loadCatalogue());
+export async function createDemande(input: DemandeInput, opts: CreateDemandeOpts = {}): Promise<Demande> {
+  const reco = opts.reco ?? optimiser(input, await loadCatalogue());
   const demande: Demande = {
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
@@ -86,6 +94,10 @@ export async function createDemande(input: DemandeInput): Promise<Demande> {
             leads: reco.leads,
             ventes: reco.ventes,
           },
+          user_id: opts.userId ?? null,
+          canal: opts.canal ?? "expert",
+          type_campagne: opts.typeCampagne ?? "auto",
+          stripe_session_id: opts.stripeSessionId ?? null,
         })
         .select("*")
         .single();
@@ -95,6 +107,41 @@ export async function createDemande(input: DemandeInput): Promise<Demande> {
 
   store.unshift(demande);
   return demande;
+}
+
+// Associe la session Stripe à la demande (corrélation pour le webhook / le suivi).
+export async function setStripeSession(id: string, stripeSessionId: string): Promise<void> {
+  if (supabaseConfigured) {
+    const sb = getAdminClient();
+    if (sb) {
+      await sb.from("demandes").update({ stripe_session_id: stripeSessionId }).eq("id", id);
+    }
+  }
+}
+
+// Webhook Stripe : marque la demande payée.
+export async function markDemandePayee(
+  id: string,
+  paymentIntent: string | null,
+  montant: number,
+): Promise<void> {
+  if (supabaseConfigured) {
+    const sb = getAdminClient();
+    if (sb) {
+      await sb
+        .from("demandes")
+        .update({
+          etat: "payee",
+          stripe_payment_intent: paymentIntent,
+          montant_paye: montant,
+          paye_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+      return;
+    }
+  }
+  const d = store.find((x) => x.id === id);
+  if (d) d.etat = "payee";
 }
 
 export async function getDemande(id: string): Promise<Demande | null> {

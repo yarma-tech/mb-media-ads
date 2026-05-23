@@ -79,6 +79,36 @@ export type DemandeInput = {
   objectifValeur?: number; // mode goal
 };
 
+// Mode auto : la partie campagne du brief (les infos entreprise viennent du profil,
+// injectées côté serveur). Sous-ensemble de DemandeInput.
+export type CampagneAutoInput = {
+  dateDebut: string; // yyyy-mm-dd
+  dateFin: string; // yyyy-mm-dd
+  objectifPrincipal: ObjectifPrincipal;
+  mode: Mode;
+  budget?: number;
+  objectifValeur?: number;
+};
+
+// Mode manuel : une configuration unique choisie par l'utilisateur -> un tarif.
+// (Le secteur + type d'entreprise viennent du profil, injectés côté serveur.)
+export type ConfigManuelle = {
+  mediaId: MediaId;
+  programmeId: string;
+  plateforme: Plateforme;
+  typePub: TypePub;
+  cible: Cible;
+  objectifPrincipal: ObjectifPrincipal;
+  dateDebut: string; // yyyy-mm-dd
+  dateFin: string; // yyyy-mm-dd
+  insertions: number; // nombre de diffusions
+};
+
+// Brief envoyé pour payer ou parler à un expert : auto (brief budget) ou manuel (config).
+export type PaiementPayload =
+  | { kind: "auto"; campagne: CampagneAutoInput }
+  | { kind: "manuel"; config: ConfigManuelle };
+
 // ---------------------------------------------------------------------------
 // Sortie optimiseur
 // ---------------------------------------------------------------------------

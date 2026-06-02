@@ -1,7 +1,6 @@
 import {
   CIBLES,
   type Cible,
-  type MediaId,
   type ObjectifPrincipal,
   type Plateforme,
   type Secteur,
@@ -10,237 +9,130 @@ import {
   type TypeEntreprise,
   type TypePub,
 } from "./enums";
-import { dureeMois, type Fenetre, fenetreCommerciale, moisRepresentatif } from "./saison";
-import {
-  predictAudience,
-  predictFrequence,
-  predictLeadScore,
-  predictPrix,
-  predictTauxLead,
-  predictTauxVente,
-} from "./scoring";
+import { periodeCommerciale } from "./saison";
+import { predictPrix, predictTauxConversion } from "./scoring";
 import type {
   Catalogue,
   ConfigManuelle,
   DemandeInput,
   Estimation,
-  Media,
   PlacementChoisi,
+  PlateformeInfo,
   Recommandation,
   ScoringInput,
   StatutReco,
 } from "./types";
 
 const Z80 = 1.2816;
-// Sigmas de base par métrique agrégée (combinaison des modèles concernés).
-const SIGMA = { audience: 0.3, couverture: 0.323, leads: 0.35, ventes: 0.372 };
+// Sigmas agrégés par métrique. taux = sigma du modèle de conversion ; audience =
+// dispersion représentative de la portée ; conversions = combinaison des deux.
+const SIGMA = { audience: 0.25, taux: 0.2825, conversions: 0.38 };
 
-type Combo = {
-  mediaId: MediaId;
-  mediaNom: string;
-  programmeId: string;
-  programmeNom: string;
+// Une configuration candidate (un placement potentiel) pour la période choisie.
+type Config = {
   plateforme: Plateforme;
   typePub: TypePub;
   cible: Cible;
-  prixUnitaire: number;
-  audienceUnitK: number;
-  couvUnitK: number;
-  leadsUnit: number;
-  ventesUnit: number;
-  valeurUnit: number; // selon l'objectif principal
-  valeurParEuro: number;
+  prix: number;
+  tauxConversion: number;
+  audienceK: number;
+  conversions: number;
+  valeur: number; // valeur selon l'objectif (portée ou conversions)
 };
 
-function couvertureEff(audK: number, freq: number): number {
-  const reach = audK / freq;
-  return freq >= 3 ? reach : reach * (freq / 3);
+function valeurUnitaire(obj: ObjectifPrincipal, audienceK: number, conversions: number): number {
+  return obj === "notoriete" ? audienceK : conversions;
 }
 
-function valeurUnitaire(obj: ObjectifPrincipal, couvK: number, leads: number, ventes: number): number {
-  return obj === "notoriete" ? couvK : obj === "lead" ? leads : ventes;
-}
-
-// ScoringInput d'une combinaison (mêmes clés catégorielles que les modèles).
-function comboScoringInput(
-  media: Media,
-  programmeNom: string,
+function scoringInput(
   plateforme: Plateforme,
   typePub: TypePub,
   cible: Cible,
   secteur: Secteur,
   typeEntreprise: TypeEntreprise,
-  fenetre: Fenetre,
+  periode: string,
 ): ScoringInput {
   return {
-    Media: media.id,
-    Programme: programmeNom,
     Plateforme: plateforme,
     Type_Pub: typePub,
     Cible: cible,
     Secteur: secteur,
     Type_Entreprise: typeEntreprise,
-    Quality_Score: media.qsTypique,
-    Fenetre_Commerciale: fenetre,
+    Periode: periode,
   };
 }
 
-// Métriques unitaires (1 insertion) d'une combinaison. Partagé entre l'optimiseur
-// (mode auto, scoré sur toutes les combinaisons) et predictTarif (mode manuel, une seule).
-type UnitScore = {
-  prixUnitaire: number;
-  audienceUnitK: number;
-  couvUnitK: number;
-  leadsUnit: number;
-  ventesUnit: number;
-};
-function scoreCombo(si: ScoringInput): UnitScore {
-  const audK = predictAudience(si).value;
-  const freq = predictFrequence(si).value;
-  return {
-    prixUnitaire: predictPrix(si).value,
-    audienceUnitK: audK,
-    couvUnitK: couvertureEff(audK, freq),
-    leadsUnit: audK * 1000 * predictTauxLead(si).value,
-    ventesUnit: audK * 1000 * predictTauxVente(si).value,
+// Propension du partenaire à convertir en client payant. Heuristique simple : le
+// dataset campagne ne porte pas ce signal, on dérive du profil (privé/secteur).
+function partnerLeadScore(typeEntreprise: TypeEntreprise, secteur: Secteur): number {
+  const base = typeEntreprise === "Privé" ? 0.58 : 0.45;
+  const sect: Record<Secteur, number> = {
+    Alimentation: 0.06,
+    Tourisme: 0.04,
+    Tech: 0.03,
+    Automobile: 0,
+    Luxe: -0.03,
+    Santé: -0.02,
   };
+  return Math.min(0.95, Math.max(0.05, base + sect[secteur]));
 }
 
-function buildCombos(input: DemandeInput, catalogue: Catalogue): Combo[] {
-  const combos: Combo[] = [];
-  const mois = moisRepresentatif(input.dateDebut, input.dateFin);
-  const mediaById = new Map(catalogue.medias.map((m) => [m.id, m]));
-
-  for (const prog of catalogue.programmes) {
-    const media = mediaById.get(prog.mediaId);
-    if (!media) continue;
-    const fenetre = fenetreCommerciale(media.id, mois);
-
-    for (const plateforme of prog.plateformes) {
-      for (const typePub of TYPES_PUB) {
-        for (const cible of CIBLES) {
-          const si = comboScoringInput(
-            media,
-            prog.nom,
-            plateforme,
-            typePub,
-            cible,
-            input.secteur,
-            input.typeEntreprise,
-            fenetre,
-          );
-          const u = scoreCombo(si);
-          const valeur = valeurUnitaire(input.objectifPrincipal, u.couvUnitK, u.leadsUnit, u.ventesUnit);
-          combos.push({
-            mediaId: media.id,
-            mediaNom: media.nom,
-            programmeId: prog.id,
-            programmeNom: prog.nom,
-            plateforme,
-            typePub,
-            cible,
-            prixUnitaire: u.prixUnitaire,
-            audienceUnitK: u.audienceUnitK,
-            couvUnitK: u.couvUnitK,
-            leadsUnit: u.leadsUnit,
-            ventesUnit: u.ventesUnit,
-            valeurUnit: valeur,
-            valeurParEuro: valeur / u.prixUnitaire,
-          });
-        }
+function buildConfigs(input: DemandeInput, catalogue: Catalogue): Config[] {
+  const periode = periodeCommerciale(input.dateDebut, input.dateFin);
+  const configs: Config[] = [];
+  for (const plat of catalogue.plateformes) {
+    for (const typePub of TYPES_PUB) {
+      for (const cible of CIBLES) {
+        const si = scoringInput(plat.id, typePub, cible, input.secteur, input.typeEntreprise, periode);
+        const prix = predictPrix(si).value;
+        const taux = predictTauxConversion(si).value;
+        const audienceK = plat.audienceTypiqueK;
+        const conversions = audienceK * 1000 * taux;
+        configs.push({
+          plateforme: plat.id,
+          typePub,
+          cible,
+          prix,
+          tauxConversion: taux,
+          audienceK,
+          conversions,
+          valeur: valeurUnitaire(input.objectifPrincipal, audienceK, conversions),
+        });
       }
     }
   }
-  return combos;
+  return configs;
 }
 
-function capacites(catalogue: Catalogue, dm: number): Map<string, number> {
-  const m = new Map<string, number>();
-  for (const p of catalogue.programmes) m.set(p.id, Math.max(1, Math.floor(p.cadenceParMois * dm)));
-  return m;
-}
-
-type Choix = { combo: Combo; insertions: number };
-
-// Rendement décroissant par programme (recouvrement d'audience) : heuristique de
-// diversification pour composer une vraie campagne multi-programmes. Les métriques affichées
-// restent linéaires (sommes) — simplification assumée du prototype.
-const FATIGUE_K = 4;
-const decay = (n: number) => 1 / (1 + n / FATIGUE_K);
-
-// Une combinaison candidate par programme (sa meilleure valeur/€) ; capacité au grain programme.
-function bestPerProgramme(combos: Combo[]): Combo[] {
-  const best = new Map<string, Combo>();
-  for (const c of combos) {
-    const cur = best.get(c.programmeId);
-    if (!cur || c.valeurParEuro > cur.valeurParEuro) best.set(c.programmeId, c);
-  }
-  return [...best.values()];
-}
-
-function toChoix(cands: Combo[], ins: Map<string, number>): Choix[] {
-  return cands
-    .filter((c) => (ins.get(c.programmeId) ?? 0) > 0)
-    .map((c) => ({ combo: c, insertions: ins.get(c.programmeId) as number }));
-}
-
-function allocateBudget(combos: Combo[], caps: Map<string, number>, budgetMediaNet: number): { choix: Choix[]; statut: StatutReco } {
-  const cands = bestPerProgramme(combos);
-  const cap = new Map(caps);
-  const ins = new Map<string, number>();
-  const cheapest = Math.min(...cands.map((c) => c.prixUnitaire));
-  let remaining = budgetMediaNet;
-
+// Panier de configurations DISTINCTES, glouton par efficience (valeur / €).
+function allocateBudget(configs: Config[], budgetMediaNet: number): { choix: Config[]; statut: StatutReco } {
+  const ordered = [...configs].sort((a, b) => b.valeur / b.prix - a.valeur / a.prix);
+  const cheapest = Math.min(...configs.map((c) => c.prix));
   if (cheapest > budgetMediaNet) return { choix: [], statut: "infaisable" };
 
-  // Greedy par efficience marginale (valeur décroissante / €), insertion par insertion.
-  while (remaining >= cheapest) {
-    let best: Combo | null = null;
-    let bestScore = 0;
-    for (const c of cands) {
-      const used = ins.get(c.programmeId) ?? 0;
-      if ((cap.get(c.programmeId) ?? 0) - used <= 0 || c.prixUnitaire > remaining) continue;
-      const score = (c.valeurUnit * decay(used)) / c.prixUnitaire;
-      if (score > bestScore) {
-        bestScore = score;
-        best = c;
-      }
+  const choix: Config[] = [];
+  let remaining = budgetMediaNet;
+  for (const c of ordered) {
+    if (c.prix <= remaining) {
+      choix.push(c);
+      remaining -= c.prix;
     }
-    if (!best) break;
-    ins.set(best.programmeId, (ins.get(best.programmeId) ?? 0) + 1);
-    remaining -= best.prixUnitaire;
   }
-
-  const capaciteRestante = cands.some((c) => (cap.get(c.programmeId) ?? 0) - (ins.get(c.programmeId) ?? 0) > 0);
-  const statut: StatutReco = remaining >= cheapest && !capaciteRestante ? "sature" : "ok";
-  return { choix: toChoix(cands, ins), statut };
+  const statut: StatutReco = choix.length === configs.length && remaining >= cheapest ? "sature" : "ok";
+  return { choix, statut };
 }
 
-function allocateGoal(combos: Combo[], caps: Map<string, number>, target: number): { choix: Choix[]; statut: StatutReco } {
-  const cands = bestPerProgramme(combos);
-  const cap = new Map(caps);
-  const ins = new Map<string, number>();
+function allocateGoal(configs: Config[], target: number): { choix: Config[]; statut: StatutReco } {
+  const ordered = [...configs].sort((a, b) => b.valeur / b.prix - a.valeur / a.prix);
+  const choix: Config[] = [];
   let achieved = 0;
-
-  while (achieved < target) {
-    let best: Combo | null = null;
-    let bestScore = 0;
-    for (const c of cands) {
-      if (c.valeurUnit <= 0) continue;
-      const used = ins.get(c.programmeId) ?? 0;
-      if ((cap.get(c.programmeId) ?? 0) - used <= 0) continue;
-      const score = (c.valeurUnit * decay(used)) / c.prixUnitaire;
-      if (score > bestScore) {
-        bestScore = score;
-        best = c;
-      }
-    }
-    if (!best) break;
-    ins.set(best.programmeId, (ins.get(best.programmeId) ?? 0) + 1);
-    achieved += best.valeurUnit;
+  for (const c of ordered) {
+    if (achieved >= target) break;
+    if (c.valeur <= 0) continue;
+    choix.push(c);
+    achieved += c.valeur;
   }
-
-  return { choix: toChoix(cands, ins), statut: achieved >= target ? "ok" : "infaisable" };
+  return { choix, statut: achieved >= target ? "ok" : "infaisable" };
 }
 
 function aggregate(values: number[], baseSigma: number): Estimation {
@@ -255,163 +147,118 @@ function aggregate(values: number[], baseSigma: number): Estimation {
   };
 }
 
-function toPlacement(c: Combo, insertions: number): PlacementChoisi {
+// Taux de conversion global = ratio pondéré (conversions / audience), avec un
+// intervalle dérivé du sigma du modèle de conversion sur n placements.
+function aggregateTaux(placements: PlacementChoisi[]): Estimation {
+  const audience = placements.reduce((s, p) => s + p.audienceK * 1000, 0);
+  const conversions = placements.reduce((s, p) => s + p.conversions, 0);
+  const value = audience > 0 ? conversions / audience : 0;
+  const n = Math.max(1, placements.length);
+  const eff = SIGMA.taux / Math.sqrt(n);
   return {
-    mediaId: c.mediaId,
-    mediaNom: c.mediaNom,
-    programmeId: c.programmeId,
-    programmeNom: c.programmeNom,
-    plateforme: c.plateforme,
-    typePub: c.typePub,
-    cible: c.cible,
-    insertions,
-    prixUnitaire: c.prixUnitaire,
-    coutMediaNet: insertions * c.prixUnitaire,
-    audienceK: insertions * c.audienceUnitK,
-    leads: insertions * c.leadsUnit,
-    ventes: insertions * c.ventesUnit,
-    couvertureEfficaceK: insertions * c.couvUnitK,
+    value,
+    lo: value * Math.exp(-Z80 * eff),
+    hi: value * Math.exp(Z80 * eff),
+    confiance: Math.min(0.95, Math.max(0.5, Math.exp(-1.1 * eff))),
   };
 }
 
-export function optimiser(input: DemandeInput, catalogue: Catalogue): Recommandation {
+function toPlacement(c: Config): PlacementChoisi {
+  return {
+    plateforme: c.plateforme,
+    typePub: c.typePub,
+    cible: c.cible,
+    prix: c.prix,
+    audienceK: c.audienceK,
+    tauxConversion: c.tauxConversion,
+    conversions: c.conversions,
+  };
+}
+
+function assemble(
+  input: { mode: DemandeInput["mode"]; objectifPrincipal: ObjectifPrincipal },
+  placements: PlacementChoisi[],
+  leadScore: number,
+  statut: StatutReco,
+  message?: string,
+): Recommandation {
   const taux = TAUX_COMMISSION;
-  const dm = dureeMois(input.dateDebut, input.dateFin);
-  const combos = buildCombos(input, catalogue);
-  const caps = capacites(catalogue, dm);
-
-  const leadScore = predictLeadScore({ Type_Entreprise: input.typeEntreprise, Secteur: input.secteur });
-
-  let choix: Choix[];
-  let statut: StatutReco;
-  if (input.mode === "budget") {
-    const budgetMediaNet = (input.budget ?? 0) * (1 - taux);
-    ({ choix, statut } = allocateBudget(combos, caps, budgetMediaNet));
-  } else {
-    ({ choix, statut } = allocateGoal(combos, caps, input.objectifValeur ?? 0));
-  }
-
-  const placements = choix
-    .map((x) => toPlacement(x.combo, x.insertions))
-    .sort((a, b) => b.coutMediaNet - a.coutMediaNet);
-
-  const coutMediaNet = placements.reduce((s, p) => s + p.coutMediaNet, 0);
+  const coutMediaNet = placements.reduce((s, p) => s + p.prix, 0);
   const budgetTotal = coutMediaNet / (1 - taux);
-  const commission = budgetTotal - coutMediaNet;
-
-  const reco: Recommandation = {
+  return {
     mode: input.mode,
     objectifPrincipal: input.objectifPrincipal,
     placements,
     audienceK: aggregate(placements.map((p) => p.audienceK), SIGMA.audience),
-    couvertureEfficaceK: aggregate(placements.map((p) => p.couvertureEfficaceK), SIGMA.couverture),
-    leads: aggregate(placements.map((p) => p.leads), SIGMA.leads),
-    ventes: aggregate(placements.map((p) => p.ventes), SIGMA.ventes),
+    tauxConversion: aggregateTaux(placements),
+    conversions: aggregate(placements.map((p) => p.conversions), SIGMA.conversions),
     coutMediaNet,
-    commission,
+    commission: budgetTotal - coutMediaNet,
     tauxCommission: taux,
     budgetTotal,
     leadScore,
     statut,
-    message: messageStatut(statut, input, combos),
+    message,
   };
-  return reco;
+}
+
+export function optimiser(input: DemandeInput, catalogue: Catalogue): Recommandation {
+  const configs = buildConfigs(input, catalogue);
+  const leadScore = partnerLeadScore(input.typeEntreprise, input.secteur);
+
+  let choix: Config[];
+  let statut: StatutReco;
+  if (input.mode === "budget") {
+    const budgetMediaNet = (input.budget ?? 0) * (1 - TAUX_COMMISSION);
+    ({ choix, statut } = allocateBudget(configs, budgetMediaNet));
+  } else {
+    ({ choix, statut } = allocateGoal(configs, input.objectifValeur ?? 0));
+  }
+
+  const placements = choix.map(toPlacement).sort((a, b) => b.prix - a.prix);
+  return assemble(input, placements, leadScore, statut, messageStatut(statut, input, configs));
 }
 
 // Mode manuel : une configuration unique -> son tarif et le résultat attendu.
-// Réutilise le scoring par combinaison ; renvoie une Recommandation à un seul placement
-// pour réutiliser l'affichage existant (ResultatReco).
 export function predictTarif(
   config: ConfigManuelle,
   secteur: Secteur,
   typeEntreprise: TypeEntreprise,
   catalogue: Catalogue,
 ): Recommandation {
-  const taux = TAUX_COMMISSION;
-  const media = catalogue.medias.find((m) => m.id === config.mediaId);
-  const prog = catalogue.programmes.find((p) => p.id === config.programmeId);
-  const insertions = Math.max(1, Math.floor(config.insertions || 1));
+  const plat = catalogue.plateformes.find((p) => p.id === config.plateforme);
+  const base = { mode: "budget" as const, objectifPrincipal: config.objectifPrincipal };
+  const leadScore = partnerLeadScore(typeEntreprise, secteur);
 
-  const base = {
-    mode: "budget" as const,
-    objectifPrincipal: config.objectifPrincipal,
-    tauxCommission: taux,
-    leadScore: predictLeadScore({ Type_Entreprise: typeEntreprise, Secteur: secteur }),
-  };
-
-  if (!media || !prog) {
-    return {
-      ...base,
-      placements: [],
-      audienceK: aggregate([], SIGMA.audience),
-      couvertureEfficaceK: aggregate([], SIGMA.couverture),
-      leads: aggregate([], SIGMA.leads),
-      ventes: aggregate([], SIGMA.ventes),
-      coutMediaNet: 0,
-      commission: 0,
-      budgetTotal: 0,
-      statut: "infaisable",
-      message: "Configuration invalide : média ou programme introuvable.",
-    };
+  if (!plat) {
+    return assemble(base, [], leadScore, "infaisable", "Configuration invalide : plateforme introuvable.");
   }
 
-  const mois = moisRepresentatif(config.dateDebut, config.dateFin);
-  const fenetre = fenetreCommerciale(media.id, mois);
-  const si = comboScoringInput(
-    media,
-    prog.nom,
-    config.plateforme,
-    config.typePub,
-    config.cible,
-    secteur,
-    typeEntreprise,
-    fenetre,
-  );
-  const u = scoreCombo(si);
-
+  const periode = periodeCommerciale(config.dateDebut, config.dateFin);
+  const si = scoringInput(plat.id, config.typePub, config.cible, secteur, typeEntreprise, periode);
+  const taux = predictTauxConversion(si).value;
+  const audienceK = plat.audienceTypiqueK;
   const placement: PlacementChoisi = {
-    mediaId: media.id,
-    mediaNom: media.nom,
-    programmeId: prog.id,
-    programmeNom: prog.nom,
-    plateforme: config.plateforme,
+    plateforme: plat.id,
     typePub: config.typePub,
     cible: config.cible,
-    insertions,
-    prixUnitaire: u.prixUnitaire,
-    coutMediaNet: insertions * u.prixUnitaire,
-    audienceK: insertions * u.audienceUnitK,
-    leads: insertions * u.leadsUnit,
-    ventes: insertions * u.ventesUnit,
-    couvertureEfficaceK: insertions * u.couvUnitK,
+    prix: predictPrix(si).value,
+    audienceK,
+    tauxConversion: taux,
+    conversions: audienceK * 1000 * taux,
   };
 
-  const coutMediaNet = placement.coutMediaNet;
-  const budgetTotal = coutMediaNet / (1 - taux);
-
-  return {
-    ...base,
-    placements: [placement],
-    audienceK: aggregate([placement.audienceK], SIGMA.audience),
-    couvertureEfficaceK: aggregate([placement.couvertureEfficaceK], SIGMA.couverture),
-    leads: aggregate([placement.leads], SIGMA.leads),
-    ventes: aggregate([placement.ventes], SIGMA.ventes),
-    coutMediaNet,
-    commission: budgetTotal - coutMediaNet,
-    budgetTotal,
-    statut: "ok",
-  };
+  return assemble(base, [placement], leadScore, "ok");
 }
 
-function messageStatut(statut: StatutReco, input: DemandeInput, combos: Combo[]): string | undefined {
+function messageStatut(statut: StatutReco, input: DemandeInput, configs: Config[]): string | undefined {
   if (statut === "ok") return undefined;
   if (statut === "infaisable" && input.mode === "budget") {
-    const cheapest = Math.min(...combos.map((c) => c.prixUnitaire));
-    return `Budget trop faible : le placement le moins cher coûte environ ${Math.round(cheapest)} € (hors commission). Augmentez le budget ou allongez la période.`;
+    const cheapest = Math.min(...configs.map((c) => c.prix));
+    return `Budget trop faible : le placement le moins cher coûte environ ${Math.round(cheapest)} € (hors commission). Augmentez le budget.`;
   }
   if (statut === "infaisable") {
-    return "Objectif hors de portée sur cette période, même en mobilisant toute la capacité de diffusion. Allongez la période ou réduisez l'objectif.";
+    return "Objectif hors de portée sur cette période, même en mobilisant toutes les configurations. Réduisez l'objectif.";
   }
-  // sature
-  return "Votre budget dépasse la capacité de diffusion disponible sur cette période. Nous avons retenu le maximum pertinent ; allongez la période pour investir davantage.";
+  return "Votre budget dépasse l'inventaire disponible : toutes les configurations pertinentes ont été retenues.";
 }

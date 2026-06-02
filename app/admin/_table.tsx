@@ -12,7 +12,7 @@ import { IconArrowRight, IconCheck, IconCross, IconDoc } from "../_components/ic
 
 function contrainte(input: DemandeInput): string {
   if (input.mode === "budget") return `Budget ${eur(input.budget ?? 0)}`;
-  const unite = input.objectifPrincipal === "notoriete" ? "K couv." : input.objectifPrincipal === "lead" ? "leads" : "ventes";
+  const unite = input.objectifPrincipal === "notoriete" ? "K" : "conversions";
   return `Objectif ${num(input.objectifValeur ?? 0)} ${unite}`;
 }
 

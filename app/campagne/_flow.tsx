@@ -21,7 +21,7 @@ export function CampagneFlow({ catalogue, nomEntreprise }: { catalogue: Catalogu
               <IconTarget /> Définir ma campagne
             </span>
             <span className="seg-desc">
-              Vous choisissez média, programme, réseau, format et cible. On vous donne le tarif.
+              Vous choisissez la plateforme, le format et la cible. On vous donne le tarif.
             </span>
           </button>
           <button type="button" onClick={() => setMode("auto")}>

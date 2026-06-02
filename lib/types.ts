@@ -1,7 +1,6 @@
 import type {
   Cible,
   EtatDemande,
-  MediaId,
   Mode,
   ObjectifPrincipal,
   Plateforme,
@@ -11,35 +10,25 @@ import type {
 } from "./enums";
 
 // ---------------------------------------------------------------------------
-// Catalogue
+// Catalogue — l'inventaire est désormais la liste des plateformes numériques.
 // ---------------------------------------------------------------------------
-export type Media = {
-  id: MediaId;
+export type PlateformeInfo = {
+  id: Plateforme;
   nom: string;
   description: string;
-  qsTypique: number; // Quality_Score moyen du média (feature des modèles prix/audience)
+  // Audience représentative (K vues) servie par la plateforme — issue du dataset,
+  // sert d'unité de volume au mode "panier de configs" (lib/optimizer.ts).
+  audienceTypiqueK: number;
 };
 
-export type Programme = {
-  id: string;
-  mediaId: MediaId;
-  nom: string;
-  cadenceParMois: number; // diffusions/mois -> borne la capacité d'une période
-  plateformes: Plateforme[];
-};
-
-export type Catalogue = { medias: Media[]; programmes: Programme[] };
+export type Catalogue = { plateformes: PlateformeInfo[] };
 
 // ---------------------------------------------------------------------------
-// Schéma des coefficients (compatible export Altair -> JSON)
+// Schéma des coefficients (export OLS -> JSON, cf. data/fit_models.py)
 // ---------------------------------------------------------------------------
 export type FeatureCoeffs = {
   numeric?: Record<string, number>;
   categorical?: Record<string, Record<string, number>>;
-  // Interaction cible × plateforme (clé `${Cible}__${Plateforme}`). Enrichissement
-  // factice (l'affinité est une interaction qu'un modèle purement linéaire ne capte pas) ;
-  // un export Altair simple pourra l'omettre.
-  interactions?: Record<string, number>;
 };
 
 export type RegressionModel = {
@@ -51,13 +40,7 @@ export type RegressionModel = {
   clamp?: [number, number];
 };
 
-export type LogisticModel = {
-  kind: "logistic";
-  intercept: number;
-  features: FeatureCoeffs;
-};
-
-export type ScoringModel = RegressionModel | LogisticModel;
+export type ScoringModel = RegressionModel;
 export type ScoringInput = Record<string, number | string>;
 
 // value + intervalle + confiance (0..1)
@@ -93,15 +76,12 @@ export type CampagneAutoInput = {
 // Mode manuel : une configuration unique choisie par l'utilisateur -> un tarif.
 // (Le secteur + type d'entreprise viennent du profil, injectés côté serveur.)
 export type ConfigManuelle = {
-  mediaId: MediaId;
-  programmeId: string;
   plateforme: Plateforme;
   typePub: TypePub;
   cible: Cible;
   objectifPrincipal: ObjectifPrincipal;
   dateDebut: string; // yyyy-mm-dd
   dateFin: string; // yyyy-mm-dd
-  insertions: number; // nombre de diffusions
 };
 
 // Brief envoyé pour payer ou parler à un expert : auto (brief budget) ou manuel (config).
@@ -113,20 +93,13 @@ export type PaiementPayload =
 // Sortie optimiseur
 // ---------------------------------------------------------------------------
 export type PlacementChoisi = {
-  mediaId: MediaId;
-  mediaNom: string;
-  programmeId: string;
-  programmeNom: string;
   plateforme: Plateforme;
   typePub: TypePub;
   cible: Cible;
-  insertions: number;
-  prixUnitaire: number; // € média net par insertion
-  coutMediaNet: number;
+  prix: number; // € média net pour ce placement
   audienceK: number;
-  leads: number;
-  ventes: number;
-  couvertureEfficaceK: number;
+  tauxConversion: number; // 0..1
+  conversions: number;
 };
 
 export type StatutReco = "ok" | "infaisable" | "sature";
@@ -136,14 +109,13 @@ export type Recommandation = {
   objectifPrincipal: ObjectifPrincipal;
   placements: PlacementChoisi[];
   audienceK: Estimation;
-  couvertureEfficaceK: Estimation;
-  leads: Estimation;
-  ventes: Estimation;
+  tauxConversion: Estimation; // taux de conversion moyen pondéré (0..1)
+  conversions: Estimation;
   coutMediaNet: number;
   commission: number;
   tauxCommission: number;
   budgetTotal: number; // média net + commission
-  leadScore: number; // 0..1
+  leadScore: number; // 0..1 (propension du partenaire)
   statut: StatutReco;
   message?: string;
 };

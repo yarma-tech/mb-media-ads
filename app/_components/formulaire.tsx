@@ -5,15 +5,7 @@ import { type ObjectifPrincipal, OBJECTIF_DESC, OBJECTIF_LABEL, OBJECTIFS } from
 import { eur, formatPeriode } from "@/lib/format";
 import type { CampagneAutoInput, Recommandation } from "@/lib/types";
 import { recommander } from "../actions";
-import {
-  IconArrowLeft,
-  IconArrowRight,
-  IconEye,
-  IconShoppingBag,
-  IconTarget,
-  IconUserPlus,
-  IconWallet,
-} from "./icons";
+import { IconArrowLeft, IconArrowRight, IconEye, IconShoppingBag, IconTarget, IconWallet } from "./icons";
 import { ResultatCta } from "./result-cta";
 import { ResultatReco } from "./resultat-reco";
 
@@ -21,14 +13,12 @@ type Errors = Partial<Record<string, string>>;
 
 const OBJECTIF_ICON: Record<ObjectifPrincipal, ComponentType<{ className?: string }>> = {
   notoriete: IconEye,
-  lead: IconUserPlus,
-  vente: IconShoppingBag,
+  conversion: IconShoppingBag,
 };
 
 function goalLabel(obj: ObjectifPrincipal): string {
-  if (obj === "notoriete") return "Couverture efficace visée (milliers de personnes)";
-  if (obj === "lead") return "Nombre de leads (inscriptions) visés";
-  return "Nombre de ventes visées";
+  if (obj === "notoriete") return "Audience visée (milliers de personnes)";
+  return "Nombre de conversions visées";
 }
 
 export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise?: string }) {
@@ -100,7 +90,7 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
   const contrainteResume =
     mode === "budget"
       ? `budget ${eur(Number(budget) || 0)}`
-      : `objectif ${objectifValeur || 0} ${objectif === "notoriete" ? "K couv." : objectif === "lead" ? "leads" : "ventes"}`;
+      : `objectif ${objectifValeur || 0} ${objectif === "notoriete" ? "K" : "conversions"}`;
 
   const showForm = !reco && !loading;
 
@@ -110,7 +100,7 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
         <form className="panel form-card" onSubmit={onSubmit} noValidate>
           <fieldset className="fieldset">
             <legend className="fieldset-legend">Votre objectif principal</legend>
-            <div className="segmented cols-3">
+            <div className="segmented">
               {OBJECTIFS.map((o) => {
                 const Icon = OBJECTIF_ICON[o];
                 return (

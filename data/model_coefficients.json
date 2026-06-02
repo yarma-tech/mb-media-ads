@@ -1,0 +1,128 @@
+{
+  "prix": {
+    "kind": "regression",
+    "link": "log",
+    "intercept": 6.9116,
+    "sigma": 0.6809,
+    "clamp": [
+      45.0,
+      6059.746
+    ],
+    "features": {
+      "categorical": {
+        "Plateforme": {
+          "TikTok": -0.0199,
+          "Meta": 0.0248,
+          "Google Ads": -0.0396,
+          "YouTube Ads": 0.0
+        },
+        "Type_Pub": {
+          "Placement de produit": -0.2031,
+          "Mention orale": -0.0277,
+          "Video partenaire": -0.019,
+          "Video Ads": -0.3396,
+          "Logo début vidéo": 0.0
+        },
+        "Cible": {
+          "Parent": 0.0192,
+          "Artisan": 0.0057,
+          "Sport Lover": -0.0093,
+          "Gamers": 0.0229,
+          "Kids": -0.0274,
+          "Professionnel": 0.0
+        },
+        "Periode": {
+          "Vacances d'été": -0.037,
+          "Rentrée scolaire": -0.0355,
+          "Hors période": -0.0248,
+          "Black Friday": -0.0402,
+          "Saint-Valentin": -0.002,
+          "Vacances de construction": -0.0608,
+          "Pâques": 0.0052,
+          "Halloween": -0.0066,
+          "Semaine de relâche": -0.1012,
+          "Temps des Fêtes": 0.0
+        },
+        "Secteur": {
+          "Alimentation": -0.0626,
+          "Tourisme": -0.0082,
+          "Luxe": -0.0009,
+          "Tech": -0.0174,
+          "Santé": -0.0383,
+          "Automobile": 0.0
+        },
+        "Type_Entreprise": {
+          "Public": -0.2565,
+          "Privé": 0.0
+        }
+      }
+    }
+  },
+  "taux_conversion": {
+    "kind": "regression",
+    "link": "log",
+    "intercept": -1.4058,
+    "sigma": 0.2825,
+    "clamp": [
+      0.0161,
+      0.5823
+    ],
+    "features": {
+      "categorical": {
+        "Plateforme": {
+          "TikTok": -0.1857,
+          "Meta": 0.0821,
+          "Google Ads": 0.201,
+          "YouTube Ads": 0.0
+        },
+        "Type_Pub": {
+          "Placement de produit": 0.0115,
+          "Mention orale": -0.0171,
+          "Video partenaire": -0.0214,
+          "Video Ads": -0.027,
+          "Logo début vidéo": 0.0
+        },
+        "Cible": {
+          "Parent": -0.3315,
+          "Artisan": -0.1603,
+          "Sport Lover": -0.4685,
+          "Gamers": -0.7007,
+          "Kids": -1.2961,
+          "Professionnel": 0.0
+        },
+        "Periode": {
+          "Vacances d'été": -0.2725,
+          "Rentrée scolaire": -0.0729,
+          "Hors période": -0.4349,
+          "Black Friday": 0.079,
+          "Saint-Valentin": -0.1272,
+          "Vacances de construction": -0.3694,
+          "Pâques": -0.1345,
+          "Halloween": -0.193,
+          "Semaine de relâche": -0.3111,
+          "Temps des Fêtes": 0.0
+        },
+        "Secteur": {
+          "Alimentation": -0.0072,
+          "Tourisme": 0.0011,
+          "Luxe": 0.022,
+          "Tech": 0.0109,
+          "Santé": 0.0118,
+          "Automobile": 0.0
+        },
+        "Type_Entreprise": {
+          "Public": -0.001,
+          "Privé": 0.0
+        }
+      }
+    }
+  },
+  "audienceParPlateforme": {
+    "Google Ads": 309,
+    "Meta": 330,
+    "TikTok": 328,
+    "YouTube Ads": 308
+  },
+  "audienceGlobale": 319,
+  "n": 5000
+}

@@ -1,49 +1,46 @@
-import type { MediaId } from "./enums";
+import type { Periode } from "./enums";
 
-// Fenêtre commerciale propre au média (réplique data/enrich_dataset.py).
-// Karata = Carnaval de Guadeloupe (T1) ; Lumen/Pulse = calendrier commercial classique.
-export type Fenetre =
-  | "Carnaval"
-  | "Été"
-  | "Standard"
-  | "Soldes"
-  | "St-Valentin"
-  | "Fête-des-mères"
-  | "Rentrée"
-  | "Noël";
-
-const CLASSIQUE: Record<number, Fenetre> = {
-  1: "Soldes",
-  2: "St-Valentin",
-  5: "Fête-des-mères",
-  6: "Fête-des-mères",
-  7: "Été",
-  8: "Été",
-  9: "Rentrée",
-  11: "Noël",
-  12: "Noël",
-};
-
-export function fenetreCommerciale(media: MediaId, mois: number): Fenetre {
-  if (media === "karata") {
-    if (mois >= 1 && mois <= 3) return "Carnaval";
-    if (mois === 7 || mois === 8) return "Été";
-    return "Standard";
-  }
-  return CLASSIQUE[mois] ?? "Standard";
-}
+// Mapping date -> période commerciale (calendrier québécois). La période est une
+// feature catégorielle des modèles (lib/models.ts) : on retient la période de la
+// date représentative (milieu de la campagne).
 
 function parse(d: string): Date {
   return new Date(`${d}T00:00:00`);
 }
 
-// Mois représentatif de la période (milieu) — pour la feature saisonnière.
-export function moisRepresentatif(dateDebut: string, dateFin: string): number {
-  const mid = new Date((parse(dateDebut).getTime() + parse(dateFin).getTime()) / 2);
-  return mid.getMonth() + 1;
+function dateRepresentative(dateDebut: string, dateFin: string): Date {
+  return new Date((parse(dateDebut).getTime() + parse(dateFin).getTime()) / 2);
 }
 
-// Durée de la période en mois (≥ ~0,03), pour borner la capacité (cadence × durée).
+// (mois, jour) -> entier comparable pour situer un point dans l'année.
+const md = (m: number, d: number) => m * 100 + d;
+
+// De la plus spécifique à la plus large : la 1re plage qui contient le point gagne.
+// (ex. fin juillet -> "Vacances de construction" plutôt que "Vacances d'été").
+// Temps des Fêtes enjambe l'année (déc -> janv), géré par le test wrap ci-dessous.
+const RANGES: [Periode, number, number][] = [
+  ["Temps des Fêtes", md(12, 1), md(1, 6)],
+  ["Black Friday", md(11, 20), md(11, 30)],
+  ["Halloween", md(10, 15), md(10, 31)],
+  ["Rentrée scolaire", md(8, 20), md(9, 20)],
+  ["Vacances de construction", md(7, 19), md(8, 4)],
+  ["Vacances d'été", md(6, 15), md(8, 31)],
+  ["Pâques", md(3, 22), md(4, 25)],
+  ["Semaine de relâche", md(3, 1), md(3, 10)],
+  ["Saint-Valentin", md(2, 1), md(2, 14)],
+];
+
+export function periodeCommerciale(dateDebut: string, dateFin: string): Periode {
+  const mid = dateRepresentative(dateDebut, dateFin);
+  const point = md(mid.getMonth() + 1, mid.getDate());
+  for (const [periode, start, end] of RANGES) {
+    const match = start <= end ? point >= start && point <= end : point >= start || point <= end;
+    if (match) return periode;
+  }
+  return "Hors période";
+}
+
+// Durée de la période en mois (≥ ~0,03) — affichage / contexte (hors modèle).
 export function dureeMois(dateDebut: string, dateFin: string): number {
   const jours = Math.max(1, (parse(dateFin).getTime() - parse(dateDebut).getTime()) / 86_400_000 + 1);
   return jours / 30;

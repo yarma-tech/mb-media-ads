@@ -31,17 +31,17 @@ function demo(input: DemandeInput, etat: EtatDemande, ageHeures: number): Demand
 
 const store: Demande[] = [
   demo(
-    { nomEntreprise: "Gwada Fresh", nomContact: "Marie Lubin", secteur: "Food", typeEntreprise: "Privé", dateDebut: "2027-02-01", dateFin: "2027-03-15", objectifPrincipal: "vente", mode: "budget", budget: 5000 },
+    { nomEntreprise: "Gwada Fresh", nomContact: "Marie Lubin", secteur: "Alimentation", typeEntreprise: "Privé", dateDebut: "2027-02-01", dateFin: "2027-02-14", objectifPrincipal: "conversion", mode: "budget", budget: 5000 },
     "soumise",
     5,
   ),
   demo(
-    { nomEntreprise: "Karukera Tourisme", nomContact: "Steve Madère", secteur: "Tourisme", typeEntreprise: "Association", dateDebut: "2027-06-01", dateFin: "2027-06-30", objectifPrincipal: "notoriete", mode: "goal", objectifValeur: 200 },
+    { nomEntreprise: "Karukera Tourisme", nomContact: "Steve Madère", secteur: "Tourisme", typeEntreprise: "Public", dateDebut: "2027-06-15", dateFin: "2027-07-15", objectifPrincipal: "notoriete", mode: "goal", objectifValeur: 200 },
     "acceptee",
     28,
   ),
   demo(
-    { nomEntreprise: "TechPro Caraïbes", nomContact: "Sandra Bernard", secteur: "Tech", typeEntreprise: "Privé", dateDebut: "2027-09-01", dateFin: "2027-10-31", objectifPrincipal: "lead", mode: "budget", budget: 12000 },
+    { nomEntreprise: "TechPro Caraïbes", nomContact: "Sandra Bernard", secteur: "Tech", typeEntreprise: "Privé", dateDebut: "2027-11-20", dateFin: "2027-11-30", objectifPrincipal: "conversion", mode: "budget", budget: 12000 },
     "soumise",
     51,
   ),
@@ -90,9 +90,8 @@ export async function createDemande(input: DemandeInput, opts: CreateDemandeOpts
           recommandation: reco,
           predictions: {
             audienceK: reco.audienceK,
-            couvertureEfficaceK: reco.couvertureEfficaceK,
-            leads: reco.leads,
-            ventes: reco.ventes,
+            tauxConversion: reco.tauxConversion,
+            conversions: reco.conversions,
           },
           user_id: opts.userId ?? null,
           canal: opts.canal ?? "expert",

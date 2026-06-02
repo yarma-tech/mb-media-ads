@@ -2,47 +2,35 @@ import type { ComponentType } from "react";
 import { CIBLE_LABEL, type Plateforme } from "@/lib/enums";
 import { eur, kvues, niveauConfiance, num, pct } from "@/lib/format";
 import type { Estimation, Recommandation } from "@/lib/types";
-import {
-  IconAlert,
-  IconFacebook,
-  IconInstagram,
-  IconSpotify,
-  IconTarget,
-  IconTikTok,
-  IconYouTube,
-} from "./icons";
+import { IconAlert, IconFacebook, IconSearch, IconTarget, IconTikTok, IconYouTube } from "./icons";
 
 const PLATFORM_ICON: Record<Plateforme, ComponentType<{ className?: string }>> = {
-  YouTube: IconYouTube,
-  Facebook: IconFacebook,
+  Meta: IconFacebook,
   TikTok: IconTikTok,
-  Instagram: IconInstagram,
-  Spotify: IconSpotify,
+  "Google Ads": IconSearch,
+  "YouTube Ads": IconYouTube,
 };
 
 type MetricDesc = { key: string; label: string; est: Estimation; fmt: (v: number) => string };
 
 function metricsFor(reco: Recommandation): MetricDesc[] {
   const A: MetricDesc = { key: "aud", label: "Audience", est: reco.audienceK, fmt: kvues };
-  const C: MetricDesc = { key: "couv", label: "Couverture efficace", est: reco.couvertureEfficaceK, fmt: kvues };
-  const L: MetricDesc = { key: "lead", label: "Leads (inscriptions)", est: reco.leads, fmt: (v) => num(v) };
-  const V: MetricDesc = { key: "vente", label: "Ventes", est: reco.ventes, fmt: (v) => num(v) };
-  if (reco.objectifPrincipal === "notoriete") return [C, A, L];
-  if (reco.objectifPrincipal === "lead") return [L, A, C];
-  return [V, A, C];
+  const T: MetricDesc = { key: "taux", label: "Taux de conversion", est: reco.tauxConversion, fmt: pct };
+  const C: MetricDesc = { key: "conv", label: "Conversions", est: reco.conversions, fmt: (v) => num(v) };
+  if (reco.objectifPrincipal === "notoriete") return [A, T, C];
+  return [T, C, A];
 }
 
 const BUT: Record<Recommandation["objectifPrincipal"], string> = {
-  notoriete: "pour maximiser la couverture efficace",
-  lead: "pour maximiser les leads",
-  vente: "pour maximiser les ventes",
+  notoriete: "pour maximiser l'audience",
+  conversion: "pour maximiser les conversions",
 };
 
 function rationale(reco: Recommandation): string {
   const n = reco.placements.length;
-  const medias = new Set(reco.placements.map((p) => p.mediaId)).size;
+  const plateformes = new Set(reco.placements.map((p) => p.plateforme)).size;
   const but = reco.mode === "goal" ? "pour atteindre votre objectif au meilleur coût" : BUT[reco.objectifPrincipal];
-  return `${n} placement${n > 1 ? "s" : ""} sur ${medias} média${medias > 1 ? "s" : ""}, ${but}.`;
+  return `${n} placement${n > 1 ? "s" : ""} sur ${plateformes} plateforme${plateformes > 1 ? "s" : ""}, ${but}.`;
 }
 
 function ConfBar({ c }: { c: number }) {
@@ -123,7 +111,7 @@ export function ResultatReco({ reco }: { reco: Recommandation }) {
           </section>
 
           <p className="muted reco-disclaimer">
-            Couverture efficace = personnes vues 3 fois ou plus. Valeurs illustratives.
+            Taux de conversion et audience estimés à partir de campagnes comparables. Valeurs illustratives.
           </p>
 
           {/* Niveau 2 : le raisonnement */}
@@ -134,28 +122,22 @@ export function ResultatReco({ reco }: { reco: Recommandation }) {
               {reco.placements.map((p) => {
                 const PlatIcon = PLATFORM_ICON[p.plateforme];
                 return (
-                  <div className="placement" key={`${p.programmeId}-${p.plateforme}-${p.typePub}-${p.cible}`}>
+                  <div className="placement" key={`${p.plateforme}-${p.typePub}-${p.cible}`}>
                     <div>
-                      <div className="p-main">
-                        {p.mediaNom} · {p.programmeNom}
+                      <div className="p-main" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <PlatIcon /> {p.plateforme}
                       </div>
                       <div className="p-tags">
-                        <span className="tag">
-                          <PlatIcon /> {p.plateforme}
-                        </span>
                         <span className="tag">{p.typePub}</span>
                         <span className="tag" aria-label={`Cible : ${CIBLE_LABEL[p.cible]}`}>
                           <IconTarget /> {CIBLE_LABEL[p.cible]}
                         </span>
-                        <span className="tag">
-                          {p.insertions} insertion{p.insertions > 1 ? "s" : ""}
-                        </span>
                       </div>
                     </div>
                     <div className="p-cost">
-                      <div className="big">{eur(p.coutMediaNet)}</div>
+                      <div className="big">{eur(p.prix)}</div>
                       <div className="muted" style={{ fontSize: 12 }}>
-                        {p.insertions} × {eur(p.prixUnitaire)}
+                        {pct(p.tauxConversion)} de conversion
                       </div>
                     </div>
                   </div>

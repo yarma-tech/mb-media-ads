@@ -1,56 +1,67 @@
-// Référentiels du domaine (valeurs alignées sur data/enrich_dataset.py — clés exactes
-// car elles servent de features catégorielles aux modèles de scoring).
+// Référentiels du domaine — valeurs EXACTES du dataset (data/dataset_ml_final.xlsx),
+// car elles servent de clés catégorielles aux modèles de scoring (lib/models.ts).
 
-export const PLATEFORMES = ["YouTube", "Facebook", "TikTok", "Instagram", "Spotify"] as const;
+// Plateformes / canaux numériques (remplace l'ancien couple Média + Plateforme).
+export const PLATEFORMES = ["Meta", "TikTok", "Google Ads", "YouTube Ads"] as const;
 export type Plateforme = (typeof PLATEFORMES)[number];
 
-export const CIBLES = ["Kids", "Professionnel", "Artisan", "Parent", "Gamers", "Sport_Lover"] as const;
+export const CIBLES = ["Professionnel", "Artisan", "Parent", "Sport Lover", "Gamers", "Kids"] as const;
 export type Cible = (typeof CIBLES)[number];
+// Les valeurs sont déjà lisibles ; le libellé est l'identité (conservé pour l'affichage).
 export const CIBLE_LABEL: Record<Cible, string> = {
-  Kids: "Kids",
   Professionnel: "Professionnel",
   Artisan: "Artisan",
   Parent: "Parent",
+  "Sport Lover": "Sport Lover",
   Gamers: "Gamers",
-  Sport_Lover: "Sport Lover",
+  Kids: "Kids",
 };
 
 export const TYPES_PUB = [
-  "Don",
-  "Mécénat",
-  "Citation orale",
-  "Placement produit",
-  "Logo fin",
-  "Logo début/fin",
+  "Placement de produit",
+  "Mention orale",
+  "Video partenaire",
+  "Logo début vidéo",
+  "Video Ads",
 ] as const;
 export type TypePub = (typeof TYPES_PUB)[number];
 
-export const SECTEURS = ["Automobile", "Food", "Tourisme", "Luxe", "Tech", "Santé"] as const;
+export const SECTEURS = ["Automobile", "Alimentation", "Tourisme", "Luxe", "Tech", "Santé"] as const;
 export type Secteur = (typeof SECTEURS)[number];
 
-export const TYPES_ENTREPRISE = ["Privé", "Public", "Association", "Particulier"] as const;
+export const TYPES_ENTREPRISE = ["Privé", "Public"] as const;
 export type TypeEntreprise = (typeof TYPES_ENTREPRISE)[number];
 
-export const MEDIA_IDS = ["karata", "lumen", "pulse"] as const;
-export type MediaId = (typeof MEDIA_IDS)[number];
+// Périodes commerciales (calendrier québécois) — remplace l'ancienne saisonnalité média.
+export const PERIODES = [
+  "Temps des Fêtes",
+  "Black Friday",
+  "Saint-Valentin",
+  "Pâques",
+  "Semaine de relâche",
+  "Vacances de construction",
+  "Vacances d'été",
+  "Rentrée scolaire",
+  "Halloween",
+  "Hors période",
+] as const;
+export type Periode = (typeof PERIODES)[number];
 
-export const OBJECTIFS = ["notoriete", "lead", "vente"] as const;
+// Objectif principal : Notoriété (audience/couverture) ou Conversion (taux de conversion).
+export const OBJECTIFS = ["notoriete", "conversion"] as const;
 export type ObjectifPrincipal = (typeof OBJECTIFS)[number];
 export const OBJECTIF_LABEL: Record<ObjectifPrincipal, string> = {
   notoriete: "Notoriété",
-  lead: "Lead",
-  vente: "Vente",
+  conversion: "Conversion",
 };
 export const OBJECTIF_DESC: Record<ObjectifPrincipal, string> = {
   notoriete: "Être vu et mémorisé",
-  lead: "Générer des contacts",
-  vente: "Générer des achats",
+  conversion: "Générer des conversions",
 };
 // Unité de l'objectif chiffré (mode goal) selon l'objectif principal.
 export const OBJECTIF_UNITE: Record<ObjectifPrincipal, string> = {
-  notoriete: "personnes touchées efficacement (K)",
-  lead: "leads",
-  vente: "ventes",
+  notoriete: "personnes touchées (K)",
+  conversion: "conversions",
 };
 
 export const MODES = ["budget", "goal"] as const;

@@ -640,20 +640,25 @@ h3 {
 
 /* Niveau 2 : KPI épurés — subordonnés, sans carte. */
 .metrics-sec {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px 80px;
   margin-top: 44px;
 }
 @media (max-width: 620px) {
   .metrics-sec {
-    grid-template-columns: 1fr;
-    gap: 18px;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
   }
 }
 .metric-sec {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  text-align: center;
   gap: 7px;
 }
 .ms-label {

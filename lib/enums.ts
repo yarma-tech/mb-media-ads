@@ -69,18 +69,6 @@ export const OBJECTIF_UNITE: Record<ObjectifPrincipal, string> = {
 export const MODES = ["budget", "goal", "taux"] as const;
 export type Mode = (typeof MODES)[number];
 
-// Famille de modèle ML servie (choix pédagogique exposé à l'utilisateur).
-export const MODEL_TYPES = ["rf", "linear"] as const;
-export type ModelType = (typeof MODEL_TYPES)[number];
-export const MODEL_TYPE_LABEL: Record<ModelType, string> = {
-  rf: "Random Forest",
-  linear: "Régression linéaire",
-};
-export const MODEL_TYPE_DESC: Record<ModelType, string> = {
-  rf: "Modèle d'ensemble, le plus précis",
-  linear: "Modèle simple et interprétable",
-};
-
 // Canal d'une demande : achat self-service (Stripe) ou mise en relation avec un expert.
 export const CANAUX = ["self_service", "expert"] as const;
 export type Canal = (typeof CANAUX)[number];

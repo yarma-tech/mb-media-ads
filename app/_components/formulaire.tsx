@@ -3,10 +3,6 @@
 import { type ComponentType, useEffect, useRef, useState } from "react";
 import {
   type Mode,
-  MODEL_TYPE_DESC,
-  MODEL_TYPE_LABEL,
-  MODEL_TYPES,
-  type ModelType,
   type ObjectifPrincipal,
   OBJECTIF_DESC,
   OBJECTIF_LABEL,
@@ -39,7 +35,6 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
   const [budget, setBudget] = useState("");
   const [objectifValeur, setObjectifValeur] = useState("");
   const [tauxPct, setTauxPct] = useState("");
-  const [modelType, setModelType] = useState<ModelType>("rf");
 
   // Le 2ᵉ bouton de contrainte dépend de l'objectif : "taux de conversion" en
   // Conversion, "objectif chiffré" (audience) en Notoriété.
@@ -88,7 +83,6 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
       budget: mode === "budget" ? Number(budget) : undefined,
       objectifValeur: mode === "goal" ? Number(objectifValeur) : undefined,
       tauxCible: mode === "taux" ? Number(tauxPct) / 100 : undefined,
-      modelType,
     };
   }
 
@@ -198,18 +192,6 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
                 <input id="d2" type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} aria-invalid={!!errors.dateFin} />
                 {errors.dateFin ? <span className="field-error">{errors.dateFin}</span> : null}
               </div>
-            </div>
-          </fieldset>
-
-          <fieldset className="fieldset">
-            <legend className="fieldset-legend">Modèle d'estimation</legend>
-            <div className="segmented">
-              {MODEL_TYPES.map((mt) => (
-                <button type="button" key={mt} aria-pressed={modelType === mt} onClick={() => setModelType(mt)}>
-                  <span className="seg-title">{MODEL_TYPE_LABEL[mt]}</span>
-                  <span className="seg-desc">{MODEL_TYPE_DESC[mt]}</span>
-                </button>
-              ))}
             </div>
           </fieldset>
 

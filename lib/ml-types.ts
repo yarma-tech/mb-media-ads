@@ -2,7 +2,7 @@
 // Les noms de champs sont identiques à ceux attendus par le service (snake_case
 // en français — alignés sur les colonnes du dataset).
 
-import type { Cible, ModelType, Periode, Plateforme, Secteur, TypeEntreprise, TypePub } from "./enums";
+import type { Cible, Periode, Plateforme, Secteur, TypeEntreprise, TypePub } from "./enums";
 
 export type NiveauConfiance = "Faible" | "Moyen" | "Élevé";
 export type OuiNon = "Oui" | "Non";
@@ -40,7 +40,8 @@ export type MlMetricReg = { r2: number; mae: number; rmse: number; sigma: number
 export type MlMetricClf = { auc: number; accuracy: number; auc_cv: number };
 export type MlMetrics = { prix: MlMetricReg; taux: MlMetricReg; objectif: MlMetricClf };
 
-export type MlMeta = { modelType: ModelType; metrics: MlMetrics };
+// modelType est purement informatif ("mix") — le service applique un mix figé.
+export type MlMeta = { modelType: string; metrics: MlMetrics };
 
 export type MlBatchResponse = {
   predictions: MlPrediction[];

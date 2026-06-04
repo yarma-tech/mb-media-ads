@@ -2,7 +2,6 @@ import type {
   Cible,
   EtatDemande,
   Mode,
-  ModelType,
   ObjectifPrincipal,
   Plateforme,
   Secteur,
@@ -43,7 +42,6 @@ export type DemandeInput = {
   budget?: number; // mode budget
   objectifValeur?: number; // mode goal
   tauxCible?: number; // mode taux (0..1) — Conversion seulement
-  modelType?: ModelType; // famille de modèle ML (défaut "rf")
 };
 
 // Mode auto : la partie campagne du brief (les infos entreprise viennent du profil,
@@ -56,7 +54,6 @@ export type CampagneAutoInput = {
   budget?: number;
   objectifValeur?: number;
   tauxCible?: number; // mode taux (0..1)
-  modelType?: ModelType;
 };
 
 // Mode manuel : une configuration unique choisie par l'utilisateur -> un tarif.
@@ -68,7 +65,6 @@ export type ConfigManuelle = {
   objectifPrincipal: ObjectifPrincipal;
   dateDebut: string; // yyyy-mm-dd
   dateFin: string; // yyyy-mm-dd
-  modelType?: ModelType;
 };
 
 // Brief envoyé pour payer ou parler à un expert : auto (brief budget) ou manuel (config).

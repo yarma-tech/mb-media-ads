@@ -1,13 +1,15 @@
-"""FastAPI ML service — 2 familles de modèles pour karatAds.
+"""FastAPI ML service — mix de modèles figé pour karatAds.
 
-Deux jeux de modèles servis côte à côte (choix pédagogique côté site) :
-- `rf`     : Random Forest      (models/rf/)     — défaut
-- `linear` : régression linéaire (models/linear/) — Tweedie + Logistic
+Un modèle par cible, choisi pour ses performances (plus de sélecteur côté site) :
+- prix     : Ridge GLM       (models/linear/model_prix)
+- taux     : Random Forest   (models/rf/model_conversion)
+- objectif : Logistic        (models/linear/model_objectif)
+
+Les deux familles (rf + linear) restent chargées car le mix pioche dans chacune.
 
 Endpoints :
 - GET  /health        : statut + versions + modèles chargés
 - POST /predict/batch : prédit prix, taux conversion, proba objectif sur un batch
-                        `model_type` ("rf"|"linear", défaut "rf") choisit la famille.
 
 Auth : header `Authorization: Bearer ${ML_API_TOKEN}` (skip si la variable n'est
 pas définie — pratique en dev local).
@@ -17,7 +19,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Dict, List, Literal
+from typing import Dict, List
 
 import joblib
 import numpy as np
@@ -72,7 +74,6 @@ class MlConfigInput(BaseModel):
 
 class BatchRequest(BaseModel):
     configs: List[MlConfigInput] = Field(min_length=1, max_length=500)
-    model_type: Literal["rf", "linear"] = "rf"
 
 
 class Prediction(BaseModel):
@@ -154,51 +155,44 @@ def _tree_predictions(pipeline, X: pd.DataFrame) -> np.ndarray:
     return np.array([tree.predict(Xprep) for tree in rf.estimators_])
 
 
-def _tree_proba(pipeline, X: pd.DataFrame) -> np.ndarray:
-    """Retourne (n_trees, n_rows) des probas P(classe=1) des arbres."""
-    Xprep = pipeline.named_steps["preprocessor"].transform(X)
-    rf = pipeline.named_steps["rf"]
-    return np.array([tree.predict_proba(Xprep)[:, 1] for tree in rf.estimators_])
+def _predict_mix(df: pd.DataFrame) -> List[Prediction]:
+    """Mix figé par cible :
+    - prix     : Ridge GLM (models/linear/prix) — intervalle ±σ résiduel d'entraînement
+    - taux     : Random Forest (models/rf/conversion) — intervalle = dispersion des arbres
+    - objectif : Logistic (models/linear/objectif) — proba + confiance = 2·|p−0.5|
+    Le prix prédit alimente Prix_Euros pour les modèles taux et objectif.
+    """
+    lin = MODELS["linear"]
+    rf = MODELS["rf"]
+    sigma_prix = float(METRICS.get("linear", {}).get("prix", {}).get("sigma", 0.0))
 
-
-def _predict_rf(bundle: Dict[str, object], df: pd.DataFrame) -> List[Prediction]:
-    """Forêt aléatoire : intervalles via la dispersion des arbres."""
-    prix_trees = _tree_predictions(bundle["prix"], df[PRIX_COLS])
-    prix = prix_trees.mean(axis=0)
-    prix_std = prix_trees.std(axis=0)
+    # Prix — Ridge (linéaire), intervalle σ constant
+    prix = np.asarray(lin["prix"].predict(df[PRIX_COLS]), dtype=float)
     df = df.assign(Prix_Euros=prix)
 
-    conv_trees = _tree_predictions(bundle["conv"], df[CONV_COLS])
+    # Taux — Random Forest, intervalle via dispersion des arbres
+    conv_trees = _tree_predictions(rf["conv"], df[CONV_COLS])
     taux = np.clip(conv_trees.mean(axis=0), 0.0, 1.0)
     taux_std = conv_trees.std(axis=0)
 
-    proba_trees = _tree_proba(bundle["obj"], df[OBJ_COLS])
-    p_mean = proba_trees.mean(axis=0)
-    p_std = proba_trees.std(axis=0)
-    p_conf = np.clip(1.0 - 2.0 * p_std, 0.0, 1.0)
-
-    return _assemble(prix, prix - prix_std, prix + prix_std, taux, taux - taux_std, taux + taux_std, p_mean, p_conf)
-
-
-def _predict_linear(bundle: Dict[str, object], df: pd.DataFrame, metrics: dict) -> List[Prediction]:
-    """Régression linéaire : intervalles via σ résiduel (régression) et distance à
-    0.5 (logistique). σ vient des métriques d'entraînement (constant par sortie)."""
-    sigma_prix = float(metrics.get("prix", {}).get("sigma", 0.0))
-    sigma_taux = float(metrics.get("taux", {}).get("sigma", 0.0))
-
-    prix = np.asarray(bundle["prix"].predict(df[PRIX_COLS]), dtype=float)
-    df = df.assign(Prix_Euros=prix)
-
-    taux = np.clip(np.asarray(bundle["conv"].predict(df[CONV_COLS]), dtype=float), 0.0, 1.0)
-
-    p_mean = np.asarray(bundle["obj"].predict_proba(df[OBJ_COLS])[:, 1], dtype=float)
+    # Objectif — Logistic, confiance via distance à 0.5
+    p_mean = np.asarray(lin["obj"].predict_proba(df[OBJ_COLS])[:, 1], dtype=float)
     p_conf = np.clip(2.0 * np.abs(p_mean - 0.5), 0.0, 1.0)
 
     return _assemble(
         prix, prix - sigma_prix, prix + sigma_prix,
-        taux, taux - sigma_taux, taux + sigma_taux,
+        taux, taux - taux_std, taux + taux_std,
         p_mean, p_conf,
     )
+
+
+def _mix_metrics() -> dict:
+    """Précision par cible, depuis la famille qui sert chaque modèle."""
+    return {
+        "prix": METRICS.get("linear", {}).get("prix", {}),
+        "taux": METRICS.get("rf", {}).get("taux", {}),
+        "objectif": METRICS.get("linear", {}).get("objectif", {}),
+    }
 
 
 def _assemble(prix, prix_lo, prix_hi, taux, taux_lo, taux_hi, p_mean, p_conf) -> List[Prediction]:
@@ -232,17 +226,9 @@ def health() -> HealthResponse:
 
 @app.post("/predict/batch", response_model=BatchResponse, dependencies=[Depends(auth)])
 def predict_batch(req: BatchRequest) -> BatchResponse:
-    bundle = MODELS.get(req.model_type)
-    if bundle is None:
-        raise HTTPException(status_code=503, detail=f"models not loaded: {req.model_type}")
+    if "linear" not in MODELS or "rf" not in MODELS:
+        raise HTTPException(status_code=503, detail="models not loaded (mix requires rf + linear)")
 
     df = pd.DataFrame([c.model_dump() for c in req.configs])
-    if req.model_type == "linear":
-        preds = _predict_linear(bundle, df, METRICS.get("linear", {}))
-    else:
-        preds = _predict_rf(bundle, df)
-
-    return BatchResponse(
-        predictions=preds,
-        meta=Meta(modelType=req.model_type, metrics=METRICS.get(req.model_type, {})),
-    )
+    preds = _predict_mix(df)
+    return BatchResponse(predictions=preds, meta=Meta(modelType="mix", metrics=_mix_metrics()))

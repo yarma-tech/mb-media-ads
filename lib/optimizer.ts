@@ -85,7 +85,7 @@ async function buildConfigs(
 ): Promise<{ configs: Config[]; meta?: MlMeta }> {
   const choices = enumerateChoices(catalogue);
   const mlInputs = choices.map((c) => toMlInput(c, input, catalogue, profile));
-  const { predictions: preds, meta } = await predictBatch(mlInputs, { modelType: input.modelType });
+  const { predictions: preds, meta } = await predictBatch(mlInputs);
 
   const configs = choices.map((choice, i) => {
     const plat = catalogue.plateformes.find((p) => p.id === choice.plateforme)!;
@@ -305,7 +305,7 @@ export async function predictTarif(
     catalogue,
     profile,
   );
-  const { predictions, meta } = await predictBatch([mlInput], { modelType: config.modelType });
+  const { predictions, meta } = await predictBatch([mlInput]);
   const pred = predictions[0];
   const audienceK = plat.audienceTypiqueK;
   const conversions = audienceK * 1000 * pred.tauxConversion;

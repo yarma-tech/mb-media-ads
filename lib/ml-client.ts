@@ -1,6 +1,5 @@
 import "server-only";
 
-import type { ModelType } from "./enums";
 import type { MlBatchResponse, MlConfigInput, MlMeta, MlPrediction } from "./ml-types";
 
 // Client du micro-service d'inférence ML (FastAPI sur Fly.io, voir ml-service/).
@@ -35,7 +34,7 @@ export function isFallbackEnabled(): boolean {
 
 export async function predictBatch(
   configs: MlConfigInput[],
-  options: { timeoutMs?: number; signal?: AbortSignal; modelType?: ModelType } = {},
+  options: { timeoutMs?: number; signal?: AbortSignal } = {},
 ): Promise<PredictResult> {
   if (configs.length === 0) return { predictions: [] };
 
@@ -56,7 +55,7 @@ export async function predictBatch(
         "Content-Type": "application/json; charset=utf-8",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ configs, model_type: options.modelType ?? "rf" }),
+      body: JSON.stringify({ configs }),
       signal: ctrl.signal,
       cache: "no-store",
     });

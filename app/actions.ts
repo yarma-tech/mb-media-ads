@@ -84,7 +84,6 @@ async function buildInputReco(
     objectifPrincipal: c.objectifPrincipal,
     mode: "budget",
     budget: Math.max(1, Math.round(reco.budgetTotal)),
-    modelType: c.modelType,
   };
   return { input, reco, typeCampagne: "manuel" };
 }

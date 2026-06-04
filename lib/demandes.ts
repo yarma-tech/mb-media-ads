@@ -16,36 +16,48 @@ export type CreateDemandeOpts = {
 
 // Données de démo (en mémoire) tant que Supabase n'est pas connecté : permettent à
 // /admin d'afficher des demandes réalistes. Les recommandations sont calculées par
-// l'optimiseur sur le catalogue local.
-function demo(input: DemandeInput, etat: EtatDemande, ageHeures: number): Demande {
-  const reco = optimiser(input, CATALOGUE_SEED);
-  return {
-    id: crypto.randomUUID(),
-    createdAt: new Date(Date.now() - ageHeures * 3_600_000).toISOString(),
-    input,
-    recommandation: reco,
-    leadScore: reco.leadScore,
-    etat,
-  };
-}
-
-const store: Demande[] = [
-  demo(
-    { nomEntreprise: "Gwada Fresh", nomContact: "Marie Lubin", secteur: "Alimentation", typeEntreprise: "Privé", dateDebut: "2027-02-01", dateFin: "2027-02-14", objectifPrincipal: "conversion", mode: "budget", budget: 5000 },
-    "soumise",
-    5,
-  ),
-  demo(
-    { nomEntreprise: "Karukera Tourisme", nomContact: "Steve Madère", secteur: "Tourisme", typeEntreprise: "Public", dateDebut: "2027-06-15", dateFin: "2027-07-15", objectifPrincipal: "notoriete", mode: "goal", objectifValeur: 200 },
-    "acceptee",
-    28,
-  ),
-  demo(
-    { nomEntreprise: "TechPro Caraïbes", nomContact: "Sandra Bernard", secteur: "Tech", typeEntreprise: "Privé", dateDebut: "2027-11-20", dateFin: "2027-11-30", objectifPrincipal: "conversion", mode: "budget", budget: 12000 },
-    "soumise",
-    51,
-  ),
+// l'optimiseur sur le catalogue local — l'opération étant désormais asynchrone
+// (appel ML), le store est construit paresseusement à la 1re lecture.
+const DEMO_INPUTS: { input: DemandeInput; etat: EtatDemande; ageHeures: number }[] = [
+  {
+    input: { nomEntreprise: "Gwada Fresh", nomContact: "Marie Lubin", secteur: "Alimentation", typeEntreprise: "Privé", dateDebut: "2027-02-01", dateFin: "2027-02-14", objectifPrincipal: "conversion", mode: "budget", budget: 5000 },
+    etat: "soumise",
+    ageHeures: 5,
+  },
+  {
+    input: { nomEntreprise: "Karukera Tourisme", nomContact: "Steve Madère", secteur: "Tourisme", typeEntreprise: "Public", dateDebut: "2027-06-15", dateFin: "2027-07-15", objectifPrincipal: "notoriete", mode: "goal", objectifValeur: 200 },
+    etat: "acceptee",
+    ageHeures: 28,
+  },
+  {
+    input: { nomEntreprise: "TechPro Caraïbes", nomContact: "Sandra Bernard", secteur: "Tech", typeEntreprise: "Privé", dateDebut: "2027-11-20", dateFin: "2027-11-30", objectifPrincipal: "conversion", mode: "budget", budget: 12000 },
+    etat: "soumise",
+    ageHeures: 51,
+  },
 ];
+
+const store: Demande[] = [];
+let demoInitPromise: Promise<void> | null = null;
+
+async function ensureDemoStore(): Promise<void> {
+  if (store.length > 0) return;
+  if (!demoInitPromise) {
+    demoInitPromise = (async () => {
+      for (const d of DEMO_INPUTS) {
+        const reco = await optimiser(d.input, CATALOGUE_SEED);
+        store.push({
+          id: crypto.randomUUID(),
+          createdAt: new Date(Date.now() - d.ageHeures * 3_600_000).toISOString(),
+          input: d.input,
+          recommandation: reco,
+          leadScore: reco.leadScore,
+          etat: d.etat,
+        });
+      }
+    })();
+  }
+  await demoInitPromise;
+}
 
 export async function listDemandes(): Promise<Demande[]> {
   if (supabaseConfigured) {
@@ -55,11 +67,12 @@ export async function listDemandes(): Promise<Demande[]> {
       if (data) return data.map(rowToDemande);
     }
   }
+  await ensureDemoStore();
   return [...store].sort((a, b) => b.leadScore - a.leadScore);
 }
 
 export async function createDemande(input: DemandeInput, opts: CreateDemandeOpts = {}): Promise<Demande> {
-  const reco = opts.reco ?? optimiser(input, await loadCatalogue());
+  const reco = opts.reco ?? (await optimiser(input, await loadCatalogue()));
   const demande: Demande = {
     id: crypto.randomUUID(),
     createdAt: new Date().toISOString(),
@@ -85,6 +98,7 @@ export async function createDemande(input: DemandeInput, opts: CreateDemandeOpts
           objectif_principal: input.objectifPrincipal,
           budget: input.budget ?? null,
           objectif_valeur: input.objectifValeur ?? null,
+          taux_cible: input.tauxCible ?? null,
           etat: "soumise",
           lead_score: reco.leadScore,
           recommandation: reco,
@@ -185,6 +199,7 @@ function rowToDemande(row: Record<string, unknown>): Demande {
       mode: row.mode as DemandeInput["mode"],
       budget: row.budget == null ? undefined : Number(row.budget),
       objectifValeur: row.objectif_valeur == null ? undefined : Number(row.objectif_valeur),
+      tauxCible: row.taux_cible == null ? undefined : Number(row.taux_cible),
     },
   };
 }

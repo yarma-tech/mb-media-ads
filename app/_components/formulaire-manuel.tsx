@@ -5,6 +5,10 @@ import {
   type Cible,
   CIBLE_LABEL,
   CIBLES,
+  MODEL_TYPE_DESC,
+  MODEL_TYPE_LABEL,
+  MODEL_TYPES,
+  type ModelType,
   OBJECTIF_DESC,
   OBJECTIF_LABEL,
   OBJECTIFS,
@@ -34,6 +38,7 @@ export function FormulaireManuel({ catalogue }: { catalogue: Catalogue }) {
   const [objectif, setObjectif] = useState<ObjectifPrincipal>("notoriete");
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
+  const [modelType, setModelType] = useState<ModelType>("rf");
 
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
@@ -75,6 +80,7 @@ export function FormulaireManuel({ catalogue }: { catalogue: Catalogue }) {
         objectifPrincipal: objectif,
         dateDebut,
         dateFin,
+        modelType,
       };
       setLastConfig(config);
       setReco(await tarif(config));
@@ -173,6 +179,18 @@ export function FormulaireManuel({ catalogue }: { catalogue: Catalogue }) {
                 <input id="m-d2" type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} aria-invalid={!!errors.dateFin} />
                 {errors.dateFin ? <span className="field-error">{errors.dateFin}</span> : null}
               </div>
+            </div>
+          </fieldset>
+
+          <fieldset className="fieldset">
+            <legend className="fieldset-legend">Modèle d'estimation</legend>
+            <div className="segmented">
+              {MODEL_TYPES.map((mt) => (
+                <button type="button" key={mt} aria-pressed={modelType === mt} onClick={() => setModelType(mt)}>
+                  <span className="seg-title">{MODEL_TYPE_LABEL[mt]}</span>
+                  <span className="seg-desc">{MODEL_TYPE_DESC[mt]}</span>
+                </button>
+              ))}
             </div>
           </fieldset>
 

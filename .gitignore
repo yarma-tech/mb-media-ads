@@ -27,3 +27,16 @@ next-env.d.ts
 
 # claude code local settings (perso, non partagé)
 .claude/settings.local.json
+
+# Artefacts ML & données lourdes — hors git (pas de Git LFS).
+# Modèles servis en prod via `fly deploy` (Dockerfile COPY models/), jamais via GitHub.
+/modeles/
+/ml-service/models/
+/data/dataset ml final.xlsx
+/data/dataset_pub_enrichi_v4-6.xlsx
+/PRD.pdf
+/PRODUCT.pdf
+
+# python
+__pycache__/
+*.pyc

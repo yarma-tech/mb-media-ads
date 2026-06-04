@@ -1,7 +1,17 @@
 "use client";
 
 import { type ComponentType, useEffect, useRef, useState } from "react";
-import { type ObjectifPrincipal, OBJECTIF_DESC, OBJECTIF_LABEL, OBJECTIFS } from "@/lib/enums";
+import {
+  type Mode,
+  MODEL_TYPE_DESC,
+  MODEL_TYPE_LABEL,
+  MODEL_TYPES,
+  type ModelType,
+  type ObjectifPrincipal,
+  OBJECTIF_DESC,
+  OBJECTIF_LABEL,
+  OBJECTIFS,
+} from "@/lib/enums";
 import { eur, formatPeriode } from "@/lib/format";
 import type { CampagneAutoInput, Recommandation } from "@/lib/types";
 import { recommander } from "../actions";
@@ -25,9 +35,21 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
   const [dateDebut, setDateDebut] = useState("");
   const [dateFin, setDateFin] = useState("");
   const [objectif, setObjectif] = useState<ObjectifPrincipal>("notoriete");
-  const [mode, setMode] = useState<"budget" | "goal">("budget");
+  const [mode, setMode] = useState<Mode>("budget");
   const [budget, setBudget] = useState("");
   const [objectifValeur, setObjectifValeur] = useState("");
+  const [tauxPct, setTauxPct] = useState("");
+  const [modelType, setModelType] = useState<ModelType>("rf");
+
+  // Le 2ᵉ bouton de contrainte dépend de l'objectif : "taux de conversion" en
+  // Conversion, "objectif chiffré" (audience) en Notoriété.
+  const objMode: Mode = objectif === "conversion" ? "taux" : "goal";
+
+  function chooseObjectif(o: ObjectifPrincipal) {
+    setObjectif(o);
+    // Si l'utilisateur était sur la contrainte par objectif, on la réaligne.
+    if (mode !== "budget") setMode(o === "conversion" ? "taux" : "goal");
+  }
 
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
@@ -48,6 +70,9 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
     if (dateDebut && dateFin && dateFin < dateDebut) e.dateFin = "La fin doit suivre le début";
     if (mode === "budget") {
       if (!budget || Number(budget) <= 0) e.budget = "Indiquez un budget positif";
+    } else if (mode === "taux") {
+      const t = Number(tauxPct);
+      if (!tauxPct || t <= 0 || t > 100) e.tauxCible = "Indiquez un taux entre 1 et 100";
     } else if (!objectifValeur || Number(objectifValeur) <= 0) {
       e.objectifValeur = "Indiquez un objectif positif";
     }
@@ -62,6 +87,8 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
       mode,
       budget: mode === "budget" ? Number(budget) : undefined,
       objectifValeur: mode === "goal" ? Number(objectifValeur) : undefined,
+      tauxCible: mode === "taux" ? Number(tauxPct) / 100 : undefined,
+      modelType,
     };
   }
 
@@ -90,7 +117,9 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
   const contrainteResume =
     mode === "budget"
       ? `budget ${eur(Number(budget) || 0)}`
-      : `objectif ${objectifValeur || 0} ${objectif === "notoriete" ? "K" : "conversions"}`;
+      : mode === "taux"
+        ? `taux visé ${tauxPct || 0} %`
+        : `objectif ${objectifValeur || 0} K`;
 
   const showForm = !reco && !loading;
 
@@ -104,7 +133,7 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
               {OBJECTIFS.map((o) => {
                 const Icon = OBJECTIF_ICON[o];
                 return (
-                  <button type="button" key={o} aria-pressed={objectif === o} onClick={() => setObjectif(o)}>
+                  <button type="button" key={o} aria-pressed={objectif === o} onClick={() => chooseObjectif(o)}>
                     <span className="seg-title">
                       <Icon /> {OBJECTIF_LABEL[o]}
                     </span>
@@ -124,11 +153,13 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
                 </span>
                 <span className="seg-desc">On maximise le résultat</span>
               </button>
-              <button type="button" aria-pressed={mode === "goal"} onClick={() => setMode("goal")}>
+              <button type="button" aria-pressed={mode === objMode} onClick={() => setMode(objMode)}>
                 <span className="seg-title">
-                  <IconTarget /> J'ai un objectif chiffré
+                  <IconTarget /> {objMode === "taux" ? "Taux de conversion" : "J'ai un objectif chiffré"}
                 </span>
-                <span className="seg-desc">On minimise le budget</span>
+                <span className="seg-desc">
+                  {objMode === "taux" ? "On vise un taux au moindre coût" : "On minimise le budget"}
+                </span>
               </button>
             </div>
             {mode === "budget" ? (
@@ -137,6 +168,13 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
                 <input id="budget" type="number" min="0" inputMode="numeric" value={budget} onChange={(e) => setBudget(e.target.value)} aria-invalid={!!errors.budget} placeholder="Ex. 5000" />
                 <span className="hint">Commission MB Média incluse dans ce montant.</span>
                 {errors.budget ? <span className="field-error">{errors.budget}</span> : null}
+              </div>
+            ) : mode === "taux" ? (
+              <div className="field">
+                <label htmlFor="taux">Taux de conversion visé (%)</label>
+                <input id="taux" type="number" min="0" max="100" inputMode="decimal" value={tauxPct} onChange={(e) => setTauxPct(e.target.value)} aria-invalid={!!errors.tauxCible} placeholder="Ex. 12" />
+                <span className="hint">On retient le placement le moins cher atteignant ce taux.</span>
+                {errors.tauxCible ? <span className="field-error">{errors.tauxCible}</span> : null}
               </div>
             ) : (
               <div className="field">
@@ -160,6 +198,18 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
                 <input id="d2" type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} aria-invalid={!!errors.dateFin} />
                 {errors.dateFin ? <span className="field-error">{errors.dateFin}</span> : null}
               </div>
+            </div>
+          </fieldset>
+
+          <fieldset className="fieldset">
+            <legend className="fieldset-legend">Modèle d'estimation</legend>
+            <div className="segmented">
+              {MODEL_TYPES.map((mt) => (
+                <button type="button" key={mt} aria-pressed={modelType === mt} onClick={() => setModelType(mt)}>
+                  <span className="seg-title">{MODEL_TYPE_LABEL[mt]}</span>
+                  <span className="seg-desc">{MODEL_TYPE_DESC[mt]}</span>
+                </button>
+              ))}
             </div>
           </fieldset>
 

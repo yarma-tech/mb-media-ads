@@ -1,0 +1,36 @@
+{
+  "configs": [
+    {
+      "Secteur_Entreprise": "Tech",
+      "Type_Entreprise_Prive_Public": "Privé",
+      "Periode": "Black Friday",
+      "Media_Numerique": "Google Ads",
+      "Type_Pub_Normalise": "Placement de produit",
+      "Cible": "Professionnel",
+      "Niveau_Confiance": "Élevé",
+      "Retargeting": "Oui",
+      "Duree_Campagne_Mois": 1.0,
+      "Objectif_Audience_K_Vues": 400,
+      "Score_Historique_Marque": 7.5,
+      "Nb_Plateformes": 3,
+      "Budget_Cible_K": 150.0,
+      "Nb_Visuels_Crees": 10
+    },
+    {
+      "Secteur_Entreprise": "Santé",
+      "Type_Entreprise_Prive_Public": "Public",
+      "Periode": "Hors période",
+      "Media_Numerique": "Meta",
+      "Type_Pub_Normalise": "Video Ads",
+      "Cible": "Parent",
+      "Niveau_Confiance": "Moyen",
+      "Retargeting": "Non",
+      "Duree_Campagne_Mois": 2.0,
+      "Objectif_Audience_K_Vues": 200,
+      "Score_Historique_Marque": 5.0,
+      "Nb_Plateformes": 1,
+      "Budget_Cible_K": 30.0,
+      "Nb_Visuels_Crees": 5
+    }
+  ]
+}

@@ -4,9 +4,10 @@ import { headers } from "next/headers";
 import { loadCatalogue } from "@/lib/catalog";
 import { createDemande, setEtat, setStripeSession } from "@/lib/demandes";
 import type { EtatDemande, Secteur, TypeCampagne, TypeEntreprise } from "@/lib/enums";
+import type { MappingProfile } from "@/lib/feature-mapping";
 import { optimiser, predictTarif } from "@/lib/optimizer";
 import { getStripe } from "@/lib/stripe";
-import { getProfile, getUser } from "@/lib/supabase-server";
+import { getProfile, getUser, type Profile } from "@/lib/supabase-server";
 import type {
   CampagneAutoInput,
   ConfigManuelle,
@@ -14,6 +15,15 @@ import type {
   PaiementPayload,
   Recommandation,
 } from "@/lib/types";
+
+function mappingProfileFrom(profile: Profile | null): MappingProfile {
+  return {
+    scoreHistoriqueMarque:
+      typeof profile?.score_historique_marque === "number"
+        ? profile.score_historique_marque
+        : undefined,
+  };
+}
 
 // Complète le brief campagne avec les infos entreprise du profil connecté (jamais du client).
 async function buildDemandeInput(campagne: CampagneAutoInput): Promise<DemandeInput> {
@@ -29,8 +39,9 @@ async function buildDemandeInput(campagne: CampagneAutoInput): Promise<DemandeIn
 
 // Calcule la campagne idéale (sans persister) -> affichage inline.
 export async function recommander(campagne: CampagneAutoInput): Promise<Recommandation> {
-  const [input, catalogue] = await Promise.all([buildDemandeInput(campagne), loadCatalogue()]);
-  return optimiser(input, catalogue);
+  const [profile, catalogue] = await Promise.all([getProfile(), loadCatalogue()]);
+  const input = await buildDemandeInput(campagne);
+  return optimiser(input, catalogue, mappingProfileFrom(profile));
 }
 
 // Mode manuel : tarif d'une configuration unique. Secteur + type d'entreprise
@@ -39,7 +50,7 @@ export async function tarif(config: ConfigManuelle): Promise<Recommandation> {
   const [profile, catalogue] = await Promise.all([getProfile(), loadCatalogue()]);
   const secteur = (profile?.secteur as Secteur) ?? "Tech";
   const typeEntreprise = (profile?.type_entreprise as TypeEntreprise) ?? "Privé";
-  return predictTarif(config, secteur, typeEntreprise, catalogue);
+  return predictTarif(config, secteur, typeEntreprise, catalogue, mappingProfileFrom(profile));
 }
 
 // Recalcule la recommandation côté serveur (jamais de prix venant du client) à partir
@@ -47,16 +58,22 @@ export async function tarif(config: ConfigManuelle): Promise<Recommandation> {
 async function buildInputReco(
   payload: PaiementPayload,
 ): Promise<{ input: DemandeInput; reco: Recommandation; typeCampagne: TypeCampagne }> {
-  const catalogue = await loadCatalogue();
+  const [profile, catalogue] = await Promise.all([getProfile(), loadCatalogue()]);
+  const mapping = mappingProfileFrom(profile);
+
   if (payload.kind === "auto") {
     const input = await buildDemandeInput(payload.campagne);
-    return { input, reco: optimiser(input, catalogue), typeCampagne: "auto" };
+    return {
+      input,
+      reco: await optimiser(input, catalogue, mapping),
+      typeCampagne: "auto",
+    };
   }
-  const [profile, user] = await Promise.all([getProfile(), getUser()]);
+  const user = await getUser();
   const secteur = (profile?.secteur as Secteur) ?? "Tech";
   const typeEntreprise = (profile?.type_entreprise as TypeEntreprise) ?? "Privé";
   const c = payload.config;
-  const reco = predictTarif(c, secteur, typeEntreprise, catalogue);
+  const reco = await predictTarif(c, secteur, typeEntreprise, catalogue, mapping);
   const input: DemandeInput = {
     nomEntreprise: profile?.nom_entreprise ?? "Mon entreprise",
     nomContact: profile?.email ?? user?.email ?? "—",
@@ -67,6 +84,7 @@ async function buildInputReco(
     objectifPrincipal: c.objectifPrincipal,
     mode: "budget",
     budget: Math.max(1, Math.round(reco.budgetTotal)),
+    modelType: c.modelType,
   };
   return { input, reco, typeCampagne: "manuel" };
 }

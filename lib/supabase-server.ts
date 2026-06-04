@@ -47,6 +47,9 @@ export type Profile = {
   secteur: string;
   type_entreprise: string;
   is_admin: boolean;
+  // Score 0..10 du capital marque, feature des modèles ML. Défaut 5.0 (médiane
+  // neutre) tant que la colonne n'a pas été éditée.
+  score_historique_marque?: number | null;
 };
 
 // Renvoie le profil de l'utilisateur connecté, ou null. Résilient si la table

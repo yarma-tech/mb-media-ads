@@ -2,12 +2,14 @@ import type {
   Cible,
   EtatDemande,
   Mode,
+  ModelType,
   ObjectifPrincipal,
   Plateforme,
   Secteur,
   TypeEntreprise,
   TypePub,
 } from "./enums";
+import type { MlMeta } from "./ml-types";
 
 // ---------------------------------------------------------------------------
 // Catalogue — l'inventaire est désormais la liste des plateformes numériques.
@@ -22,26 +24,6 @@ export type PlateformeInfo = {
 };
 
 export type Catalogue = { plateformes: PlateformeInfo[] };
-
-// ---------------------------------------------------------------------------
-// Schéma des coefficients (export OLS -> JSON, cf. data/fit_models.py)
-// ---------------------------------------------------------------------------
-export type FeatureCoeffs = {
-  numeric?: Record<string, number>;
-  categorical?: Record<string, Record<string, number>>;
-};
-
-export type RegressionModel = {
-  kind: "regression";
-  link: "identity" | "log";
-  intercept: number;
-  sigma: number; // écart-type résiduel (espace du lien) -> intervalle + confiance
-  features: FeatureCoeffs;
-  clamp?: [number, number];
-};
-
-export type ScoringModel = RegressionModel;
-export type ScoringInput = Record<string, number | string>;
 
 // value + intervalle + confiance (0..1)
 export type Estimation = { value: number; lo: number; hi: number; confiance: number };
@@ -60,6 +42,8 @@ export type DemandeInput = {
   mode: Mode;
   budget?: number; // mode budget
   objectifValeur?: number; // mode goal
+  tauxCible?: number; // mode taux (0..1) — Conversion seulement
+  modelType?: ModelType; // famille de modèle ML (défaut "rf")
 };
 
 // Mode auto : la partie campagne du brief (les infos entreprise viennent du profil,
@@ -71,6 +55,8 @@ export type CampagneAutoInput = {
   mode: Mode;
   budget?: number;
   objectifValeur?: number;
+  tauxCible?: number; // mode taux (0..1)
+  modelType?: ModelType;
 };
 
 // Mode manuel : une configuration unique choisie par l'utilisateur -> un tarif.
@@ -82,6 +68,7 @@ export type ConfigManuelle = {
   objectifPrincipal: ObjectifPrincipal;
   dateDebut: string; // yyyy-mm-dd
   dateFin: string; // yyyy-mm-dd
+  modelType?: ModelType;
 };
 
 // Brief envoyé pour payer ou parler à un expert : auto (brief budget) ou manuel (config).
@@ -111,6 +98,9 @@ export type Recommandation = {
   audienceK: Estimation;
   tauxConversion: Estimation; // taux de conversion moyen pondéré (0..1)
   conversions: Estimation;
+  // Probabilité agrégée d'atteinte de l'objectif (modèle ML de classification).
+  // Optionnel : peut manquer pour les vieilles demandes persistées avant le ML.
+  pObjectif?: Estimation;
   coutMediaNet: number;
   commission: number;
   tauxCommission: number;
@@ -118,6 +108,9 @@ export type Recommandation = {
   leadScore: number; // 0..1 (propension du partenaire)
   statut: StatutReco;
   message?: string;
+  // Famille de modèle utilisée + sa précision (badges page résultat).
+  // Optionnel : absent des demandes persistées avant l'exposition des 2 modèles.
+  meta?: MlMeta;
 };
 
 // ---------------------------------------------------------------------------

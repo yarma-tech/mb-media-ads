@@ -1,0 +1,24 @@
+{
+  "input": {
+    "Secteur_Entreprise": "Tech",
+    "Type_Entreprise_Prive_Public": "Privé",
+    "Periode": "Black Friday",
+    "Duree_Campagne_Mois": 1.0,
+    "Objectif_Audience_K_Vues": 400,
+    "Score_Historique_Marque": 7.5,
+    "Media_Numerique": "Google Ads",
+    "Type_Pub_Normalise": "Placement de produit",
+    "Cible": "Professionnel",
+    "Niveau_Confiance": "Élevé",
+    "Nb_Plateformes": 3,
+    "Budget_Cible_K": 150.0,
+    "Nb_Visuels_Crees": 10,
+    "Retargeting": "Oui"
+  },
+  "expected": {
+    "prix": 2186.929074722224,
+    "taux_conversion": 0.37872719920634906,
+    "p_objectif": 0.9080737133237132
+  },
+  "tolerance": 0.0001
+}

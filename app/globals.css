@@ -586,16 +586,11 @@ h3 {
   margin: 0 0 36px;
   max-width: 52ch;
 }
-.answer-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-.answer-side:first-child {
-  padding-right: 44px;
-}
-.answer-side + .answer-side {
-  padding-left: 44px;
-  border-left: 1px solid var(--on-hero-line);
+.answer-hero {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .answer-label {
   font-size: 12px;
@@ -604,81 +599,49 @@ h3 {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
-.answer-value {
-  font-size: 76px;
+.answer-price {
+  font-size: 96px;
   line-height: 0.96;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.04em;
-  margin: 16px 0 8px;
+  color: var(--on-hero);
+  margin: 14px 0 10px;
   font-variant-numeric: tabular-nums;
 }
-.answer-side:first-child .answer-value {
-  color: var(--hero-accent);
+.answer-precision {
+  margin-top: 16px;
 }
-.answer-side:last-child .answer-value {
-  color: var(--on-hero);
+/* Pilule de précision : fond opaque (couleur inline selon le palier), pleine lisibilité. */
+.prec-pill {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.answer-sub {
-  font-size: 13px;
-  color: var(--on-hero-soft);
-}
-.answer-note {
-  font-size: 13px;
-  color: var(--on-hero-soft);
-  margin: 10px 0 0;
-}
-.answer-breakdown {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 32px;
-  padding-top: 22px;
-  border-top: 1px solid var(--on-hero-line);
-  font-size: 13px;
-  color: var(--on-hero-soft);
-}
-.answer-breakdown span[aria-hidden] {
-  color: color-mix(in oklch, white 40%, transparent);
-}
-.answer .conf-label {
-  color: var(--on-hero);
-}
-.answer .conf-head .mono {
-  color: var(--on-hero-soft);
-}
-.answer .conf-bar {
-  background: color-mix(in oklch, white 14%, transparent);
-  border-color: transparent;
-}
-.answer .conf-bar > span {
-  background: var(--hero-accent);
+.prec-glyph {
+  font-size: 9px;
+  line-height: 1;
+  margin-right: 5px;
 }
 @media (max-width: 620px) {
   .answer {
     padding: 34px 24px;
   }
-  .answer-grid {
-    grid-template-columns: 1fr;
-  }
-  .answer-side:first-child {
-    padding-right: 0;
-    padding-bottom: 30px;
-  }
-  .answer-side + .answer-side {
-    padding-left: 0;
-    padding-top: 30px;
-    border-left: 0;
-    border-top: 1px solid var(--on-hero-line);
-  }
-  .answer-value {
-    font-size: 56px;
+  .answer-price {
+    font-size: 64px;
   }
 }
 
-/* Niveau 2 : indicateurs secondaires — subordonnés, sans carte. */
+/* Niveau 2 : KPI épurés — subordonnés, sans carte. */
 .metrics-sec {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 28px;
   margin-top: 44px;
 }
@@ -691,24 +654,23 @@ h3 {
 .metric-sec {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 7px;
 }
 .ms-label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 .ms-value {
-  font-size: 23px;
+  font-size: 40px;
   font-weight: 600;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 .ms-meta {
-  font-size: 12px;
-  color: var(--muted);
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 .reco-disclaimer {

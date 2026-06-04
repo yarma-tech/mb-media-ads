@@ -1,0 +1,76 @@
+{
+  "numeric_features": [
+    "Duree_Campagne_Mois",
+    "Objectif_Audience_K_Vues",
+    "Score_Historique_Marque",
+    "Nb_Plateformes",
+    "Budget_Cible_K",
+    "Nb_Visuels_Crees"
+  ],
+  "categorical_features": [
+    "Secteur_Entreprise",
+    "Type_Entreprise_Prive_Public",
+    "Periode",
+    "Media_Numerique",
+    "Type_Pub_Normalise",
+    "Cible",
+    "Niveau_Confiance",
+    "Retargeting"
+  ],
+  "categorical_values": {
+    "Secteur_Entreprise": [
+      "Alimentation",
+      "Automobile",
+      "Luxe",
+      "Santé",
+      "Tech",
+      "Tourisme"
+    ],
+    "Type_Entreprise_Prive_Public": [
+      "Privé",
+      "Public"
+    ],
+    "Periode": [
+      "Black Friday",
+      "Halloween",
+      "Hors période",
+      "Pâques",
+      "Rentrée scolaire",
+      "Saint-Valentin",
+      "Semaine de relâche",
+      "Temps des Fêtes",
+      "Vacances d'été",
+      "Vacances de construction"
+    ],
+    "Media_Numerique": [
+      "Google Ads",
+      "Meta",
+      "TikTok",
+      "YouTube Ads"
+    ],
+    "Type_Pub_Normalise": [
+      "Logo début vidéo",
+      "Mention orale",
+      "Placement de produit",
+      "Video Ads",
+      "Video partenaire"
+    ],
+    "Cible": [
+      "Artisan",
+      "Gamers",
+      "Kids",
+      "Parent",
+      "Professionnel",
+      "Sport Lover"
+    ],
+    "Niveau_Confiance": [
+      "Faible",
+      "Moyen",
+      "Élevé"
+    ],
+    "Retargeting": [
+      "Non",
+      "Oui"
+    ]
+  }
+}

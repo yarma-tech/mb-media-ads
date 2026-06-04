@@ -14,9 +14,9 @@ const PLATFORM_ICON: Record<Plateforme, ComponentType<{ className?: string }>> =
 type Prec = { mot: "Précision" | "Confiance"; ratio: number };
 type KpiDesc = { key: string; label: string; value: string; prec: Prec };
 
-// KPI épurés : taux → audience → probabilité (conversions retiré).
-// Chaque KPI porte sa propre précision : régression → R², classification → AUC.
-// Audience n'a pas de modèle (dérivée) → on retombe sur la confiance de l'estimation.
+// KPI épurés : taux → audience (probabilité d'objectif retirée — jugée incohérente).
+// Chaque KPI porte sa propre précision : régression → R². Audience n'a pas de modèle
+// (dérivée) → on retombe sur la confiance de l'estimation.
 function kpisFor(reco: Recommandation): KpiDesc[] {
   const taux: KpiDesc = {
     key: "taux",
@@ -32,18 +32,7 @@ function kpisFor(reco: Recommandation): KpiDesc[] {
     value: kvues(reco.audienceK.value),
     prec: { mot: "Confiance", ratio: reco.audienceK.confiance },
   };
-  const kpis: KpiDesc[] = [taux, audience];
-  if (reco.pObjectif) {
-    kpis.push({
-      key: "proba",
-      label: "Probabilité d'atteinte de l'objectif",
-      value: pct(reco.pObjectif.value),
-      prec: reco.meta
-        ? { mot: "Précision", ratio: reco.meta.metrics.objectif.auc }
-        : { mot: "Confiance", ratio: reco.pObjectif.confiance },
-    });
-  }
-  return kpis;
+  return [taux, audience];
 }
 
 function precLine(p: Prec): string {

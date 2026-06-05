@@ -5,7 +5,9 @@ Un modèle par cible, choisi pour ses performances (plus de sélecteur côté si
 - taux     : Random Forest   (models/rf/model_conversion)
 - objectif : Logistic        (models/linear/model_objectif)
 
-Les deux familles (rf + linear) restent chargées car le mix pioche dans chacune.
+On ne charge QUE les modèles servis par le mix (linéaire prix+objectif, RF
+conversion). Les RF prix/objectif (~85 Mo) ne sont jamais utilisés → ni chargés
+en RAM (machine Fly 512 Mo) ni embarqués dans l'image (cf. .dockerignore).
 
 Endpoints :
 - GET  /health        : statut + versions + modèles chargés
@@ -30,7 +32,6 @@ from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parent
 MODELS_DIR = ROOT / "models"
-MODEL_TYPES = ("rf", "linear")
 
 CAT_COLS = [
     "Secteur_Entreprise",
@@ -123,15 +124,18 @@ def _load_metrics(name: str, key: str) -> dict:
 
 @app.on_event("startup")
 def load_models() -> None:
-    for mt in MODEL_TYPES:
-        d = MODELS_DIR / mt
-        if not (d / "model_prix.pkl").exists():
-            continue
-        MODELS[mt] = {
-            "prix": joblib.load(d / "model_prix.pkl"),
-            "conv": joblib.load(d / "model_conversion.pkl"),
-            "obj": joblib.load(d / "model_objectif.pkl"),
+    # Mix figé : prix + objectif = linéaire, taux = RF/conversion. On charge
+    # UNIQUEMENT ces 3 modèles ; les RF prix/objectif (~85 Mo) ne sont jamais
+    # utilisés et resteraient en RAM pour rien (machine Fly 512 Mo).
+    lin = MODELS_DIR / "linear"
+    if (lin / "model_prix.pkl").exists():
+        MODELS["linear"] = {
+            "prix": joblib.load(lin / "model_prix.pkl"),
+            "obj": joblib.load(lin / "model_objectif.pkl"),
         }
+    rf = MODELS_DIR / "rf"
+    if (rf / "model_conversion.pkl").exists():
+        MODELS["rf"] = {"conv": joblib.load(rf / "model_conversion.pkl")}
     METRICS["rf"] = _load_metrics("metrics_rf.json", "rf")
     METRICS["linear"] = _load_metrics("metrics_linear.json", "linear")
     print(f"✅ modèles chargés {list(MODELS)} (sklearn {sklearn.__version__})")

@@ -5,3 +5,9 @@ __pycache__/
 tests/
 scripts/
 .DS_Store
+
+# Modèles RF non servis par le mix figé (taux = rf/conversion uniquement).
+# prix + objectif = linéaire → ces 2 RF (~85 Mo) ne sont ni chargés ni embarqués.
+models/rf/model_prix.pkl
+models/rf/model_objectif.pkl
+models/linear/model_prix.pkl.bak

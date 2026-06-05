@@ -42,6 +42,8 @@ export type DemandeInput = {
   budget?: number; // mode budget
   objectifValeur?: number; // mode goal
   tauxCible?: number; // mode taux (0..1) — Conversion seulement
+  vuesCible?: number; // mode budget + Notoriété — vues souhaitées
+  conversionsCible?: number; // mode budget + Conversion — conversions cible
 };
 
 // Mode auto : la partie campagne du brief (les infos entreprise viennent du profil,
@@ -54,6 +56,8 @@ export type CampagneAutoInput = {
   budget?: number;
   objectifValeur?: number;
   tauxCible?: number; // mode taux (0..1)
+  vuesCible?: number; // mode budget + Notoriété — vues souhaitées
+  conversionsCible?: number; // mode budget + Conversion — conversions cible
 };
 
 // Mode manuel : une configuration unique choisie par l'utilisateur -> un tarif.

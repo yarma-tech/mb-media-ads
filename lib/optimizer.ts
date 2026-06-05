@@ -183,21 +183,75 @@ function aggregateTaux(placements: PlacementChoisi[], configs: Config[]): Estima
   return { value, lo: Math.max(0, value - width / 2), hi: Math.min(1, value + width / 2), confiance };
 }
 
-// Probabilité d'atteinte de l'objectif agrégée sur les placements retenus.
-// Pondération par valeur (poids du placement dans le résultat).
-function aggregatePObjectif(configs: Config[]): Estimation {
-  if (configs.length === 0) return { value: 0, lo: 0, hi: 0, confiance: 0 };
-  const totalW = configs.reduce((s, c) => s + Math.max(c.valeur, 1e-9), 0);
-  const value =
-    configs.reduce((s, c) => s + c.pObjectif * Math.max(c.valeur, 1e-9), 0) / totalW;
-  const confiance =
-    configs.reduce((s, c) => s + c.pObjectifConfiance * Math.max(c.valeur, 1e-9), 0) / totalW;
-  const spread = (1 - confiance) * 0.5;
+// Φ(z) — fonction de répartition de la loi normale centrée réduite.
+// Approximation de Zelen & Severo (26.2.17), erreur < 7,5e-8.
+function normalCdf(z: number): number {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.3989422804014327 * Math.exp(-0.5 * z * z);
+  const p =
+    d *
+    t *
+    (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  return z >= 0 ? 1 - p : p;
+}
+
+// P(estimation ≥ cible) à partir de l'intervalle 80 % de l'estimation.
+// σ ≈ (hi − lo) / (2·Z80) ; loi normale → Φ((value − cible) / σ).
+function probaAtLeast(est: Estimation, cible: number): number {
+  if (cible <= 0) return 1;
+  const sigma = (est.hi - est.lo) / (2 * Z80);
+  if (sigma <= 1e-9) return est.value >= cible ? 1 : 0;
+  return normalCdf((est.value - cible) / sigma);
+}
+
+// Probabilité d'atteinte de l'objectif, dérivée de l'écart entre l'estimation et
+// la cible chiffrée saisie (et non plus du classifieur ML). Alignée sur l'objectif :
+// Notoriété → vues, Conversion → taux (mode taux) ou conversions (mode budget).
+// Sans cible exploitable → undefined (le KPI est alors masqué).
+function probaObjectif(
+  input: {
+    mode: DemandeInput["mode"];
+    objectifPrincipal: ObjectifPrincipal;
+    objectifValeur?: number;
+    tauxCible?: number;
+    vuesCible?: number;
+    conversionsCible?: number;
+  },
+  est: { audienceK: Estimation; tauxConversion: Estimation; conversions: Estimation },
+): Estimation | undefined {
+  let proba: number | undefined;
+  let base: Estimation | undefined;
+
+  if (input.objectifPrincipal === "notoriete") {
+    // audienceK est en milliers de vues → cible ramenée en K.
+    const cibleK =
+      input.mode === "budget"
+        ? input.vuesCible !== undefined
+          ? input.vuesCible / 1000
+          : undefined
+        : input.objectifValeur; // mode goal : déjà en K
+    if (cibleK && cibleK > 0) {
+      proba = probaAtLeast(est.audienceK, cibleK);
+      base = est.audienceK;
+    }
+  } else if (input.mode === "taux") {
+    if (input.tauxCible && input.tauxCible > 0) {
+      proba = probaAtLeast(est.tauxConversion, input.tauxCible);
+      base = est.tauxConversion;
+    }
+  } else if (input.conversionsCible && input.conversionsCible > 0) {
+    // Conversion + mode budget.
+    proba = probaAtLeast(est.conversions, input.conversionsCible);
+    base = est.conversions;
+  }
+
+  if (proba === undefined || !base) return undefined;
+  const spread = (1 - base.confiance) * 0.5;
   return {
-    value,
-    lo: Math.max(0, value - spread),
-    hi: Math.min(1, value + spread),
-    confiance: Math.min(0.95, Math.max(0.05, confiance)),
+    value: proba,
+    lo: Math.max(0, proba - spread),
+    hi: Math.min(1, proba + spread),
+    confiance: base.confiance,
   };
 }
 
@@ -214,7 +268,14 @@ function toPlacement(c: Config): PlacementChoisi {
 }
 
 function assemble(
-  input: { mode: DemandeInput["mode"]; objectifPrincipal: ObjectifPrincipal },
+  input: {
+    mode: DemandeInput["mode"];
+    objectifPrincipal: ObjectifPrincipal;
+    objectifValeur?: number;
+    tauxCible?: number;
+    vuesCible?: number;
+    conversionsCible?: number;
+  },
   placements: PlacementChoisi[],
   chosen: Config[],
   leadScore: number,
@@ -225,20 +286,23 @@ function assemble(
   const taux = TAUX_COMMISSION;
   const coutMediaNet = placements.reduce((s, p) => s + p.prix, 0);
   const budgetTotal = coutMediaNet / (1 - taux);
+  const audienceK = aggregate(
+    placements.map((p) => p.audienceK),
+    SIGMA.audience,
+  );
+  const tauxConversion = aggregateTaux(placements, chosen);
+  const conversions = aggregate(
+    placements.map((p) => p.conversions),
+    SIGMA.conversions,
+  );
   return {
     mode: input.mode,
     objectifPrincipal: input.objectifPrincipal,
     placements,
-    audienceK: aggregate(
-      placements.map((p) => p.audienceK),
-      SIGMA.audience,
-    ),
-    tauxConversion: aggregateTaux(placements, chosen),
-    conversions: aggregate(
-      placements.map((p) => p.conversions),
-      SIGMA.conversions,
-    ),
-    pObjectif: aggregatePObjectif(chosen),
+    audienceK,
+    tauxConversion,
+    conversions,
+    pObjectif: probaObjectif(input, { audienceK, tauxConversion, conversions }),
     coutMediaNet,
     commission: budgetTotal - coutMediaNet,
     tauxCommission: taux,

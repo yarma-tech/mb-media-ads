@@ -38,9 +38,9 @@ function kpisFor(reco: Recommandation): KpiDesc[] {
       key: "proba",
       label: "Probabilité d'atteinte de l'objectif",
       value: pct(reco.pObjectif.value),
-      prec: reco.meta
-        ? { mot: "Précision", ratio: reco.meta.metrics.objectif.auc }
-        : { mot: "Confiance", ratio: reco.pObjectif.confiance },
+      // La proba dérive désormais de l'écart estimation/cible (et non du
+      // classifieur ML) → la précision affichée est la confiance de l'estimation.
+      prec: { mot: "Confiance", ratio: reco.pObjectif.confiance },
     });
   }
   return kpis;

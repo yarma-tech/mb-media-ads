@@ -8,7 +8,7 @@ import {
   OBJECTIF_LABEL,
   OBJECTIFS,
 } from "@/lib/enums";
-import { eur, formatPeriode } from "@/lib/format";
+import { eur, formatPeriode, num } from "@/lib/format";
 import type { CampagneAutoInput, Recommandation } from "@/lib/types";
 import { recommander } from "../actions";
 import { IconArrowLeft, IconArrowRight, IconEye, IconShoppingBag, IconTarget, IconWallet } from "./icons";
@@ -35,6 +35,8 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
   const [budget, setBudget] = useState("");
   const [objectifValeur, setObjectifValeur] = useState("");
   const [tauxPct, setTauxPct] = useState("");
+  const [vuesCible, setVuesCible] = useState("");
+  const [conversionsCible, setConversionsCible] = useState("");
 
   // Le 2ᵉ bouton de contrainte dépend de l'objectif : "taux de conversion" en
   // Conversion, "objectif chiffré" (audience) en Notoriété.
@@ -65,6 +67,8 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
     if (dateDebut && dateFin && dateFin < dateDebut) e.dateFin = "La fin doit suivre le début";
     if (mode === "budget") {
       if (!budget || Number(budget) <= 0) e.budget = "Indiquez un budget positif";
+      const cibleStr = objectif === "notoriete" ? vuesCible : conversionsCible;
+      if (cibleStr && Number(cibleStr) <= 0) e.cible = "Indiquez une cible positive";
     } else if (mode === "taux") {
       const t = Number(tauxPct);
       if (!tauxPct || t <= 0 || t > 100) e.tauxCible = "Indiquez un taux entre 1 et 100";
@@ -83,6 +87,12 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
       budget: mode === "budget" ? Number(budget) : undefined,
       objectifValeur: mode === "goal" ? Number(objectifValeur) : undefined,
       tauxCible: mode === "taux" ? Number(tauxPct) / 100 : undefined,
+      vuesCible:
+        mode === "budget" && objectif === "notoriete" && vuesCible ? Number(vuesCible) : undefined,
+      conversionsCible:
+        mode === "budget" && objectif === "conversion" && conversionsCible
+          ? Number(conversionsCible)
+          : undefined,
     };
   }
 
@@ -108,9 +118,14 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
     setSubmitError("");
   }
 
+  const cibleSaisie = objectif === "notoriete" ? vuesCible : conversionsCible;
+  const cibleResume =
+    mode === "budget" && cibleSaisie && Number(cibleSaisie) > 0
+      ? ` · cible ${num(Number(cibleSaisie))} ${objectif === "notoriete" ? "vues" : "conversions"}`
+      : "";
   const contrainteResume =
     mode === "budget"
-      ? `budget ${eur(Number(budget) || 0)}`
+      ? `budget ${eur(Number(budget) || 0)}${cibleResume}`
       : mode === "taux"
         ? `taux visé ${tauxPct || 0} %`
         : `objectif ${objectifValeur || 0} K`;
@@ -157,12 +172,33 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
               </button>
             </div>
             {mode === "budget" ? (
-              <div className="field">
-                <label htmlFor="budget">Budget total (€)</label>
-                <input id="budget" type="number" min="0" inputMode="numeric" value={budget} onChange={(e) => setBudget(e.target.value)} aria-invalid={!!errors.budget} placeholder="Ex. 5000" />
-                <span className="hint">Commission MB Média incluse dans ce montant.</span>
-                {errors.budget ? <span className="field-error">{errors.budget}</span> : null}
-              </div>
+              <>
+                <div className="field">
+                  <label htmlFor="budget">Budget total (€)</label>
+                  <input id="budget" type="number" min="0" inputMode="numeric" value={budget} onChange={(e) => setBudget(e.target.value)} aria-invalid={!!errors.budget} placeholder="Ex. 5000" />
+                  <span className="hint">Commission MB Média incluse dans ce montant.</span>
+                  {errors.budget ? <span className="field-error">{errors.budget}</span> : null}
+                </div>
+                <div className="field" style={{ marginTop: 16 }}>
+                  <label htmlFor="cible">
+                    {objectif === "notoriete" ? "Vues souhaitées (facultatif)" : "Conversions cible (facultatif)"}
+                  </label>
+                  <input
+                    id="cible"
+                    type="number"
+                    min="0"
+                    inputMode="numeric"
+                    value={objectif === "notoriete" ? vuesCible : conversionsCible}
+                    onChange={(e) =>
+                      objectif === "notoriete" ? setVuesCible(e.target.value) : setConversionsCible(e.target.value)
+                    }
+                    aria-invalid={!!errors.cible}
+                    placeholder={objectif === "notoriete" ? "Ex. 300 000" : "Ex. 5 000"}
+                  />
+                  <span className="hint">Sert à estimer la probabilité d'atteinte. Laissez vide si vous n'avez pas de cible.</span>
+                  {errors.cible ? <span className="field-error">{errors.cible}</span> : null}
+                </div>
+              </>
             ) : mode === "taux" ? (
               <div className="field">
                 <label htmlFor="taux">Taux de conversion visé (%)</label>

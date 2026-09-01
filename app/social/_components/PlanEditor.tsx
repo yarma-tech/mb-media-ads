@@ -4,12 +4,13 @@ import { useRef, useState, useTransition } from "react";
 import {
   addAdAction,
   createShareAction,
+  createUploadUrlAction,
   deleteAdAction,
   resolveCommentAction,
   updateAdAction,
-  uploadMediaAction,
   type AdPatch,
 } from "@/app/social/actions";
+import { getBrowserClient } from "@/lib/supabase";
 import type { CopyVariation } from "@/lib/social-ads/copy";
 import {
   CTAS,
@@ -201,17 +202,31 @@ function AdEditorCard({
   }
 
   async function upload(file: File, as: "media" | "logo") {
-    const fd = new FormData();
-    fd.set("file", file);
-    const res = await uploadMediaAction(planId, fd);
+    const MAX = 300 * 1024 * 1024; // 300 Mo (aligné sur la limite du bucket)
+    if (file.size > MAX) {
+      alert(`Fichier trop lourd (${(file.size / 1024 / 1024).toFixed(0)} Mo). Maximum 300 Mo.`);
+      return;
+    }
+    const res = await createUploadUrlAction(planId, file.name, file.type);
     if ("error" in res) {
       alert(`Upload : ${res.error}`);
       return;
     }
+    const sb = getBrowserClient();
+    if (!sb) {
+      alert("Supabase non configuré.");
+      return;
+    }
+    // Envoi direct navigateur → Storage (ne passe pas par le serveur Next).
+    const { error } = await sb.storage.from("social-ads").uploadToSignedUrl(res.path, res.token, file);
+    if (error) {
+      alert(`Upload : ${error.message}`);
+      return;
+    }
     if (as === "logo") {
-      set({ marque_logo: res.media.url });
+      set({ marque_logo: res.publicUrl });
     } else {
-      const medias = [...ad.medias, res.media];
+      const medias = [...ad.medias, { type: res.type, url: res.publicUrl }];
       set({ medias });
     }
   }

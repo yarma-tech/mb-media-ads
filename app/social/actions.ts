@@ -89,27 +89,25 @@ export async function resolveCommentAction(
   return ok;
 }
 
-// Upload d'un média dans le bucket public `social-ads` via le client SSR
-// (JWT du partenaire → satisfait la policy "authenticated"). Renvoie l'URL publique.
-export async function uploadMediaAction(
+// Crée une URL d'upload signée pour le bucket public `social-ads`. Le fichier est
+// ensuite envoyé DIRECTEMENT depuis le navigateur (uploadToSignedUrl) — il ne
+// transite pas par le serveur Next, ce qui lève la limite ~1 Mo des Server Actions
+// et permet les vidéos lourdes (plafond = limite du bucket / du projet Supabase).
+export async function createUploadUrlAction(
   planId: string,
-  formData: FormData,
-): Promise<{ media: Media } | { error: string }> {
-  const file = formData.get("file");
-  if (!(file instanceof File)) return { error: "Aucun fichier." };
+  filename: string,
+  contentType: string,
+): Promise<{ path: string; token: string; publicUrl: string; type: Media["type"] } | { error: string }> {
   const sb = await createServerSupabase();
-  const ext = (file.name.split(".").pop() || "bin").toLowerCase();
+  const ext = (filename.split(".").pop() || "bin").toLowerCase();
   const path = `plans/${planId}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await sb.storage.from("social-ads").upload(path, file, {
-    contentType: file.type || undefined,
-    upsert: false,
-  });
-  if (error) return { error: error.message };
-  const { data } = sb.storage.from("social-ads").getPublicUrl(path);
-  const type: Media["type"] = file.type.startsWith("video")
+  const { data, error } = await sb.storage.from("social-ads").createSignedUploadUrl(path);
+  if (error || !data) return { error: error?.message ?? "URL d'upload indisponible." };
+  const { data: pub } = sb.storage.from("social-ads").getPublicUrl(path);
+  const type: Media["type"] = contentType.startsWith("video")
     ? "video"
     : ext === "gif"
       ? "gif"
       : "image";
-  return { media: { type, url: data.publicUrl } };
+  return { path, token: data.token, publicUrl: pub.publicUrl, type };
 }

@@ -49,12 +49,24 @@ export type Media = {
   hauteur?: number;
 };
 
+export const RATIOS = ["1:1", "4:5", "1.91:1", "9:16"] as const;
+export type Ratio = (typeof RATIOS)[number];
+
+// Valeur numérique largeur/hauteur pour la boîte média.
+export const RATIO_VALUE: Record<Ratio, number> = {
+  "1:1": 1,
+  "4:5": 0.8,
+  "1.91:1": 1.91,
+  "9:16": 0.5625,
+};
+
 export type Ad = {
   id: string;
   plan_id: string;
   ordre: number;
   plateforme: Plateforme;
   format: Format;
+  ratio: Ratio;
   marque_nom: string | null;
   marque_handle: string | null;
   marque_logo: string | null;
@@ -115,13 +127,84 @@ export const PLAN_STATUT_LABEL: Record<PlanStatut, string> = {
   approuve: "Approuvé",
 };
 
-// Limites de caractères indicatives par plateforme (aide à la rédaction / LLM).
-export const LIMITES: Record<Plateforme, { texte_principal: number; titre: number }> = {
-  facebook: { texte_principal: 500, titre: 40 },
-  instagram: { texte_principal: 300, titre: 40 },
-  linkedin: { texte_principal: 600, titre: 70 },
-  tiktok: { texte_principal: 150, titre: 40 },
+// ---------------------------------------------------------------------------
+// Référentiel de specs par (plateforme × format).
+// Source : specs publicitaires officielles 2026 (Meta / LinkedIn / TikTok).
+//   texteShown = nb de caractères affichés avant « … Voir plus »
+//   texteMax   = plafond dur du champ
+//   texteHard  = coupe dure sans « Voir plus » (TikTok)
+//   titreMax   = plafond du titre ; titreHard = coupe dure (LinkedIn)
+//   ratios     = ratios d'image autorisés (le 1er est le défaut)
+//   safeZone   = fractions (0..1) à laisser libres de texte (formats verticaux)
+// ---------------------------------------------------------------------------
+export type FormatSpec = {
+  texteShown: number;
+  texteMax: number;
+  texteHard: boolean;
+  titreMax: number;
+  titreHard: boolean;
+  ratios: Ratio[];
+  resolution: string;
+  safeZone?: { top: number; right: number; bottom: number };
 };
+
+const META_FEED = { texteShown: 125, texteMax: 63206, texteHard: false, titreMax: 40, titreHard: true };
+const META_SAFE = { top: 0.14, right: 0.06, bottom: 0.2 };
+
+export const SPECS: Record<Plateforme, Partial<Record<Format, FormatSpec>>> = {
+  facebook: {
+    feed_image: { ...META_FEED, ratios: ["1:1", "4:5", "1.91:1"], resolution: "1080×1080" },
+    feed_carrousel: { ...META_FEED, titreMax: 40, ratios: ["1:1"], resolution: "1080×1080" },
+    feed_video: { ...META_FEED, ratios: ["1:1", "4:5", "1.91:1"], resolution: "1080×1080" },
+    story: { ...META_FEED, ratios: ["9:16"], resolution: "1080×1920", safeZone: META_SAFE },
+  },
+  instagram: {
+    feed_image: { texteShown: 125, texteMax: 2200, texteHard: false, titreMax: 40, titreHard: true, ratios: ["1:1", "4:5"], resolution: "1080×1080" },
+    feed_carrousel: { texteShown: 125, texteMax: 2200, texteHard: false, titreMax: 40, titreHard: true, ratios: ["1:1", "4:5"], resolution: "1080×1080" },
+    feed_video: { texteShown: 125, texteMax: 2200, texteHard: false, titreMax: 40, titreHard: true, ratios: ["1:1", "4:5"], resolution: "1080×1080" },
+    story: { texteShown: 125, texteMax: 2200, texteHard: false, titreMax: 40, titreHard: true, ratios: ["9:16"], resolution: "1080×1920", safeZone: META_SAFE },
+    reel: { texteShown: 125, texteMax: 2200, texteHard: false, titreMax: 40, titreHard: true, ratios: ["9:16"], resolution: "1080×1920", safeZone: META_SAFE },
+  },
+  linkedin: {
+    feed_image: { texteShown: 150, texteMax: 600, texteHard: false, titreMax: 70, titreHard: true, ratios: ["1.91:1", "1:1", "4:5"], resolution: "1200×627" },
+    feed_carrousel: { texteShown: 255, texteMax: 600, texteHard: false, titreMax: 45, titreHard: true, ratios: ["1:1"], resolution: "1080×1080" },
+    feed_video: { texteShown: 150, texteMax: 600, texteHard: false, titreMax: 70, titreHard: true, ratios: ["1:1", "4:5", "1.91:1"], resolution: "1200×627" },
+  },
+  tiktok: {
+    reel: { texteShown: 50, texteMax: 100, texteHard: true, titreMax: 0, titreHard: true, ratios: ["9:16"], resolution: "1080×1920", safeZone: { top: 0.1, right: 0.1, bottom: 0.2 } },
+  },
+};
+
+// Spec effective d'une annonce, avec repli raisonnable si le couple est absent.
+export function getSpec(plateforme: Plateforme, format: Format): FormatSpec {
+  const s = SPECS[plateforme]?.[format];
+  if (s) return s;
+  const anyFormat = Object.values(SPECS[plateforme])[0];
+  return (
+    anyFormat ?? {
+      texteShown: 125,
+      texteMax: 2200,
+      texteHard: false,
+      titreMax: 40,
+      titreHard: true,
+      ratios: ["1:1"],
+      resolution: "1080×1080",
+    }
+  );
+}
+
+// Ratios d'image proposables pour un format donné.
+export function getAllowedRatios(plateforme: Plateforme, format: Format): Ratio[] {
+  return getSpec(plateforme, format).ratios;
+}
+
+// Tronque un texte à `shown` caractères en respectant les mots (pour « Voir plus »).
+export function tronquer(texte: string, shown: number): { visible: string; coupe: boolean } {
+  if (texte.length <= shown) return { visible: texte, coupe: false };
+  const brut = texte.slice(0, shown);
+  const espace = brut.lastIndexOf(" ");
+  return { visible: (espace > shown * 0.6 ? brut.slice(0, espace) : brut).trimEnd(), coupe: true };
+}
 
 // Génère un token public court et non devinable pour un lien de partage.
 export function genererToken(): string {

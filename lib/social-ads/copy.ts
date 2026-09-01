@@ -5,7 +5,7 @@
 // CTA clair. Retourne plusieurs variations prêtes à coller dans l'éditeur.
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
-import { LIMITES, PLATEFORME_LABEL, type Format, type Plateforme } from "./types";
+import { getSpec, PLATEFORME_LABEL, type Format, type Plateforme } from "./types";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5";
 
@@ -54,12 +54,15 @@ export async function genererCopy(input: CopyInput): Promise<CopyVariation[]> {
   if (!copyConfigured()) throw new Error("ANTHROPIC_API_KEY manquante.");
   const client = new Anthropic();
   const n = Math.min(Math.max(input.nbVariations ?? 3, 1), 5);
-  const lim = LIMITES[input.plateforme];
+  const spec = getSpec(input.plateforme, input.format);
 
   const prompt = `Plateforme : ${PLATEFORME_LABEL[input.plateforme]}
 Format : ${input.format}
 Objectif : ${input.objectif}
-${input.marque ? `Marque : ${input.marque}\n` : ""}${input.ton ? `Ton souhaité : ${input.ton}\n` : ""}Limites de caractères : texte principal ≤ ${lim.texte_principal}, titre ≤ ${lim.titre}.
+${input.marque ? `Marque : ${input.marque}\n` : ""}${input.ton ? `Ton souhaité : ${input.ton}\n` : ""}Contraintes de caractères (STRICTES) :
+- Texte principal : vise ≤ ${spec.texteShown} caractères (au-delà, la plateforme masque derrière « Voir plus ») ; ne dépasse jamais ${spec.texteMax}.
+- L'essentiel du message et le CTA doivent tenir dans les ${spec.texteShown} premiers caractères.
+${spec.titreMax > 0 ? `- Titre : ≤ ${spec.titreMax} caractères${spec.titreHard ? " (coupe DURE, pas de « voir plus »)" : ""}.` : "- Pas de titre séparé pour ce format."}
 
 Brief :
 ${input.brief}

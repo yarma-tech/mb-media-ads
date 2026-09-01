@@ -12,7 +12,14 @@ import {
   updateAd,
 } from "@/lib/social-ads/db";
 import { createServerSupabase } from "@/lib/supabase-server";
-import { genererToken, type Ad, type Format, type Media, type Plateforme } from "@/lib/social-ads/types";
+import {
+  genererToken,
+  getAllowedRatios,
+  type Ad,
+  type Format,
+  type Media,
+  type Plateforme,
+} from "@/lib/social-ads/types";
 
 // Créer un plan puis rediriger vers son éditeur.
 export async function createPlanAction(formData: FormData): Promise<void> {
@@ -28,7 +35,8 @@ export async function addAdAction(
   plateforme: Plateforme,
   format: Format,
 ): Promise<Ad | null> {
-  const ad = await insertAd(planId, { plateforme, format });
+  const ratio = getAllowedRatios(plateforme, format)[0];
+  const ad = await insertAd(planId, { plateforme, format, ratio });
   revalidatePath(`/social/${planId}`);
   return ad;
 }
@@ -38,6 +46,7 @@ export type AdPatch = Partial<
     Ad,
     | "plateforme"
     | "format"
+    | "ratio"
     | "marque_nom"
     | "marque_handle"
     | "marque_logo"

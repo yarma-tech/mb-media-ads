@@ -15,7 +15,8 @@ import {
   CTAS,
   FORMAT_LABEL,
   FORMATS_PAR_PLATEFORME,
-  LIMITES,
+  getAllowedRatios,
+  getSpec,
   PLATEFORME_LABEL,
   PLATEFORMES,
   PLAN_STATUT_LABEL,
@@ -26,6 +27,7 @@ import {
   type Media,
   type Plan,
   type Plateforme,
+  type Ratio,
 } from "@/lib/social-ads/types";
 import SocialPreview from "./SocialPreview";
 import CopyAssistant from "./CopyAssistant";
@@ -180,7 +182,10 @@ function AdEditorCard({
   const [saving, setSaving] = useState<"idle" | "saving" | "saved">("idle");
   const fileRef = useRef<HTMLInputElement>(null);
   const logoRef = useRef<HTMLInputElement>(null);
-  const lim = LIMITES[ad.plateforme];
+  const spec = getSpec(ad.plateforme, ad.format);
+  const ratios = getAllowedRatios(ad.plateforme, ad.format);
+  const texteLen = (ad.texte_principal ?? "").length;
+  const titreLen = (ad.titre ?? "").length;
 
   async function persist(patch: AdPatch) {
     setSaving("saving");
@@ -241,7 +246,8 @@ function AdEditorCard({
                   const format = FORMATS_PAR_PLATEFORME[plateforme].includes(ad.format)
                     ? ad.format
                     : FORMATS_PAR_PLATEFORME[plateforme][0];
-                  set({ plateforme, format });
+                  const ratio = getAllowedRatios(plateforme, format)[0];
+                  set({ plateforme, format, ratio });
                 }}
               >
                 {PLATEFORMES.map((p) => (
@@ -253,7 +259,15 @@ function AdEditorCard({
             </label>
             <label className="sap-field">
               <span>Format</span>
-              <select value={ad.format} onChange={(e) => set({ format: e.target.value as Format })}>
+              <select
+                value={ad.format}
+                onChange={(e) => {
+                  const format = e.target.value as Format;
+                  const allowed = getAllowedRatios(ad.plateforme, format);
+                  const ratio = allowed.includes(ad.ratio) ? ad.ratio : allowed[0];
+                  set({ format, ratio });
+                }}
+              >
                 {formats.map((f) => (
                   <option key={f} value={f}>
                     {FORMAT_LABEL[f]}
@@ -261,6 +275,18 @@ function AdEditorCard({
                 ))}
               </select>
             </label>
+            {ratios.length > 1 ? (
+              <label className="sap-field sap-field-ratio">
+                <span>Ratio</span>
+                <select value={ad.ratio} onChange={(e) => set({ ratio: e.target.value as Ratio })}>
+                  {ratios.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
           </div>
           <button type="button" className="sap-remove" onClick={onRemove} aria-label="Supprimer">
             ✕
@@ -335,8 +361,8 @@ function AdEditorCard({
         <label className="sap-field">
           <span>
             Texte principal
-            <em className="sap-count">
-              {(ad.texte_principal ?? "").length}/{lim.texte_principal}
+            <em className={`sap-count ${texteLen > spec.texteShown ? "over" : ""}`}>
+              {texteLen}/{spec.texteShown} affichés · max {spec.texteMax}
             </em>
           </span>
           <textarea
@@ -348,16 +374,22 @@ function AdEditorCard({
         </label>
 
         <div className="sap-field-row">
-          <label className="sap-field">
-            <span>
-              Titre <em className="sap-count">{(ad.titre ?? "").length}/{lim.titre}</em>
-            </span>
-            <input
-              defaultValue={ad.titre ?? ""}
-              onChange={(e) => onLocalPatch({ titre: e.target.value })}
-              onBlur={(e) => persist({ titre: e.target.value })}
-            />
-          </label>
+          {spec.titreMax > 0 ? (
+            <label className="sap-field">
+              <span>
+                Titre{" "}
+                <em className={`sap-count ${titreLen > spec.titreMax ? "over" : ""}`}>
+                  {titreLen}/{spec.titreMax}
+                  {spec.titreHard ? " (dur)" : ""}
+                </em>
+              </span>
+              <input
+                defaultValue={ad.titre ?? ""}
+                onChange={(e) => onLocalPatch({ titre: e.target.value })}
+                onBlur={(e) => persist({ titre: e.target.value })}
+              />
+            </label>
+          ) : null}
           <label className="sap-field">
             <span>Bouton (CTA)</span>
             <input

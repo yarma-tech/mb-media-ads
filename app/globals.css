@@ -1330,3 +1330,21 @@ td.num {
 .sap-decision-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .btn-danger { background: var(--danger); color: #fff; }
 .sap-general { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+/* ---- Gabarits précis : ratio, safe zone, troncature ---- */
+.sap-previewwrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.sap-spec-note { margin: 0; font-size: 12px; color: var(--muted); }
+.sap-field-ratio { flex: 0 0 92px; }
+.sap-count.over { color: var(--danger); font-weight: 600; }
+.sap-voirplus { color: #65676b; }
+.sap-safe-toggle { font-size: 12px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; align-self: flex-start; cursor: pointer; }
+.sap-safe { position: absolute; inset: 0; pointer-events: none; }
+.sap-safe-band {
+  position: absolute; left: 0; right: 0;
+  background: repeating-linear-gradient(45deg, rgba(255,45,85,0.28), rgba(255,45,85,0.28) 8px, rgba(255,45,85,0.12) 8px, rgba(255,45,85,0.12) 16px);
+  border: 1px dashed rgba(255,45,85,0.7);
+}
+.sap-safe-tag {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  background: rgba(0,0,0,0.6); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px;
+}

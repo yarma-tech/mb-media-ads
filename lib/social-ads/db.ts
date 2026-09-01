@@ -115,6 +115,7 @@ function sanitizeAd(p: Partial<Ad>): Record<string, unknown> {
   const keys: (keyof Ad)[] = [
     "plateforme",
     "format",
+    "ratio",
     "ordre",
     "marque_nom",
     "marque_handle",

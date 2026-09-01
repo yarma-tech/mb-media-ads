@@ -14,6 +14,13 @@ LLM rédige les contenus marketing.
 - **Lien de partage public** `/preview/{token}` : validation (Approuver / Demander une révision) + commentaires, **sans compte**.
 - Suivi côté owner : statut du plan (Brouillon → En revue → Approuvé), feedback par annonce.
 
+**Gabarits précis :** un référentiel de specs officielles 2026 par (plateforme × format)
+vit dans `lib/social-ads/types.ts` (`SPECS`, `getSpec`) : ratio d'image, résolution,
+seuil « Voir plus », plafond dur, coupe dure du titre, safe zones. Le mockup applique
+le ratio choisi, tronque le texte au bon seuil et peut afficher la zone sûre (formats
+verticaux). **Meta (Facebook/Instagram) est encodé au plus juste** ; LinkedIn et TikTok
+utilisent la même mécanique (valeurs à affiner).
+
 **Hors V1 (prévu) :** mockup sur sites de presse/display (V2), notifications e-mail, multi-relecteurs avancé, versions.
 
 ## Architecture

@@ -25,6 +25,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {user ? (
                 <>
                   <Link href="/campagne">Lancer une campagne</Link>
+                  <Link href="/social">Social Ads</Link>
                   {profile?.is_admin ? <Link href="/admin">Espace MB Média</Link> : null}
                   <form action={signOutAction}>
                     <button className="navlink" type="submit">

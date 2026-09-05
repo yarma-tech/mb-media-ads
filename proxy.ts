@@ -12,6 +12,8 @@ function isPublic(pathname: string): boolean {
   // Callback d'auth + webhook de paiement (Stripe) doivent rester accessibles sans session.
   if (pathname.startsWith("/auth")) return true;
   if (pathname.startsWith("/api/stripe")) return true;
+  // Lien public de validation Social Ads : accessible sans compte (par TOKEN).
+  if (pathname.startsWith("/preview/")) return true;
   return false;
 }
 

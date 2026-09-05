@@ -1042,3 +1042,309 @@ td.num {
     transition: none !important;
   }
 }
+
+/* ===========================================================================
+   Module Social Ads — éditeur, mockups de plateformes, page de validation.
+   =========================================================================== */
+
+/* ---- Listes de plans / création ---- */
+.sap-newplan {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 18px 0 26px;
+}
+.sap-newplan input {
+  flex: 1 1 220px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font: inherit;
+}
+.sap-planlist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+.sap-plan-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+}
+.sap-plan-item:hover {
+  text-decoration: none;
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+.sap-empty-hint {
+  color: var(--ink-soft);
+  padding: 22px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+/* ---- Statuts ---- */
+.sap-statut {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+.sap-statut-brouillon { background: var(--fill); color: var(--ink-soft); }
+.sap-statut-en_revue { background: var(--warn-wash); color: oklch(0.45 0.13 65); }
+.sap-statut-approuve { background: var(--success-wash); color: oklch(0.42 0.12 150); }
+
+/* ---- Barre d'outils de l'éditeur ---- */
+.sap-editor { margin-top: 18px; }
+.sap-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  position: sticky;
+  top: 60px;
+  z-index: 5;
+}
+.sap-add, .sap-share { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sap-toolbar select {
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font: inherit;
+}
+.sap-sharebox { display: flex; gap: 6px; align-items: center; }
+.sap-sharebox input {
+  width: min(340px, 52vw);
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font: inherit;
+  font-size: 13px;
+}
+
+/* ---- Cartes d'annonce (formulaire + preview) ---- */
+.sap-ads { display: grid; gap: 18px; margin-top: 18px; }
+.sap-adcard {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 22px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+@media (max-width: 860px) {
+  .sap-adcard { grid-template-columns: 1fr; }
+}
+.sap-adcard-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.sap-remove {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: var(--radius-pill);
+  width: 30px; height: 30px;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+.sap-remove:hover { color: var(--danger); border-color: var(--danger); }
+
+.sap-field-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.sap-field { display: flex; flex-direction: column; gap: 5px; flex: 1 1 160px; margin-bottom: 12px; }
+.sap-field > span { font-size: 12px; font-weight: 600; color: var(--ink-soft); display: flex; justify-content: space-between; }
+.sap-count { font-style: normal; font-weight: 400; color: var(--muted); }
+.sap-field input, .sap-field select, .sap-field textarea {
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+.sap-field input:focus, .sap-field textarea:focus, .sap-field select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+.sap-media-tools { display: flex; gap: 10px; align-items: center; margin: 4px 0 8px; flex-wrap: wrap; }
+.sap-media-list { list-style: none; padding: 0; margin: 0 0 12px; display: grid; gap: 6px; }
+.sap-media-list li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-soft); }
+.sap-media-chip {
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--fill);
+}
+.sap-media-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sap-savehint { height: 16px; font-size: 12px; color: var(--success); }
+
+/* ---- Assistant IA ---- */
+.sap-ai-toggle { margin: 4px 0; }
+.sap-ai {
+  margin: 10px 0;
+  padding: 14px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-wash);
+}
+.sap-ai-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.sap-variations { display: grid; gap: 8px; margin-top: 12px; }
+.sap-variation {
+  display: flex; gap: 10px; align-items: flex-start; justify-content: space-between;
+  padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.sap-variation-main { margin: 0 0 4px; font-size: 14px; }
+.sap-variation-title { margin: 0; font-weight: 600; font-size: 13px; }
+.sap-variation-tags { margin: 4px 0 0; font-size: 12px; color: var(--accent-strong); }
+.sap-error { color: var(--danger); font-size: 13px; }
+
+/* ---- Feedback (badges + commentaires) ---- */
+.sap-feedback { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.sap-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: var(--radius-pill); }
+.sap-badge-approuve { background: var(--success-wash); color: oklch(0.42 0.12 150); }
+.sap-badge-revision { background: var(--danger-wash); color: var(--danger); }
+.sap-comment {
+  display: flex; justify-content: space-between; gap: 10px;
+  font-size: 13px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface-2);
+  margin-top: 6px;
+}
+.sap-comment.resolu { opacity: 0.5; text-decoration: line-through; }
+.sap-comments { display: grid; gap: 6px; margin: 8px 0; }
+.sap-comment-box { display: flex; gap: 8px; align-items: flex-end; }
+.sap-comment-box textarea {
+  flex: 1; padding: 8px 10px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font: inherit; font-size: 13px; resize: vertical;
+}
+
+/* ===========================================================================
+   Mockups de plateformes (sap-*) — présentationnel.
+   =========================================================================== */
+.sap-frame { display: flex; justify-content: center; }
+.sap-card {
+  width: 340px;
+  max-width: 100%;
+  background: #fff;
+  color: #050505;
+  border: 1px solid #dadde1;
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.sap-adcard-preview { position: sticky; top: 130px; align-self: start; }
+
+.sap-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; }
+.sap-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.sap-avatar-fallback {
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #6a7cff, #9b5cff); color: #fff; font-weight: 700;
+}
+.sap-head-txt { display: flex; flex-direction: column; line-height: 1.2; flex: 1; }
+.sap-head-txt strong { font-size: 14px; }
+.sap-sub { color: #65676b; font-size: 12px; }
+.sap-dots { color: #65676b; }
+.sap-body { padding: 0 12px 10px; margin: 0; white-space: pre-wrap; }
+
+.sap-media { position: relative; background: #000; aspect-ratio: 1.91 / 1; display: flex; }
+.sap-media img, .sap-media video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sap-media-vertical { aspect-ratio: 9 / 16; }
+.sap-media-empty {
+  background: repeating-linear-gradient(45deg, #eef0f3, #eef0f3 12px, #e6e8ec 12px, #e6e8ec 24px);
+  align-items: center; justify-content: center; color: #9aa0a6; font-size: 13px;
+}
+.sap-carousel-dots { position: absolute; bottom: 8px; left: 0; right: 0; display: flex; gap: 5px; justify-content: center; }
+.sap-carousel-dots button { width: 7px; height: 7px; border-radius: 50%; border: 0; background: rgba(255,255,255,0.6); cursor: pointer; padding: 0; }
+.sap-carousel-dots button.on { background: #fff; }
+.sap-carousel-count { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.6); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 12px; }
+
+.sap-linkbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #f0f2f5; padding: 10px 12px; }
+.sap-linkbar-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sap-domain { text-transform: uppercase; font-size: 11px; color: #65676b; }
+.sap-linkbar-txt strong { font-size: 14px; }
+.sap-desc { font-size: 12px; color: #65676b; }
+.sap-cta-btn {
+  flex: 0 0 auto; background: #e4e6eb; color: #050505; font-weight: 600;
+  font-size: 13px; padding: 8px 12px; border-radius: 6px; white-space: nowrap;
+}
+.sap-actions { display: flex; justify-content: space-around; padding: 8px 4px; border-top: 1px solid #edeef1; color: #65676b; font-size: 13px; }
+
+/* Instagram */
+.sap-ig .sap-media { aspect-ratio: 1 / 1; }
+.sap-ig-ctabar { background: #efefef; color: #0095f6; font-weight: 600; padding: 9px 12px; text-align: center; font-size: 13px; }
+.sap-ig-actions { justify-content: flex-start; gap: 16px; padding: 8px 12px; font-size: 18px; border: 0; }
+.sap-ig .sap-body { font-size: 13px; }
+.sap-ig-story, .sap-tt { width: 300px; position: relative; background: #000; border: 0; }
+.sap-ig-story .sap-media, .sap-tt .sap-media { aspect-ratio: 9 / 16; }
+.sap-story-top { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; align-items: center; gap: 8px; color: #fff; font-size: 13px; }
+.sap-story-top .sap-avatar { width: 30px; height: 30px; border: 2px solid #fff; }
+.sap-story-top .sap-sub { color: rgba(255,255,255,0.85); }
+.sap-story-caption { position: absolute; bottom: 74px; left: 12px; right: 12px; color: #fff; margin: 0; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+.sap-story-cta { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: #fff; font-weight: 600; }
+
+/* LinkedIn */
+.sap-li-linkbar { background: #f3f6f8; }
+.sap-li .sap-cta-btn { background: #0a66c2; color: #fff; border-radius: 20px; }
+
+/* TikTok */
+.sap-tt-overlay { position: absolute; left: 0; right: 46px; bottom: 0; padding: 14px; color: #fff; background: linear-gradient(transparent, rgba(0,0,0,0.55)); }
+.sap-tt-meta strong { font-size: 15px; }
+.sap-tt-meta p { margin: 4px 0 0; font-size: 13px; }
+.sap-tt-cta { margin-top: 10px; background: #fe2c55; color: #fff; text-align: center; font-weight: 700; padding: 9px; border-radius: 6px; }
+.sap-tt-rail { position: absolute; right: 8px; bottom: 20px; display: flex; flex-direction: column; gap: 16px; color: #fff; font-size: 22px; text-align: center; }
+
+/* ===========================================================================
+   Page publique de validation.
+   =========================================================================== */
+.sap-review-gate { text-align: center; max-width: 460px; margin: 40px auto; }
+.sap-review-gate .sap-newplan { justify-content: center; }
+.sap-review-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.sap-review-progress { display: flex; flex-direction: column; align-items: flex-end; }
+.sap-review-progress strong { font-size: 22px; }
+.sap-review-list { display: grid; gap: 20px; }
+.sap-review-ad {
+  display: grid; grid-template-columns: 340px 1fr; gap: 22px;
+  padding: 20px; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface);
+}
+@media (max-width: 760px) { .sap-review-ad { grid-template-columns: 1fr; } }
+.sap-review-preview { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.sap-review-plat { align-self: flex-start; font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+.sap-review-side { display: flex; flex-direction: column; gap: 12px; }
+.sap-decision-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-danger { background: var(--danger); color: #fff; }
+.sap-general { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+/* ---- Gabarits précis : ratio, safe zone, troncature ---- */
+.sap-previewwrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.sap-spec-note { margin: 0; font-size: 12px; color: var(--muted); }
+.sap-field-ratio { flex: 0 0 92px; }
+.sap-count.over { color: var(--danger); font-weight: 600; }
+.sap-voirplus { color: #65676b; }
+.sap-safe-toggle { font-size: 12px; color: var(--ink-soft); display: flex; align-items: center; gap: 6px; align-self: flex-start; cursor: pointer; }
+.sap-safe { position: absolute; inset: 0; pointer-events: none; }
+.sap-safe-band {
+  position: absolute; left: 0; right: 0;
+  background: repeating-linear-gradient(45deg, rgba(255,45,85,0.28), rgba(255,45,85,0.28) 8px, rgba(255,45,85,0.12) 8px, rgba(255,45,85,0.12) 16px);
+  border: 1px dashed rgba(255,45,85,0.7);
+}
+.sap-safe-tag {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  background: rgba(0,0,0,0.6); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px;
+}

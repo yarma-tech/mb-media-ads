@@ -92,7 +92,7 @@ async function callOpenRouter(prompt: string): Promise<string> {
       "Content-Type": "application/json",
       // En-têtes recommandés par OpenRouter (classement / attribution).
       "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "https://mb-media-ads.vercel.app",
-      "X-Title": "MB Media Ads — Social Ads",
+      "X-Title": "MB Media Ads - Social Ads",
     },
     body: JSON.stringify({
       model,

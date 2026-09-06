@@ -10,7 +10,7 @@ export async function POST(req: Request) {
 
   if (!copyConfigured()) {
     return NextResponse.json(
-      { error: "Assistant IA non configuré (ANTHROPIC_API_KEY manquante)." },
+      { error: "Assistant IA non configuré (OPENROUTER_API_KEY ou ANTHROPIC_API_KEY manquante)." },
       { status: 503 },
     );
   }

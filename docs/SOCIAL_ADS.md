@@ -29,7 +29,7 @@ utilisent la même mécanique (valeurs à affiner).
 - **DB** : mêmes projet Supabase, tables préfixées `sa_` (voir migration `20260901120000_social_ads.sql`).
 - **RLS** : owner-only. La page publique n'a **aucun** accès direct à la base : tout passe par
   du code serveur (clé `service_role`) qui valide le **token** du lien.
-- **LLM** : route `POST /api/social/copy` (réservée aux connectés), SDK `@anthropic-ai/sdk`, modèle `claude-opus-5` par défaut.
+- **LLM** : route `POST /api/social/copy` (réservée aux connectés), fournisseur **pluggable** — OpenRouter (compatible OpenAI, route vers Claude & autres) si `OPENROUTER_API_KEY` est défini, sinon Anthropic direct (`@anthropic-ai/sdk`).
 
 ### Fichiers clés
 
@@ -50,8 +50,7 @@ utilisent la même mécanique (valeurs à affiner).
 2. **Variables d'environnement** (voir `.env.local.example`) :
    - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` (déjà en place)
    - `SUPABASE_SERVICE_ROLE_KEY` — **requis** pour la page publique `/preview`
-   - `ANTHROPIC_API_KEY` — pour l'assistant de rédaction (sinon le bouton renvoie un message)
-   - `ANTHROPIC_MODEL` — optionnel (défaut `claude-opus-5`)
+   - `OPENROUTER_API_KEY` (+ `OPENROUTER_MODEL`, défaut `anthropic/claude-3.5-sonnet`) **ou** `ANTHROPIC_API_KEY` (+ `ANTHROPIC_MODEL`) — pour l'assistant de rédaction. OpenRouter est prioritaire s'il est défini.
 3. `npm install && npm run dev`, puis **Social Ads** dans la barre de navigation.
 
 ## Parcours de test

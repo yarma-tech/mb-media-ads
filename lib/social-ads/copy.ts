@@ -1,13 +1,13 @@
-// Module Social Ads — génération de copy marketing par LLM (Claude / Anthropic).
+// Module Social Ads — génération de copy marketing par LLM.
 //
+// Fournisseur pluggable : OpenRouter (compatible OpenAI, route vers Claude et
+// d'autres modèles) si OPENROUTER_API_KEY est défini, sinon Anthropic direct.
 // Expertise « rédaction social ads » encodée dans le system prompt : hook fort,
 // une idée par annonce, ton par plateforme, respect des limites de caractères,
 // CTA clair. Retourne plusieurs variations prêtes à coller dans l'éditeur.
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { getSpec, PLATEFORME_LABEL, type Format, type Plateforme } from "./types";
-
-const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-5";
 
 export type CopyInput = {
   plateforme: Plateforme;
@@ -27,8 +27,17 @@ export type CopyVariation = {
   hashtags: string[];
 };
 
+type Provider = "openrouter" | "anthropic";
+
+// OpenRouter prioritaire s'il est configuré, sinon Anthropic.
+function provider(): Provider | null {
+  if (process.env.OPENROUTER_API_KEY) return "openrouter";
+  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  return null;
+}
+
 export function copyConfigured(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return provider() !== null;
 }
 
 const SYSTEM = `Tu es un directeur de création publicitaire expert en social ads, spécialisé dans la rédaction de messages marketing qui convertissent. Tu maîtrises les codes propres à chaque plateforme (Facebook, Instagram, LinkedIn, TikTok).
@@ -51,8 +60,8 @@ Tu réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, de la forme
 - "hashtags" : 0 sur LinkedIn/Facebook si non pertinent ; 3–6 max sur IG/TikTok.`;
 
 export async function genererCopy(input: CopyInput): Promise<CopyVariation[]> {
-  if (!copyConfigured()) throw new Error("ANTHROPIC_API_KEY manquante.");
-  const client = new Anthropic();
+  const p = provider();
+  if (!p) throw new Error("Aucune clé LLM (OPENROUTER_API_KEY ou ANTHROPIC_API_KEY) configurée.");
   const n = Math.min(Math.max(input.nbVariations ?? 3, 1), 5);
   const spec = getSpec(input.plateforme, input.format);
 
@@ -69,19 +78,54 @@ ${input.brief}
 
 Génère ${n} variation(s) distinctes (angles différents), en respectant les limites.`;
 
+  const text = p === "openrouter" ? await callOpenRouter(prompt) : await callAnthropic(prompt);
+  return parseVariations(text);
+}
+
+// --- OpenRouter (API compatible OpenAI) ------------------------------------
+async function callOpenRouter(prompt: string): Promise<string> {
+  const model = process.env.OPENROUTER_MODEL || "anthropic/claude-3.5-sonnet";
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+      // En-têtes recommandés par OpenRouter (classement / attribution).
+      "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "https://mb-media-ads.vercel.app",
+      "X-Title": "MB Media Ads — Social Ads",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 4000,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: SYSTEM },
+        { role: "user", content: prompt },
+      ],
+    }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    throw new Error(`OpenRouter ${res.status} : ${detail.slice(0, 300)}`);
+  }
+  const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+  return data.choices?.[0]?.message?.content ?? "";
+}
+
+// --- Anthropic direct ------------------------------------------------------
+async function callAnthropic(prompt: string): Promise<string> {
+  const model = process.env.ANTHROPIC_MODEL || "claude-opus-5";
+  const client = new Anthropic();
   const response = await client.messages.create({
-    model: MODEL,
+    model,
     max_tokens: 4000,
     system: SYSTEM,
     messages: [{ role: "user", content: prompt }],
   });
-
-  const text = response.content
+  return response.content
     .filter((b): b is Anthropic.TextBlock => b.type === "text")
     .map((b) => b.text)
     .join("");
-
-  return parseVariations(text);
 }
 
 // Extraction robuste du JSON même si le modèle ajoute du texte autour.

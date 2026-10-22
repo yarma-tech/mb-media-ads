@@ -5,7 +5,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = new Set(["/", "/connexion", "/inscription"]);
+// Démonstration statique uniquement : aucune campagne réelle ni donnée admin.
+const PUBLIC_PATHS = new Set(["/", "/connexion", "/inscription", "/decks/apercu", "/decks/presentation", "/studio", "/studio/validation", "/studio/on-air", "/studio/statistiques"]);
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;

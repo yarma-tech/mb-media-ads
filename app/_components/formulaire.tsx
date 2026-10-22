@@ -158,7 +158,7 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
             <div className="segmented" style={{ marginBottom: 16 }}>
               <button type="button" aria-pressed={mode === "budget"} onClick={() => setMode("budget")}>
                 <span className="seg-title">
-                  <IconWallet /> J'ai un budget
+                  <IconWallet /> J’ai un budget
                 </span>
                 <span className="seg-desc">On maximise le résultat</span>
               </button>
@@ -195,7 +195,7 @@ export function Formulaire({ nomEntreprise = "Votre campagne" }: { nomEntreprise
                     aria-invalid={!!errors.cible}
                     placeholder={objectif === "notoriete" ? "Ex. 300 000" : "Ex. 5 000"}
                   />
-                  <span className="hint">Sert à estimer la probabilité d'atteinte. Laissez vide si vous n'avez pas de cible.</span>
+                  <span className="hint">Sert à estimer la probabilité d’atteinte. Laissez vide si vous n’avez pas de cible.</span>
                   {errors.cible ? <span className="field-error">{errors.cible}</span> : null}
                 </div>
               </>

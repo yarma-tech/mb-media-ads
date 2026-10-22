@@ -39,12 +39,12 @@ export function SignUpForm() {
         </div>
       ) : null}
       <div className="field">
-        <label htmlFor="nomEntreprise">Nom de l'entreprise</label>
+        <label htmlFor="nomEntreprise">Nom de l’entreprise</label>
         <input id="nomEntreprise" name="nomEntreprise" type="text" autoComplete="organization" required />
       </div>
       <div className="grid-2">
         <div className="field">
-          <label htmlFor="secteur">Secteur d'activité</label>
+          <label htmlFor="secteur">Secteur d’activité</label>
           <select id="secteur" name="secteur" defaultValue="" required>
             <option value="" disabled>
               Choisir…

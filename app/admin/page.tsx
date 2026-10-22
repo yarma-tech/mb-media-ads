@@ -44,7 +44,7 @@ export default async function AdminPage() {
       ) : (
         <div className="panel">
           <div className="empty">
-            <h3>Aucune demande pour l'instant</h3>
+            <h3>Aucune demande pour l’instant</h3>
             <p>Les demandes soumises via le formulaire partenaire apparaîtront ici.</p>
           </div>
         </div>

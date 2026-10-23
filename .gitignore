@@ -40,3 +40,13 @@ next-env.d.ts
 # python
 __pycache__/
 *.pyc
+.env*
+
+# Studio connected development, isolated from the V1
+/.next-studio/
+/dev/studio/supabase/.temp/
+/dev/studio/supabase/.branches/
+
+# Browser test artifacts
+/test-results/
+/playwright-report/

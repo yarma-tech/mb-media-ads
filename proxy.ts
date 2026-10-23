@@ -6,10 +6,28 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Démonstration statique uniquement : aucune campagne réelle ni donnée admin.
-const PUBLIC_PATHS = new Set(["/", "/connexion", "/inscription", "/decks/apercu", "/decks/presentation", "/studio", "/studio/validation", "/studio/on-air", "/studio/statistiques"]);
+const PUBLIC_PATHS = new Set([
+  "/",
+  "/connexion",
+  "/inscription",
+  "/decks/apercu",
+  "/decks/presentation",
+  "/studio",
+  "/studio/validation",
+  "/studio/on-air",
+  "/studio/statistiques",
+]);
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
+  // Studio API authenticates bearer identities itself; connected UI contains no private SSR data.
+  if (pathname === "/api/studio" || pathname.startsWith("/api/studio/"))
+    return true;
+  if (
+    process.env.STUDIO_CONNECTED === "true" &&
+    (pathname === "/studio" || pathname.startsWith("/studio/"))
+  )
+    return true;
   // Callback d'auth + webhook de paiement (Stripe) doivent rester accessibles sans session.
   if (pathname.startsWith("/auth")) return true;
   if (pathname.startsWith("/api/stripe")) return true;
@@ -32,9 +50,13 @@ export async function proxy(request: NextRequest) {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value),
+        );
         response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options),
+        );
       },
     },
   });

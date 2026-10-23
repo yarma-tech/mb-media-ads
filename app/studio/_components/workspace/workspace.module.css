@@ -1,0 +1,1092 @@
+.app {
+  --ink: #171717;
+  --muted: #555;
+  --accent: #006971;
+  min-height: 100dvh;
+  background: #f5f5f5;
+  color: var(--ink);
+  font:
+    13px/1.5 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.app *,
+.login * {
+  box-sizing: border-box;
+}
+.app :is(button, input, select, textarea),
+.login :is(button, input) {
+  font: inherit;
+  color: inherit;
+}
+.app :is(button, select),
+.login button {
+  cursor: pointer;
+}
+.app button {
+  border: 0;
+  border-radius: 8px;
+  background: #eaeaea;
+  padding: 10px 14px;
+  min-height: 40px;
+}
+.app button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.app :is(input, select, textarea),
+.login input {
+  border: 1px solid #cecece;
+  border-radius: 7px;
+  padding: 10px;
+  background: #fff;
+  color: #171717;
+  min-width: 0;
+}
+.app input::placeholder {
+  color: #555;
+}
+.app textarea {
+  resize: vertical;
+}
+.app :is(button, input, select, textarea, a):focus-visible,
+.login :is(input, button):focus-visible {
+  outline: 2px solid var(--accent, #006971);
+  outline-offset: 3px;
+}
+.app a {
+  color: inherit;
+  text-decoration: none;
+}
+.app h1,
+.app h2,
+.app h3,
+.app p {
+  margin: 0;
+}
+.app h2 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.app small {
+  display: block;
+  font-size: 11px;
+  color: #555;
+}
+.sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 72px;
+  background: #111;
+  color: #bdbdbd;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 22px 10px;
+  gap: 28px;
+  z-index: 20;
+}
+.wordmark {
+  font-size: 28px;
+  letter-spacing: -2px;
+  font-weight: 750;
+  line-height: 1;
+}
+.sidebar .wordmark {
+  background: #fff;
+  border-radius: 9px;
+  color: #111;
+  padding: 6px;
+}
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  align-items: center;
+}
+.sidebar nav a {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+}
+.sidebar nav a[aria-current="page"] {
+  background: #163536;
+  color: #62e0e0;
+}
+.sidebar > button {
+  margin-top: auto;
+  background: transparent;
+  color: #bdbdbd;
+}
+.main {
+  margin-left: 72px;
+  padding: 0 32px 32px;
+  max-width: 1740px;
+}
+.header {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12px;
+  color: #555;
+}
+.header nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header b {
+  color: #171717;
+  font-weight: 600;
+}
+.header > span {
+  font-size: 11px;
+}
+.title {
+  font-size: 25px;
+  font-weight: 550;
+  letter-spacing: -0.6px;
+  margin: 20px 0 32px !important;
+}
+.primary,
+.app .primary {
+  background: #006971;
+  color: #fff;
+}
+.login {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: #f5f5f5;
+  font:
+    14px/1.5 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+.login form {
+  width: min(400px, 90vw);
+  display: grid;
+  gap: 20px;
+  background: #fff;
+  padding: 36px;
+  border-radius: 16px;
+}
+.login label,
+.settings label,
+.settingsGrid label,
+.batch > label,
+.dialog label,
+.commentDialog label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+.login button {
+  padding: 12px;
+  border: 0;
+  border-radius: 8px;
+}
+.skip {
+  position: absolute;
+  left: 80px;
+  top: -100px;
+  z-index: 100;
+  background: white;
+  padding: 10px;
+}
+.skip:focus {
+  top: 8px;
+}
+.toolbar,
+.heading,
+.inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.toolbar {
+  margin: 0 0 28px;
+}
+.heading {
+  justify-content: space-between;
+  margin: 24px 0 16px;
+}
+.heading > span {
+  color: #555;
+  font-size: 12px;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  background: #ebebeb;
+  border-radius: 9px;
+  padding: 0 12px;
+  color: #555;
+}
+.search input {
+  background: transparent;
+  border: 0;
+  width: 180px;
+}
+.homeCounter {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 28px;
+  background: #e6f7f7;
+  border-radius: 12px;
+  max-width: 500px;
+  margin: 20px 0 40px;
+}
+.homeCounter strong {
+  font-size: 44px;
+  font-weight: 500;
+  color: #006971;
+}
+.homeCounter span {
+  font-size: 15px;
+}
+.homeCounter small {
+  margin-top: 5px;
+  color: #006971;
+}
+.campaignList {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.campaignList > a {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  justify-content: space-between;
+  padding: 20px 24px;
+}
+.campaignList > a:hover {
+  background: #edf6f6;
+}
+.campaignList > a > span:first-child {
+  flex: 1;
+}
+.campaignList > p {
+  padding: 28px;
+}
+.campaignSettings {
+  margin-bottom: 24px;
+}
+.campaignSettings > summary {
+  cursor: pointer;
+  color: #555;
+}
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 16px;
+  background: #eee;
+  border-radius: 10px;
+  padding: 20px;
+  margin: 16px 0;
+}
+.channelTabs {
+  display: flex;
+  gap: 8px;
+  overflow: auto;
+  margin: 24px 0;
+}
+.channelTabs button {
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+}
+.channelTabs button[aria-pressed="true"] {
+  background: #e6f7f7;
+  color: #006971;
+}
+.channelTabs small {
+  color: inherit;
+}
+.formatPicker {
+  margin: 24px 0;
+}
+.formatPicker summary {
+  cursor: pointer;
+  font-size: 12px;
+}
+.formats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+}
+.formats label {
+  width: 140px;
+  min-height: 140px;
+  border: 1px solid #d8d8d8;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  cursor: pointer;
+  position: relative;
+}
+.formats label[data-selected="true"] {
+  outline: 2px solid #006971;
+  background: #eff9f9;
+}
+.formats label > input {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+}
+.formats b {
+  font-size: 11px;
+  text-align: center;
+}
+.formatShape {
+  display: grid;
+  place-items: center;
+  background: #e4eded;
+  border: 1px solid #9cbbbb;
+  width: 70px;
+  max-width: 80px;
+  margin: 10px auto 0;
+  color: #006971;
+}
+.configSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  align-items: start;
+}
+.tablePane {
+  min-width: 0;
+}
+.tableScroll {
+  max-width: 100%;
+  overflow: auto;
+  background: #fff;
+  border-radius: 10px;
+}
+.saveState {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  color: #555;
+  margin-bottom: 10px;
+}
+.saveState > span {
+  color: #9e2732;
+}
+.editTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+.editTable th {
+  text-align: left;
+  white-space: nowrap;
+  padding: 14px 12px;
+  background: #eceeee;
+  font-size: 11px;
+  font-weight: 550;
+}
+.editTable td {
+  vertical-align: top;
+  padding: 12px;
+  min-width: 160px;
+}
+.editTable td:first-child {
+  min-width: 40px;
+}
+.editTable tr[data-active="true"] td {
+  background: #f0fafa;
+}
+.editTable textarea {
+  border: 1px solid transparent;
+  background: transparent;
+  min-width: 180px;
+  width: 100%;
+  font-size: 12px;
+}
+.editTable tr[data-active="true"] textarea:not([readonly]) {
+  border-color: #b8cccc;
+  background: #fff;
+}
+.editTable select {
+  max-width: 230px;
+}
+.editTable td small {
+  margin-top: 6px;
+  max-width: 220px;
+}
+.app .rowTitle {
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  min-height: 25px;
+}
+.rowActions {
+  display: grid;
+  gap: 6px;
+}
+.app .rowActions button {
+  font-size: 11px;
+  padding: 6px 8px;
+  min-height: 32px;
+}
+.previewPane {
+  position: sticky;
+  top: 20px;
+  min-width: 0;
+}
+.previewPane > .heading {
+  margin-top: 0;
+}
+.adPreview,
+.searchPreview {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  color: #202124;
+  font:
+    13px/1.5 Arial,
+    sans-serif;
+  box-shadow: 0 4px 20px #00000007;
+}
+.identity {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 14px;
+}
+.identity img,
+.monogram {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  border-radius: 50%;
+}
+.monogram {
+  display: grid;
+  place-items: center;
+  background: #e9f3f3;
+  color: #006971;
+}
+.identity small {
+  font:
+    11px Arial,
+    sans-serif;
+  margin-top: 3px;
+  color: #555;
+}
+.adPreview > p {
+  padding: 0 14px 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.previewMedia {
+  min-height: 100px;
+  background: #eee;
+  display: grid;
+  place-items: center;
+  color: #555;
+}
+.previewMedia img,
+.previewMedia video {
+  display: block;
+  width: 100%;
+  max-height: 650px;
+  object-fit: contain;
+}
+.vertical {
+  max-width: 300px;
+  margin: 0 auto;
+  aspect-ratio: 9/16;
+}
+.previewDestination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #f0f1f3;
+  gap: 10px;
+}
+.previewDestination > span:last-child {
+  background: #e3e5e8;
+  padding: 6px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.previewDestination b {
+  display: block;
+  font-size: 12px;
+}
+.youtubeBrand {
+  padding: 12px 14px;
+  font-size: 17px;
+  font-weight: bold;
+}
+.searchPreview {
+  padding: 22px;
+}
+.searchPreview .identity {
+  padding: 14px 0;
+}
+.searchPreview h3 {
+  color: #1a0dab;
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1.3;
+  margin: 0 0 8px;
+}
+.searchPreview p {
+  font-size: 13px;
+  margin: 10px 0;
+}
+.previewTag {
+  display: block;
+  color: #555;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  margin-bottom: 16px;
+}
+.searchPreview footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  gap: 8px;
+  font-size: 11px;
+}
+.searchPreview > small {
+  margin-top: 12px;
+  font-size: 10px;
+}
+.batch {
+  display: grid;
+  gap: 14px;
+  background: #eaf4f4;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 22px;
+}
+.batch > label:has([type="checkbox"]) {
+  display: flex;
+  align-items: center;
+}
+.library {
+  margin-top: 40px;
+}
+.drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  background: #e9eded;
+  border-radius: 10px;
+  color: #555;
+}
+.mediaList {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.mediaList > article {
+  min-width: 0;
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.mediaList b {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.mediaList fieldset {
+  border: 0;
+  padding: 0;
+  margin: 8px 0;
+}
+.mediaList legend {
+  font-size: 10px;
+  color: #555;
+  margin-bottom: 6px;
+}
+.mediaList label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.mediaList button {
+  font-size: 11px;
+}
+.mediaThumb {
+  height: 140px;
+  background: #eee;
+  display: grid;
+  place-items: center;
+}
+.mediaThumb :is(img, video) {
+  height: 140px;
+  max-width: 100%;
+  object-fit: contain;
+}
+.error {
+  color: #922732 !important;
+  font-size: 12px;
+  padding: 8px 0;
+  overflow-wrap: anywhere;
+}
+.empty {
+  padding: 50px 20px;
+  text-align: center;
+  color: #555;
+}
+.status {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 550;
+  color: #31575b;
+}
+.history {
+  margin-top: 16px;
+  font-size: 11px;
+  color: #555;
+}
+.history summary {
+  cursor: pointer;
+  padding: 8px 0;
+}
+.history > div {
+  padding: 12px 0;
+}
+.history pre {
+  font-size: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 250px;
+  overflow: auto;
+}
+.settings {
+  max-width: 650px;
+}
+.settings form {
+  display: grid;
+  gap: 16px;
+  margin: 20px 0 40px;
+}
+.settings textarea {
+  width: 100%;
+  margin-top: 16px;
+}
+.settings h2 {
+  margin-top: 25px;
+}
+.segment {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 4px;
+  background: #e9e9e9;
+  border-radius: 12px;
+  isolation: isolate;
+}
+.segment::before {
+  content: "";
+  position: absolute;
+  inset: 4px auto 4px 4px;
+  width: calc((100% - 8px) / 2);
+  border-radius: 9px;
+  background: white;
+  box-shadow: 0 1px 4px #0001;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: -1;
+}
+.segment[data-second="true"]::before {
+  transform: translateX(100%);
+}
+.segment button {
+  background: transparent;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.segment button[aria-pressed="true"] {
+  color: #006971;
+  font-weight: 600;
+}
+.channelGroup {
+  margin-bottom: 44px;
+}
+.channelGroup h2 {
+  margin-bottom: 24px;
+}
+.channelGroup h2 small {
+  display: inline;
+  margin-left: 10px;
+  font-weight: 400;
+}
+.reviewGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+  align-items: start;
+}
+.reviewCard {
+  min-width: 0;
+}
+.reviewCard [data-workspace-ad] {
+  max-width: 380px;
+  margin: auto;
+}
+.cardCaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  margin: 14px 0;
+}
+.cardCaption span {
+  color: #555;
+}
+.validationActions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  align-items: center;
+  margin: 16px 0;
+}
+.validationActions button {
+  background: transparent;
+  display: grid;
+  place-items: center;
+}
+.validationActions .approve {
+  border-radius: 50%;
+  background: #e4f5eb;
+  color: #176b3d;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+}
+.validationActions .primary {
+  background: #006971;
+}
+.carousel {
+  max-width: 520px;
+  margin: 0 auto 40px;
+  overflow: hidden;
+}
+.carousel [data-workspace-ad] {
+  max-width: 500px;
+}
+.finishedCampaign {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  background: #fff;
+  margin-bottom: 20px;
+  border-radius: 10px;
+}
+.dialog,
+.commentDialog {
+  padding: 32px;
+  border: 0;
+  border-radius: 16px;
+  background: #fff;
+  color: #171717;
+  box-shadow: 0 30px 100px #0005;
+  width: min(1000px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px);
+  font:
+    13px/1.5 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+.dialog::backdrop,
+.commentDialog::backdrop {
+  background: #0008;
+}
+.dialogSplit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+.dialogSplit > form,
+.commentDialog form {
+  display: grid;
+  gap: 16px;
+}
+.dialog :is(input, textarea),
+.commentDialog textarea {
+  font: inherit;
+  padding: 10px;
+  border: 1px solid #b8b8b8;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.dialog button,
+.commentDialog button {
+  cursor: pointer;
+  border: 0;
+  border-radius: 8px;
+  padding: 11px 14px;
+}
+.close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: #eee;
+  font-size: 20px;
+}
+.commentDialog {
+  width: min(500px, calc(100vw - 32px));
+}
+.toast {
+  position: fixed;
+  right: 24px;
+  top: 20px;
+  z-index: 100;
+  background: #171717;
+  color: white;
+  padding: 14px 18px;
+  border-radius: 9px;
+  box-shadow: 0 8px 28px #0002;
+  max-width: calc(100vw - 40px);
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.toast button {
+  background: transparent;
+  color: white;
+  padding: 0;
+  min-height: 24px;
+}
+:global(body):has(.app) > :global(header),
+:global(body):has(.app) > :global(footer),
+:global(body):has(.login) > :global(header),
+:global(body):has(.login) > :global(footer) {
+  display: none;
+}
+:global(body):has(.app) > :global(main),
+:global(body):has(.login) > :global(main) {
+  padding: 0;
+  margin: 0;
+  max-width: none;
+}
+@media (max-width: 1200px) {
+  .configSplit {
+    grid-template-columns: minmax(0, 1fr) 280px;
+  }
+  .reviewGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mediaList {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 850px) {
+  .configSplit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .previewPane {
+    position: static;
+    max-width: 420px;
+  }
+  .settingsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mediaList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 620px) {
+  .sidebar {
+    inset: auto 0 0;
+    width: auto;
+    height: 58px;
+    flex-direction: row;
+    padding: 6px 8px;
+    gap: 10px;
+  }
+  .sidebar > .wordmark {
+    display: none;
+  }
+  .sidebar nav {
+    flex-direction: row;
+    justify-content: space-around;
+    gap: 0;
+  }
+  .sidebar > button {
+    margin: 0;
+    padding: 4px;
+  }
+  .main {
+    margin: 0;
+    padding: 0 16px 90px;
+  }
+  .header {
+    height: 60px;
+    font-size: 11px;
+  }
+  .header > span {
+    max-width: 130px;
+    text-align: right;
+  }
+  .reviewGrid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
+  .mediaList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dialogSplit {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dialog {
+    padding: 28px 18px;
+  }
+  .settingsGrid {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px;
+  }
+  .campaignList > a {
+    padding: 16px;
+    gap: 12px;
+  }
+  .campaignList > a > span:nth-child(2) {
+    display: none;
+  }
+  .search {
+    margin: 0;
+    width: 100%;
+  }
+  .search input {
+    width: 100%;
+  }
+  .finishedCampaign {
+    flex-direction: column;
+  }
+  .inline {
+    gap: 8px;
+  }
+  .drop {
+    flex-direction: column;
+  }
+  .formats label {
+    width: calc(50% - 6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .segment::before {
+    transition: none;
+  }
+}
+
+.editFields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.rowUpload {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+  font-size: 10px;
+  color: #555;
+}
+.rowUpload input {
+  width: 200px;
+  font-size: 10px;
+}
+
+.members {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0;
+}
+.members > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: white;
+  padding: 14px;
+  border-radius: 9px;
+  flex-wrap: wrap;
+}
+.members > div > span {
+  flex: 1;
+  min-width: 120px;
+}
+.header > span > button {
+  background: transparent;
+  padding: 0;
+  min-height: 30px;
+}
+.accountForm {
+  display: flex;
+  align-items: end;
+  gap: 14px;
+  padding: 20px;
+  background: white;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+.accountForm label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.missing {
+  font-size: 11px;
+  color: #7b3430;
+  margin-top: 7px;
+}
+.missing summary {
+  cursor: pointer;
+}
+.missing ul {
+  padding-left: 16px;
+  min-width: 180px;
+}
+.adName {
+  display: grid;
+  gap: 5px;
+  font-size: 11px;
+  color: #555;
+  margin-bottom: 20px;
+}

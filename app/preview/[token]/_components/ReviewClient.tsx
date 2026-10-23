@@ -32,8 +32,10 @@ export default function ReviewClient({
     try {
       const saved = localStorage.getItem(LS_KEY);
       if (saved) {
-        setNom(saved);
-        setNomSet(true);
+        queueMicrotask(() => {
+          setNom(saved);
+          setNomSet(true);
+        });
       }
     } catch {
       /* localStorage indisponible */

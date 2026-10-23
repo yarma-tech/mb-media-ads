@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import WorkspaceApp from "./_components/workspace/WorkspaceApp";
 import StudioShell from "./_components/StudioShell";
 import { StudioProvider } from "./_components/StudioProvider";
 
@@ -13,6 +14,7 @@ export default function StudioLayout({
 }: {
   children: React.ReactNode;
 }) {
+  if (process.env.STUDIO_CONNECTED === "true") return <WorkspaceApp />;
   return (
     <StudioProvider>
       <StudioShell>{children}</StudioShell>

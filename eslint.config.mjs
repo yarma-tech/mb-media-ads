@@ -15,6 +15,7 @@ export default defineConfig([
   },
   globalIgnores([
     ".next/**",
+    ".next-studio/**",
     "node_modules/**",
     ".codex/**",
     "supabase/.temp/**",

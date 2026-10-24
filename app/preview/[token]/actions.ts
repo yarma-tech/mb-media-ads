@@ -1,7 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addPublicComment, setPublicApproval } from "@/lib/social-ads/db";
+import {
+  addPublicComment,
+  setPublicApproval,
+  editPublicAd,
+} from "@/lib/social-ads/db";
+import type { EditableAdText } from "@/lib/social-ads/review";
 import type { Decision } from "@/lib/social-ads/types";
 
 // Actions de la page publique de validation : aucune authentification.
@@ -13,10 +18,21 @@ export async function submitCommentAction(
   auteur: string,
   corps: string,
 ): Promise<boolean> {
-  if (!corps.trim()) return false;
+  if (typeof corps !== "string" || typeof auteur !== "string" || !corps.trim())
+    return false;
   const ok = await addPublicComment(token, adId, auteur.trim(), corps.trim());
   if (ok) revalidatePath(`/preview/${token}`);
   return ok;
+}
+
+export async function editPublicAdAction(
+  token: string,
+  adId: string,
+  patch: EditableAdText,
+) {
+  const ad = await editPublicAd(token, adId, patch);
+  if (ad) revalidatePath(`/preview/${token}`);
+  return ad;
 }
 
 export async function submitApprovalAction(
@@ -25,6 +41,7 @@ export async function submitApprovalAction(
   relecteur: string,
   decision: Decision,
 ): Promise<boolean> {
+  if (typeof relecteur !== "string") return false;
   const ok = await setPublicApproval(token, adId, relecteur.trim(), decision);
   if (ok) revalidatePath(`/preview/${token}`);
   return ok;

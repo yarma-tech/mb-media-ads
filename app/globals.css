@@ -1,3 +1,7 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
 :root {
   /* Apple : fond gris très clair (#f5f5f7), surfaces blanches, encre graphite (#1d1d1f) */
   --paper: oklch(0.966 0.002 265);
@@ -1348,3 +1352,64 @@ td.num {
   position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
   background: rgba(0,0,0,0.6); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 10px;
 }
+
+/* Annonces en situation: surfaces de travail et UI natives isolées. */
+.sa-native-icon { width: 21px; height: 21px; flex-shrink: 0; vertical-align: middle; }
+.sa-ig-actions > span { display: flex; gap: 14px; }.sa-ig-actions .sa-native-icon { width: 25px; height: 25px; }.sa-native-actions > span { display: inline-flex; align-items: center; gap: 5px; }.sa-native-actions .sa-native-icon { width: 17px; height: 17px; }.sa-vertical-rail .sa-native-icon { width: 27px; height: 27px; }
+.sa-panel { padding: 24px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); margin: 24px 0; min-width: 0; }
+.sa-tabs { display: flex; gap: 24px; padding: 12px 0; }
+.sa-drop { display: grid; gap: 12px; padding: 24px; border: 1px dashed var(--border-strong); border-radius: 12px; background: var(--surface-2); cursor: pointer; }
+.sa-import-preview { max-height: 320px; overflow: auto; margin: 16px 0; }
+.sa-brand-account { border: 1px solid var(--border); border-radius: 12px; margin: 20px 0; padding: 20px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.sa-slot-list { display: grid; gap: 12px; padding: 0; list-style: none; }
+.sa-slot-list li, .sa-manual { padding: 14px; background: var(--surface-2); border-radius: 10px; overflow-wrap: anywhere; }
+.sa-text-editor { display: grid; gap: 12px; min-width: 0; }
+.sa-error { color: #b42318; }
+.sa-preview { width: 100%; min-width: 0; }
+.sa-preview-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12px; margin-bottom: 14px; }
+.sa-preview-controls button { border: 1px solid #d5d8dc; padding: 7px 12px; background: white; color: #374151; cursor: pointer; }
+.sa-preview-controls button[aria-pressed=true] { color: white; background: #222; border-color: #222; }
+.sa-preview-controls label { display: flex; gap: 6px; align-items: center; }
+.sa-stage { display: flex; justify-content: center; min-width: 0; padding: 16px; background: #e9edf1; border-radius: 14px; }
+.sa-native { width: 100%; max-width: 500px; background: #fff; color: #14171a; border: 1px solid #d9dde1; border-radius: 8px; overflow: hidden; font: 14px/1.45 Arial, sans-serif; box-shadow: 0 2px 7px #0000000b; }
+.sa-native-mobile { max-width: 360px; }
+.sa-native strong { font-weight: 600; }
+.sa-platform-top { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eceff1; font-weight: 700; font-size: 20px; color: #0866ff; }
+.sa-platform-top span { font: 16px Arial,sans-serif; color: #606770; }
+.sa-native-instagram .sa-platform-top { color: #111; font-family: Georgia,serif; }
+.sa-native-linkedin .sa-platform-top { color: #0a66c2; }
+.sa-native-header { display: flex; align-items: center; gap: 10px; padding: 13px 14px 8px; }
+.sa-avatar { width: 38px; height: 38px; object-fit: cover; border-radius: 50%; flex: 0 0 38px; }
+.sa-avatar-initial { display: grid; place-items: center; background: #eef1f5; color: #555; font-weight: 700; }
+.sa-native-header > div { min-width: 0; flex: 1; }
+.sa-native-header strong,.sa-native-header small { display: block; overflow-wrap: anywhere; }
+.sa-native-header small { color: #65676b; font-size: 11px; }
+.sa-follow { color: #0a66c2; font-size: 12px; }
+.sa-more { font-size: 22px; letter-spacing: 2px; }
+.sa-copy { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: 7px 14px 13px; font: inherit; color: inherit; }
+.sa-copy button { border: 0; background: none; color: #65676b; font: inherit; padding: 0; cursor: pointer; }
+.sa-picture { position: relative; display: grid; place-items: center; width: 100%; overflow: hidden; background: #eff1f4; }
+.sa-picture img { display: block; width: 100%; height: 100%; object-fit: contain; position: absolute; inset: 0; }
+.sa-picture-empty { color: #6b7280; font-size: 13px; padding: 40px; text-align: center; }
+.sa-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: #0008; color: white; border: 2px solid #fffc; font-size: 24px; padding-left: 4px; }
+.sa-carousel-prev,.sa-carousel-next { position: absolute; top: 45%; border: 0; border-radius: 50%; width: 34px; height: 34px; background: #fffE; box-shadow: 0 1px 8px #0003; font-size: 28px; line-height: 1; cursor: pointer; }
+.sa-carousel-prev { left: 10px; }.sa-carousel-next { right: 10px; }.sa-carousel-prev:disabled,.sa-carousel-next:disabled { opacity: .3; }
+.sa-card-count { position: absolute; right: 12px; top: 12px; background: #0009; color: white; padding: 3px 9px; border-radius: 20px; font-size: 12px; }
+.sa-card-caption { padding: 12px 14px; background: #f5f6f7; }.sa-card-caption strong,.sa-card-caption span { display: block; }.sa-card-dots { display: flex; justify-content: center; gap: 5px; margin-top: 8px; }.sa-card-dots button { color: #bbb; border: 0; background: none; cursor: pointer; font-size: 9px; padding: 4px; }.sa-card-dots button[aria-pressed=true] { color: #0095f6; }
+.sa-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; background: #f0f2f5; border-bottom: 1px solid #ddd; }.sa-link > div { min-width: 0; }.sa-link strong,.sa-link small,.sa-link span { display: block; overflow-wrap: anywhere; }.sa-link small { color: #65676b; font-size: 10px; text-transform: uppercase; }.sa-link span { font-size: 11px; color: #65676b; }
+.sa-native-cta { border-radius: 6px; background: #e4e6eb; padding: 8px 10px; color: #111 !important; font-size: 12px !important; flex-shrink: 0; font-weight: 600; }
+.sa-engagement { color: #65676b; padding: 8px 14px; font-size: 11px; }.sa-native-actions { display: flex; justify-content: space-around; gap: 4px; padding: 12px 6px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #65676b; }
+.sa-ig-cta { display: flex; justify-content: space-between; background: #0095f6; color: white; padding: 10px 14px; font-size: 13px; font-weight: 600; }.sa-ig-actions { display: flex; justify-content: space-between; padding: 10px 14px; font-size: 25px; }.sa-ig-caption { padding: 0 14px 12px; }.sa-ig-caption .sa-copy { padding: 4px 0; }.sa-ig-caption strong { font-size: 12px; }
+.sa-phone { max-width: 330px; width: 100%; position: relative; overflow: hidden; border: 6px solid #171717; border-radius: 30px; color: white; background: #111; font: 12px/1.4 Arial,sans-serif; box-shadow: 0 8px 20px #0002; }
+.sa-phone .sa-picture { aspect-ratio: 9/16; }.sa-phone .sa-picture-empty { background: #262a30; color: #ddd; width: 100%; height: 100%; display: grid; place-items: center; }
+.sa-phone-status { height: 27px; display: flex; justify-content: space-between; padding: 6px 16px 4px; font-size: 10px; }
+.sa-phone .sa-picture::after { content: ""; position: absolute; inset: 0; background: linear-gradient(transparent 45%,#0008); pointer-events: none; }
+.sa-vertical-header { position: absolute; top: 54px; left: 12px; right: 12px; display: flex; gap: 8px; align-items: center; }.sa-vertical-header > div { flex: 1; }.sa-vertical-header strong,.sa-vertical-header small { display: block; }.sa-vertical-header .sa-avatar { width: 28px; height: 28px; flex-basis: 28px; }
+.sa-story-progress { position: absolute; top: 36px; left: 10px; right: 10px; display: flex; gap: 4px; }.sa-story-progress i { height: 2px; flex: 1; background: #fff8; }.sa-story-progress i:first-child { background: white; }
+.sa-vertical-title { position: absolute; top: 43px; left: 16px; right: 16px; display: flex; justify-content: space-between; font-size: 18px; font-weight: 600; }
+.sa-vertical-rail { position: absolute; right: 12px; top: 47%; display: grid; gap: 16px; font-size: 27px; text-shadow: 0 1px 4px #000; }
+.sa-vertical-caption { position: absolute; bottom: 30px; left: 14px; right: 48px; }.sa-vertical-caption header { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }.sa-vertical-caption .sa-avatar { width: 28px; height: 28px; flex-basis: 28px; }.sa-vertical-caption .sa-copy { padding: 7px 0 12px; }.sa-vertical-caption .sa-copy button { color: #ddd; }.sa-vertical-caption > small { color: #ddd; }.sa-vertical-cta { display: block; text-align: center; background: #fff3; border: 1px solid #fff5; border-radius: 7px; padding: 10px 6px; font-weight: 600; }.sa-phone-stories .sa-vertical-caption { right: 14px; }.sa-phone-home { position: absolute; bottom: 7px; left: 35%; width: 30%; height: 4px; background: white; border-radius: 5px; }
+.sa-safe { position: absolute; inset: 0; background: #ff284440; pointer-events: none; z-index: 4; }.sa-safe > div { position: absolute; border: 1px dashed white; background: #ffffff26; box-shadow: 0 0 0 400px #ff284418; }
+.sa-youtube .sa-platform-top { color: #111; }.sa-youtube .sa-platform-top::first-letter { color: #ff0000; }.sa-yt-screen { position: relative; }.sa-yt-ad { position: absolute; top: 12px; left: 12px; background: #0008; padding: 4px 8px; color: white; font-size: 11px; }.sa-yt-skip { position: absolute; bottom: 38px; right: 0; border: 1px solid #fff4; border-right: 0; background: #000b; color: white; padding: 9px 12px; font-size: 12px; cursor: pointer; }.sa-yt-controls { position: absolute; bottom: 0; left: 0; right: 0; padding: 6px 10px; color: white; background: #0008; font-size: 12px; white-space: nowrap; overflow: hidden; }.sa-yt-info { display: flex; gap: 10px; align-items: center; padding: 14px; }.sa-yt-info > div { flex: 1; min-width: 0; }.sa-yt-info strong,.sa-yt-info small { display: block; }.sa-yt-info small { color: #666; font-size: 11px; }.sa-youtube .sa-native-cta { color: #065fd4 !important; background: #def1ff; }
+.sa-review-nav { display: flex; flex-wrap: wrap; gap: 10px; position: sticky; top: 0; z-index: 10; background: var(--paper); padding: 12px 0; }.sa-review-nav a { padding: 8px 12px; border: 1px solid var(--border); border-radius: 30px; background: white; font-size: 13px; }.sa-review-section { scroll-margin-top: 76px; }.sa-review-section h2 { margin: 28px 0 12px; }.sa-review-section small { font-size: 13px; color: var(--ink-soft); }.sap-review-side { min-width: 0; }.sap-review-ad { min-width: 0; }.sa-import-preview p,.sap-review-side p { overflow-wrap: anywhere; }
+@media(max-width:600px) { .sa-panel { padding: 16px; }.sa-brand-account { grid-template-columns: 1fr; }.sa-stage { padding: 8px; }.sa-preview-controls { gap: 8px; }.sa-native-actions { font-size: 10px; }.sa-native-cta { padding: 7px; font-size: 10px !important; }.sa-yt-info { padding: 10px; gap: 8px; }.sa-review-nav { top: 0; }.sap-decision-row { flex-wrap: wrap; }.sap-adcard-form,.sap-adcard-preview,.sap-review-preview,.sap-review-side { min-width: 0; }.sap-field-row { flex-wrap: wrap; }.sap-field { min-width: 0; }.sap-toolbar,.sap-sharebox { flex-wrap: wrap; } }

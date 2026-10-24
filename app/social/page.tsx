@@ -5,6 +5,7 @@ import { PLAN_STATUT_LABEL } from "@/lib/social-ads/types";
 import { supabaseConfigured } from "@/lib/supabase";
 import { getUser } from "@/lib/supabase-server";
 import { createPlanAction } from "./actions";
+import ImportCampaign from "./_components/ImportCampaign";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,8 @@ export default async function SocialPlansPage() {
     <>
       <p className="eyebrow">Aperçu & validation · Social Ads</p>
       <h1>Vos plans d’annonces</h1>
+      <nav className="sa-tabs"><Link href="/social">Campagnes</Link><Link href="/social/parametrage">Paramétrage</Link></nav>
+      <ImportCampaign />
       <p className="subtitle">
         Composez vos annonces social, partagez un lien, et laissez votre client valider et commenter.
       </p>

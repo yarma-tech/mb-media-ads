@@ -1,5 +1,5 @@
 "use client";
-import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 import {
   createContext,
   useContext,
@@ -54,7 +54,7 @@ const ctx = createContext<Context | null>(null);
 export const authClient =
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    ? createClient(
+    ? createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       )

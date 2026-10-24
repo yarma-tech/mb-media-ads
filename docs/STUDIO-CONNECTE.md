@@ -79,3 +79,13 @@ npx playwright test --config playwright.studio.config.ts
 La configuration Playwright locale utilise Google Chrome installé dans `/Applications`. Les tests créent des campagnes de recette dans la base locale. Ne pas lancer cette suite contre une base de production.
 
 Les migrations additives sont isolées dans `dev/studio/supabase/migrations`. La V1 et les anciens modules Social Ads conservent leurs modèles existants.
+
+## Préparation de la recette distante
+
+Tous les travaux Social Ads sont intégrés au même code : import de classeurs, choix de formats, aperçu des placements, textes, bibliothèque, partage et export. Le Studio et Social Ads partagent désormais la session Supabase par cookies. Le lien « Social Ads » dans la navigation ouvre l’autre espace sans seconde connexion.
+
+Les douze migrations historiques ont été vérifiées sur la base locale isolée. Pour un projet de développement distant neuf, appliquer ces migrations puis les cinq migrations Studio. Ne jamais réappliquer les migrations initiales sur la base de production existante.
+
+La publication distante exige les variables du projet Supabase distant, `STUDIO_CONNECTED=true` et un `STUDIO_URL` correspondant au domaine publié. Les identifiants et clés de la base locale ne sont pas utilisables depuis Vercel.
+
+Le plafond de fichier global du projet doit autoriser 200 Mo. Le plan gratuit Supabase limite les fichiers à 50 Mo ; 200 Mo nécessite un projet sur une organisation Pro ou supérieure : https://supabase.com/docs/guides/storage/uploads/file-limits.

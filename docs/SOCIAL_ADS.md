@@ -60,3 +60,10 @@ utilisent la même mécanique (valeurs à affiner).
 3. **Générer le lien de validation** → copier l'URL `/preview/{token}`.
 4. Ouvrir ce lien en navigation privée (sans compte) → saisir un nom → **Approuver** / commenter.
 5. Retour éditeur : le feedback et le statut du plan se mettent à jour.
+# Annonces en situation V1
+
+Le workflow V1 ajoute paramétrage de marque, import XLSX avec aperçu et rapport,
+manifeste des captures/images, review groupée avec édition des textes et export TXT.
+Voir `social-ads-import-template.md`, `social-ads-situation-recette.md` et le ledger
+`superpowers/plans/2026-10-06-progress.md`. La migration V1 est locale uniquement
+pour cette livraison; son application production n'est pas autorisée ici.

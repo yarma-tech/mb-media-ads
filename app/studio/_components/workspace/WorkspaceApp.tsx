@@ -19,6 +19,7 @@ const pages: { url: string; label: string; icon: IconName }[] = [
   { url: "/studio/on-air", label: "On air", icon: "live" },
   { url: "/studio/terminees", label: "Terminées", icon: "clock" },
   { url: "/studio/acces", label: "Accès", icon: "info" },
+  { url: "/social", label: "Social Ads", icon: "external" },
 ];
 export default function WorkspaceApp() {
   return (

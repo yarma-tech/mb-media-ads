@@ -50,3 +50,10 @@ __pycache__/
 # Browser test artifacts
 /test-results/
 /playwright-report/
+
+# Local sessions and credentials
+/.codex/
+/.playwright-mcp/
+/.vercel-check.env
+/recovery-codes.txt
+/supabase/.temp/

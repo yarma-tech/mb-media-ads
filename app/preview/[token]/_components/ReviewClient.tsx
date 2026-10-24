@@ -1,13 +1,25 @@
 "use client";
-
-import { useEffect, useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import SocialPreview from "@/app/social/_components/SocialPreview";
-import { PLATEFORME_LABEL, type Ad, type Approval, type Comment, type Decision } from "@/lib/social-ads/types";
-import { submitApprovalAction, submitCommentAction } from "../actions";
-
-const LS_KEY = "sa_relecteur";
-
+import AdTextEditor from "@/app/social/_components/AdTextEditor";
+import {
+  PLATEFORME_LABEL,
+  type Ad,
+  type Approval,
+  type Comment,
+  type Decision,
+} from "@/lib/social-ads/types";
+import {
+  decisionForAd,
+  groupAdsByPlatform,
+  type EditableAdText,
+} from "@/lib/social-ads/review";
+import {
+  submitApprovalAction,
+  submitCommentAction,
+  editPublicAdAction,
+} from "../actions";
 export default function ReviewClient({
   token,
   planNom,
@@ -25,247 +37,287 @@ export default function ReviewClient({
 }) {
   const router = useRouter();
   const [nom, setNom] = useState("");
-  const [nomSet, setNomSet] = useState(false);
-  const [pending, start] = useTransition();
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(LS_KEY);
-      if (saved) {
-        queueMicrotask(() => {
-          setNom(saved);
-          setNomSet(true);
-        });
-      }
-    } catch {
-      /* localStorage indisponible */
-    }
-  }, []);
-
-  function saveNom() {
-    if (!nom.trim()) return;
-    try {
-      localStorage.setItem(LS_KEY, nom.trim());
-    } catch {
-      /* ignore */
-    }
-    setNomSet(true);
-  }
-
-  const approuves = approvals.filter((a) => a.decision === "approuve").length;
-
-  if (!nomSet) {
+  const [identified, setIdentified] = useState(false);
+  const [view, setView] = useState<"desktop" | "mobile">("mobile");
+  const groups = groupAdsByPlatform(ads);
+  const count = (items: Ad[], decision: "approuve" | "revision") =>
+    items.filter(
+      (a) =>
+        decisionForAd(approvals.filter((d) => d.ad_id === a.id)) === decision,
+    ).length;
+  if (!identified)
     return (
       <div className="sap-review-gate">
         <p className="eyebrow">Validation de campagne</p>
         <h1>{planNom}</h1>
-        <p className="subtitle">Indiquez votre nom pour valider et commenter les annonces.</p>
-        <div className="sap-newplan">
-          <input
-            value={nom}
-            onChange={(e) => setNom(e.target.value)}
-            placeholder="Votre nom"
-            onKeyDown={(e) => e.key === "Enter" && saveNom()}
-          />
-          <button type="button" className="btn btn-primary" onClick={saveNom} disabled={!nom.trim()}>
-            Accéder aux annonces
-          </button>
-        </div>
+        <p>Identifiez vos commentaires et décisions.</p>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (nom.trim()) {
+              setNom(nom.trim());
+              setIdentified(true);
+            }
+          }}
+        >
+          <label className="sap-field">
+            <span>Votre nom</span>
+            <input
+              value={nom}
+              maxLength={80}
+              required
+              onChange={(e) => setNom(e.target.value)}
+              autoComplete="name"
+            />
+          </label>
+          <button className="btn btn-primary">Accéder aux annonces</button>
+        </form>
       </div>
     );
-  }
-
   return (
     <div className="sap-review">
       <div className="sap-review-head">
         <div>
-          <p className="eyebrow">Validation de campagne{clientNom ? ` · ${clientNom}` : ""}</p>
+          <p className="eyebrow">{clientNom || "Validation de campagne"}</p>
           <h1>{planNom}</h1>
+          <p>
+            {ads.length} annonces · {count(ads, "approuve")} approuvées ·{" "}
+            {count(ads, "revision")} à réviser
+          </p>
         </div>
-        <div className="sap-review-progress">
-          <strong>
-            {approuves}/{ads.length}
-          </strong>
-          <span className="sap-sub">annonces approuvées</span>
-          <button
-            type="button"
-            className="navlink"
-            onClick={() => {
-              setNomSet(false);
-            }}
-          >
-            {nom} · changer
-          </button>
-        </div>
+        <button className="navlink" onClick={() => setIdentified(false)}>
+          {nom} · changer
+        </button>
       </div>
-
-      <div className="sap-review-list">
-        {ads.map((ad) => (
-          <ReviewAd
-            key={ad.id}
-            ad={ad}
-            comments={comments.filter((c) => c.ad_id === ad.id)}
-            myDecision={approvals.find((a) => a.ad_id === ad.id && a.relecteur === nom)?.decision ?? null}
-            allDecisions={approvals.filter((a) => a.ad_id === ad.id)}
-            onDecision={(d) =>
-              start(async () => {
-                await submitApprovalAction(token, ad.id, nom, d);
-                router.refresh();
-              })
-            }
-            onComment={(corps) =>
-              start(async () => {
-                await submitCommentAction(token, ad.id, nom, corps);
-                router.refresh();
-              })
-            }
-            pending={pending}
-          />
+      <div
+        className="sa-preview-controls"
+        role="group"
+        aria-label="Vue de toutes les annonces"
+      >
+        <button
+          aria-pressed={view === "desktop"}
+          onClick={() => setView("desktop")}
+        >
+          Bureau
+        </button>
+        <button
+          aria-pressed={view === "mobile"}
+          onClick={() => setView("mobile")}
+        >
+          Mobile
+        </button>
+      </div>
+      <nav className="sa-review-nav" aria-label="Plateformes">
+        {groups.map((g) => (
+          <a key={g.plateforme} href={`#platform-${g.plateforme}`}>
+            {PLATEFORME_LABEL[g.plateforme]} · {g.ads.length}
+          </a>
         ))}
-      </div>
-
-      <GeneralComments
-        comments={comments.filter((c) => c.ad_id === null)}
-        onComment={(corps) =>
-          start(async () => {
-            await submitCommentAction(token, null, nom, corps);
-            router.refresh();
-          })
-        }
-        pending={pending}
-      />
+      </nav>
+      {groups.map((g) => (
+        <section
+          className="sa-review-section"
+          id={`platform-${g.plateforme}`}
+          key={g.plateforme}
+        >
+          <h2>
+            {PLATEFORME_LABEL[g.plateforme]}{" "}
+            <small>
+              {count(g.ads, "approuve")} approuvées · {count(g.ads, "revision")}{" "}
+              à réviser
+            </small>
+          </h2>
+          <div className="sap-review-list">
+            {g.ads.map((ad) => (
+              <ReviewAd
+                key={`${ad.id}-${ad.updated_at}`}
+                ad={ad}
+                view={view}
+                comments={comments.filter((c) => c.ad_id === ad.id)}
+                approvals={approvals.filter((a) => a.ad_id === ad.id)}
+                nom={nom}
+                token={token}
+                refresh={() => router.refresh()}
+              />
+            ))}
+          </div>
+        </section>
+      ))}
+      <section className="sap-general">
+        <h2>Commentaires généraux</h2>
+        <CommentBox
+          comments={comments.filter((c) => !c.ad_id)}
+          submit={async (text) => {
+            const ok = await submitCommentAction(token, null, nom, text);
+            if (ok) router.refresh();
+            return ok;
+          }}
+        />
+      </section>
     </div>
   );
 }
-
 function ReviewAd({
   ad,
+  view,
   comments,
-  myDecision,
-  allDecisions,
-  onDecision,
-  onComment,
-  pending,
+  approvals,
+  nom,
+  token,
+  refresh,
 }: {
   ad: Ad;
+  view: "desktop" | "mobile";
   comments: Comment[];
-  myDecision: Decision | null;
-  allDecisions: Approval[];
-  onDecision: (d: Decision) => void;
-  onComment: (corps: string) => void;
-  pending: boolean;
+  approvals: Approval[];
+  nom: string;
+  token: string;
+  refresh: () => void;
 }) {
-  const [texte, setTexte] = useState("");
-
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<EditableAdText>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const decision = approvals.find((a) => a.relecteur === nom)?.decision;
+  async function decide(d: Decision) {
+    setBusy(true);
+    setError("");
+    try {
+      if (!(await submitApprovalAction(token, ad.id, nom, d)))
+        throw new Error(
+          "Décision refusée: le lien n’est peut-être plus actif.",
+        );
+      refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Décision impossible.");
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <div className="sap-review-ad">
+    <article className="sap-review-ad">
       <div className="sap-review-preview">
-        <span className="sap-review-plat">{PLATEFORME_LABEL[ad.plateforme]}</span>
-        <SocialPreview ad={ad} />
+        <SocialPreview ad={{ ...ad, ...draft }} view={view} />
       </div>
-
       <div className="sap-review-side">
         <div className="sap-decision-row">
           <button
-            type="button"
-            className={`btn ${myDecision === "approuve" ? "btn-primary" : "btn-ghost"}`}
-            onClick={() => onDecision("approuve")}
-            disabled={pending}
+            disabled={busy || editing}
+            className={`btn ${decision === "approuve" ? "btn-primary" : "btn-ghost"}`}
+            onClick={() => void decide("approuve")}
           >
             ✓ Approuver
           </button>
           <button
-            type="button"
-            className={`btn ${myDecision === "revision" ? "btn-danger" : "btn-ghost"}`}
-            onClick={() => onDecision("revision")}
-            disabled={pending}
+            disabled={busy || editing}
+            className={`btn ${decision === "revision" ? "btn-danger" : "btn-ghost"}`}
+            onClick={() => void decide("revision")}
           >
-            ✎ Demander une révision
+            Demander une révision
           </button>
         </div>
-
-        {allDecisions.length > 0 ? (
-          <div className="sap-feedback">
-            {allDecisions.map((a) => (
-              <span key={a.id} className={`sap-badge sap-badge-${a.decision}`}>
-                {a.relecteur} : {a.decision === "approuve" ? "Approuvé" : "Révision"}
-              </span>
-            ))}
-          </div>
-        ) : null}
-
-        <div className="sap-comments">
-          {comments.map((c) => (
-            <div key={c.id} className={`sap-comment ${c.resolu ? "resolu" : ""}`}>
-              <strong>{c.auteur}</strong> {c.corps}
-            </div>
-          ))}
-        </div>
-
-        <div className="sap-comment-box">
-          <textarea
-            rows={2}
-            value={texte}
-            onChange={(e) => setTexte(e.target.value)}
-            placeholder="Laisser un commentaire sur cette annonce…"
-          />
-          <button
-            type="button"
-            className="btn btn-ghost"
-            disabled={pending || !texte.trim()}
-            onClick={() => {
-              onComment(texte);
-              setTexte("");
+        <p>
+          {decisionForAd(approvals) === "revision"
+            ? "À réviser"
+            : decisionForAd(approvals) === "approuve"
+              ? "Approuvée"
+              : "Sans décision"}
+        </p>
+        <p role="alert">{error}</p>
+        <button
+          className="btn btn-ghost"
+          onClick={() => {
+            setEditing(!editing);
+            if (editing) setDraft({});
+          }}
+        >
+          {editing ? "Fermer l’édition" : "Éditer l’annonce"}
+        </button>
+        {editing && ad.variant_status !== "needs_review" && (
+          <AdTextEditor
+            ad={ad}
+            onChange={(p) => setDraft((d) => ({ ...d, ...p }))}
+            onSave={async (patch) => {
+              const updated = await editPublicAdAction(token, ad.id, patch);
+              if (updated) {
+                setDraft({});
+                refresh();
+              }
+              return updated;
             }}
-          >
-            Envoyer
-          </button>
-        </div>
+          />
+        )}
+        {ad.variant_status === "needs_review" && (
+          <p>Format historique à confirmer par le propriétaire.</p>
+        )}
+        <p className="sap-sub">
+          Dernière modification:{" "}
+          {new Date(ad.updated_at).toLocaleString("fr-CA")}
+        </p>
+        <CommentBox
+          comments={comments}
+          submit={async (text) => {
+            const ok = await submitCommentAction(token, ad.id, nom, text);
+            if (ok) refresh();
+            return ok;
+          }}
+        />
       </div>
-    </div>
+    </article>
   );
 }
-
-function GeneralComments({
+function CommentBox({
   comments,
-  onComment,
-  pending,
+  submit,
 }: {
   comments: Comment[];
-  onComment: (corps: string) => void;
-  pending: boolean;
+  submit: (text: string) => Promise<boolean>;
 }) {
-  const [texte, setTexte] = useState("");
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   return (
-    <div className="sap-general">
-      <h2>Commentaires généraux</h2>
+    <div>
       <div className="sap-comments">
         {comments.map((c) => (
-          <div key={c.id} className="sap-comment">
+          <div className={`sap-comment ${c.resolu ? "resolu" : ""}`} key={c.id}>
             <strong>{c.auteur}</strong> {c.corps}
           </div>
         ))}
-        {comments.length === 0 ? <p className="sap-sub">Aucun commentaire général.</p> : null}
       </div>
-      <div className="sap-comment-box">
-        <textarea
-          rows={2}
-          value={texte}
-          onChange={(e) => setTexte(e.target.value)}
-          placeholder="Un mot sur l’ensemble du plan…"
-        />
-        <button
-          type="button"
-          className="btn btn-ghost"
-          disabled={pending || !texte.trim()}
-          onClick={() => {
-            onComment(texte);
-            setTexte("");
-          }}
-        >
+      <form
+        className="sap-comment-box"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          setError("");
+          try {
+            if (!(await submit(text)))
+              throw new Error(
+                "Commentaire refusé. Votre saisie est conservée.",
+              );
+            setText("");
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "Envoi impossible.");
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <label className="sap-field">
+          <span>Commentaire</span>
+          <textarea
+            value={text}
+            maxLength={2000}
+            rows={3}
+            onChange={(e) => setText(e.target.value)}
+          />
+        </label>
+        <button className="btn btn-ghost" disabled={busy || !text.trim()}>
           Envoyer
         </button>
-      </div>
+        <p role="alert">{error}</p>
+      </form>
     </div>
   );
 }

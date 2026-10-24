@@ -8,10 +8,12 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { getSpec, PLATEFORME_LABEL, type Format, type Plateforme } from "./types";
+import { getVariantSpec, type AdVariant } from "./specs";
 
 export type CopyInput = {
   plateforme: Plateforme;
   format: Format;
+  variant?: AdVariant;
   objectif: string; // Notoriété / Trafic / Conversion / Leads…
   brief: string; // description du produit / offre / message
   marque?: string;
@@ -63,7 +65,7 @@ export async function genererCopy(input: CopyInput): Promise<CopyVariation[]> {
   const p = provider();
   if (!p) throw new Error("Aucune clé LLM (OPENROUTER_API_KEY ou ANTHROPIC_API_KEY) configurée.");
   const n = Math.min(Math.max(input.nbVariations ?? 3, 1), 5);
-  const spec = getSpec(input.plateforme, input.format);
+  const spec = input.variant ? getVariantSpec(input.variant) : getSpec(input.plateforme, input.format);
 
   const prompt = `Plateforme : ${PLATEFORME_LABEL[input.plateforme]}
 Format : ${input.format}

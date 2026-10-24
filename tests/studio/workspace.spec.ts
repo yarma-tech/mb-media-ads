@@ -209,3 +209,14 @@ test("contraste des pages connectées sur ordinateur et mobile", async ({ page }
     }
   }
 });
+
+test("connexion commune entre Studio et Social Ads", async ({ page }) => {
+  const users = JSON.parse(await readFile(".env.studio-users.local", "utf8"));
+  await page.goto(base + "/studio");
+  await page.getByLabel("E-mail", { exact: true }).fill(users[0].email);
+  await page.getByLabel("Mot de passe", { exact: true }).fill(users[0].password);
+  await page.getByRole("button", { name: "Se connecter", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Votre espace de travail" })).toBeVisible();
+  await page.goto(base + "/social");
+  await expect(page.getByRole("heading", { name: "Vos plans d’annonces" })).toBeVisible();
+});

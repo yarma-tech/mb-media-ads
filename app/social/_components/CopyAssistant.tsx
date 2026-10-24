@@ -4,6 +4,7 @@
 // variations que l'on applique à l'annonce en un clic.
 import { useState } from "react";
 import type { CopyVariation } from "@/lib/social-ads/copy";
+import type { AdVariant } from "@/lib/social-ads/specs";
 import type { Format, Plateforme } from "@/lib/social-ads/types";
 import { PLATEFORME_LABEL } from "@/lib/social-ads/types";
 
@@ -12,11 +13,13 @@ const OBJECTIFS = ["Notoriété", "Trafic", "Conversion", "Génération de leads
 export default function CopyAssistant({
   plateforme,
   format,
+  variant,
   marque,
   onApply,
 }: {
   plateforme: Plateforme;
   format: Format;
+  variant?: AdVariant;
   marque: string;
   onApply: (v: CopyVariation) => void;
 }) {
@@ -36,7 +39,7 @@ export default function CopyAssistant({
       const res = await fetch("/api/social/copy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plateforme, format, objectif, ton, marque, brief, nbVariations: 3 }),
+        body: JSON.stringify({ plateforme, format, variant, objectif, ton, marque, brief, nbVariations: 3 }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erreur de génération.");
@@ -59,7 +62,7 @@ export default function CopyAssistant({
   return (
     <div className="sap-ai">
       <div className="sap-ai-head">
-        <strong>✨ Rédaction assistée — {PLATEFORME_LABEL[plateforme]}</strong>
+        <strong>✨ Rédaction assistée - {PLATEFORME_LABEL[plateforme]}</strong>
         <button type="button" className="navlink" onClick={() => setOpen(false)}>
           Fermer
         </button>
@@ -79,7 +82,7 @@ export default function CopyAssistant({
         </label>
       </div>
       <label className="sap-field">
-        <span>Brief — produit, offre, message clé</span>
+        <span>Brief - produit, offre, message clé</span>
         <textarea
           value={brief}
           onChange={(e) => setBrief(e.target.value)}

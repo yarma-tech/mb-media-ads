@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { copyConfigured, genererCopy } from "@/lib/social-ads/copy";
 import { FORMATS, PLATEFORMES, type Format, type Plateforme } from "@/lib/social-ads/types";
 import { getUser } from "@/lib/supabase-server";
+import { parseVariant, legacyVariant } from "@/lib/social-ads/specs";
 
 // Génération de copy marketing par LLM. Réservée aux partenaires connectés.
 export async function POST(req: Request) {
@@ -27,6 +28,12 @@ export async function POST(req: Request) {
   if (!PLATEFORMES.includes(plateforme) || !FORMATS.includes(format)) {
     return NextResponse.json({ error: "Plateforme ou format invalide." }, { status: 400 });
   }
+  let variant;
+  try {
+    const parsed = parseVariant(body.variant || legacyVariant(plateforme, format));
+    if (parsed.status === "invalid" || parsed.variant.plateforme !== plateforme) return NextResponse.json({ error: "Variante invalide." }, { status: 400 });
+    variant = parsed.variant;
+  } catch { return NextResponse.json({ error: "Variante invalide." }, { status: 400 }); }
   const brief = String(body.brief ?? "").trim();
   if (!brief) return NextResponse.json({ error: "Brief requis." }, { status: 400 });
 
@@ -34,6 +41,7 @@ export async function POST(req: Request) {
     const variations = await genererCopy({
       plateforme,
       format,
+      variant,
       objectif: String(body.objectif ?? "Notoriété"),
       brief,
       marque: body.marque ? String(body.marque) : undefined,

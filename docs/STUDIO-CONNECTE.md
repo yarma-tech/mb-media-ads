@@ -64,7 +64,7 @@ Exemple de commande après lecture de la campagne :
 
 Pour éditer : acquérir `lock` avec un token UUID, utiliser ce `lockToken` dans `edit`, puis `release`. Les mutations de campagne incluent sa dernière `revision`. Un HTTP 409 exige une relecture avant nouvel essai ; ne pas rejouer aveuglément une création après une réponse réseau incertaine. Les réponses de batch distinguent annonces soumises et ignorées.
 
-Les invitations locales arrivent dans la boîte de test. Aucun fournisseur SMTP ni hébergement de développement partagé n’a été configuré. L’environnement fonctionne sur cette machine. Une mise en ligne nécessite un projet Supabase de développement distant et ses variables propres.
+Les invitations locales arrivent dans la boîte de test. Un environnement distant de recette est également déployé, décrit ci-dessous. Aucun fournisseur SMTP dédié n’a été configuré ; les restrictions du service e-mail Supabase par défaut restent applicables.
 
 ## Vérifier
 
@@ -84,7 +84,7 @@ Les migrations additives sont isolées dans `dev/studio/supabase/migrations`. La
 
 Tous les travaux Social Ads sont intégrés au même code : import de classeurs, choix de formats, aperçu des placements, textes, bibliothèque, partage et export. Le Studio et Social Ads partagent désormais la session Supabase par cookies. Le lien « Social Ads » dans la navigation ouvre l’autre espace sans seconde connexion.
 
-Les douze migrations historiques ont été vérifiées sur la base locale isolée. Pour un projet de développement distant neuf, appliquer ces migrations puis les cinq migrations Studio. Ne jamais réappliquer les migrations initiales sur la base de production existante.
+Les migrations historiques ont été vérifiées sur la base locale isolée. Pour un projet de développement distant neuf, appliquer toutes les migrations historiques et Studio dans leur ordre chronologique, y compris le correctif de privilèges API. Ne jamais réappliquer les migrations initiales sur la base de production existante.
 
 La publication distante exige les variables du projet Supabase distant, `STUDIO_CONNECTED=true` et un `STUDIO_URL` correspondant au domaine publié. Les identifiants et clés de la base locale ne sont pas utilisables depuis Vercel.
 

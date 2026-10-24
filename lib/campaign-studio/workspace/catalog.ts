@@ -1,3 +1,4 @@
+import { MEDIA_LIMIT_BYTES } from "./upload-limits";
 import type { Channel, Media } from "./types";
 export const CHANNELS: Record<Channel, string> = {
   facebook: "Facebook",
@@ -64,7 +65,7 @@ export function compatibleFormats(
     media.bytes <= 0
   )
     return [];
-  if (media.mime.startsWith("video/") && media.bytes > 200_000_000) return [];
+  if (media.mime.startsWith("video/") && media.bytes > MEDIA_LIMIT_BYTES) return [];
   if (channel === "display" && media.bytes > 150_000) return [];
   const kind = media.mime.startsWith("video/")
     ? "video"

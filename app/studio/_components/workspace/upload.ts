@@ -1,4 +1,5 @@
 "use client";
+import { MEDIA_LIMIT_MB, MEDIA_LIMIT_BYTES } from "@/lib/campaign-studio/workspace/upload-limits";
 import { Upload } from "tus-js-client";
 import type {
   Campaign,
@@ -15,7 +16,7 @@ export async function uploadFile(
   onProgress: (n: number) => void = () => {},
   onTransfer: (upload: Upload) => void = () => {},
 ): Promise<Media> {
-  if (file.size > 200000000) throw new Error("200 Mo maximum par fichier.");
+  if (file.size > MEDIA_LIMIT_BYTES) throw new Error(`${MEDIA_LIMIT_MB} Mo maximum par fichier.`);
   if (
     ![
       "image/jpeg",

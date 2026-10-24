@@ -89,3 +89,12 @@ Les douze migrations historiques ont été vérifiées sur la base locale isolé
 La publication distante exige les variables du projet Supabase distant, `STUDIO_CONNECTED=true` et un `STUDIO_URL` correspondant au domaine publié. Les identifiants et clés de la base locale ne sont pas utilisables depuis Vercel.
 
 Le plafond de fichier global du projet doit autoriser 200 Mo. Le plan gratuit Supabase limite les fichiers à 50 Mo ; 200 Mo nécessite un projet sur une organisation Pro ou supérieure : https://supabase.com/docs/guides/storage/uploads/file-limits.
+
+### Environnement distant de recette
+
+- Application : https://mb-media-studio-dev.vercel.app/studio
+- Projet Supabase isolé : `eybpsijzytdqiqifmohj`, région Canada Central.
+- Limite gratuite temporaire acceptée : 50 Mo par fichier, contrôlée avant transfert, par l’API et par le bucket. `NEXT_PUBLIC_STUDIO_UPLOAD_LIMIT_MB=50` configure cette recette ; le défaut local reste 200 Mo.
+- Migrations historiques et Studio appliquées ; tâche Postgres active chaque minute.
+- Deux comptes de test identiques aux comptes locaux, sans secret commité.
+- Les tests API/UI peuvent cibler cet environnement via `STUDIO_TEST_BASE_URL` et ses clés publiques de test. Ne jamais cibler la base historique de production.

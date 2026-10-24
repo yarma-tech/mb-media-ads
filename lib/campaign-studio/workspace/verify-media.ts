@@ -1,3 +1,4 @@
+import { MEDIA_LIMIT_BYTES } from "./upload-limits";
 import "server-only";
 import { mkdtemp, rm } from "node:fs/promises";
 import { createWriteStream } from "node:fs";
@@ -30,7 +31,7 @@ export async function verifyMedia(
     const limiter = new Transform({
       transform(chunk, encoding, callback) {
         bytes += chunk.length;
-        if (bytes > 200000000 || bytes > media.bytes)
+        if (bytes > MEDIA_LIMIT_BYTES || bytes > media.bytes)
           callback(new Error("Taille du fichier incorrecte."));
         else callback(null, chunk);
       },

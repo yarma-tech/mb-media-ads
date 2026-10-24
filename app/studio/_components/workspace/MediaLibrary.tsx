@@ -10,6 +10,7 @@ import type {
 import { compatibleFormats } from "@/lib/campaign-studio/workspace/catalog";
 import { useWorkspace } from "./WorkspaceProvider";
 import w from "./workspace.module.css";
+import { MEDIA_LIMIT_MB } from "@/lib/campaign-studio/workspace/upload-limits";
 import { uploadFile } from "./upload";
 export default function MediaLibrary({
   campaign,
@@ -70,7 +71,7 @@ export default function MediaLibrary({
     <section className={w.library}>
       <div className={w.heading}>
         <h2>Bibliothèque du canal</h2>
-        <span>Images et vidéos finales · 200 Mo max.</span>
+        <span>Images et vidéos finales · {MEDIA_LIMIT_MB} Mo max.</span>
       </div>
       <input
         ref={input}

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-const base = "http://127.0.0.1:3002";
+const base = process.env.STUDIO_TEST_BASE_URL ?? "http://127.0.0.1:3002";
 test("configuration SEM et validation connectées", async ({ page }) => {
   const users = JSON.parse(await readFile(".env.studio-users.local", "utf8"));
   await page.goto(base + "/studio");

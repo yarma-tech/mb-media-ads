@@ -1,3 +1,4 @@
+import { MEDIA_LIMIT_BYTES } from "./upload-limits";
 import { z } from "zod";
 export const ChannelSchema = z.enum([
   "facebook",
@@ -117,7 +118,7 @@ export const CommandSchema = z.discriminatedUnion("type", [
       "video/webm",
       "video/quicktime",
     ]),
-    bytes: z.number().int().min(1).max(200000000),
+    bytes: z.number().int().min(1).max(MEDIA_LIMIT_BYTES),
   }),
   z.object({ type: z.literal("resume_upload"), ...target, mediaId: uuid }),
   z.object({ type: z.literal("verify_media"), ...target, mediaId: uuid }),

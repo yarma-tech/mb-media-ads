@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- API response assertions exercise the runtime boundary. */
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-const api = "http://127.0.0.1:3002";
+const api = process.env.STUDIO_TEST_BASE_URL ?? "http://127.0.0.1:3002";
 test("autorisations serveur, verrou concurrent et MCP agent", async ({
   request,
 }) => {
@@ -9,7 +9,7 @@ test("autorisations serveur, verrou concurrent et MCP agent", async ({
   const tokens: Record<string, string> = {};
   for (const u of users) {
     const r = await request.post(
-      "http://127.0.0.1:55421/auth/v1/token?grant_type=password",
+      `${process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:55421"}/auth/v1/token?grant_type=password`,
       {
         headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
         data: { email: u.email, password: u.password },
@@ -132,7 +132,7 @@ test("batch partiel, demande de correction, V2 et fin automatique", async ({
 }) => {
   const users = JSON.parse(await readFile(".env.studio-users.local", "utf8"));
   const login = await request.post(
-    "http://127.0.0.1:55421/auth/v1/token?grant_type=password",
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:55421"}/auth/v1/token?grant_type=password`,
     {
       headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
       data: { email: users[0].email, password: users[0].password },
@@ -249,7 +249,7 @@ test("vérifier un média ne modifie pas une ligne verrouillée", async ({ reque
   const users = JSON.parse(await readFile(".env.studio-users.local", "utf8"));
   const tokens: Record<string, string> = {};
   for (const u of users) {
-    const r = await request.post("http://127.0.0.1:55421/auth/v1/token?grant_type=password", {
+    const r = await request.post(`${process.env.NEXT_PUBLIC_SUPABASE_URL ?? "http://127.0.0.1:55421"}/auth/v1/token?grant_type=password`, {
       headers: { apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
       data: { email: u.email, password: u.password },
     });

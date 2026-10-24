@@ -219,4 +219,19 @@ test("connexion commune entre Studio et Social Ads", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Votre espace de travail" })).toBeVisible();
   await page.goto(base + "/social");
   await expect(page.getByRole("heading", { name: "Vos plans d’annonces" })).toBeVisible();
+  const { campaignFixture } = await import("../../lib/social-ads/__fixtures__/campaign");
+  await page.getByLabel("Classeur de campagne").setInputFiles({
+    name: "Recette-social.xlsx",
+    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: Buffer.from(await campaignFixture()),
+  });
+  await expect(page.getByText(/12 annonces valides/)).toBeVisible({ timeout: 30000 });
+  await page.getByRole("button", { name: "Créer le plan avec 12 annonces", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Exporter les textes (.txt)", exact: true })).toBeVisible({ timeout: 30000 });
+  const exportUrl = await page.getByRole("link", { name: "Exporter les textes (.txt)", exact: true }).getAttribute("href");
+  const exported = await page.request.get(base + exportUrl);
+  expect(exported.status()).toBe(200);
+  expect(await exported.text()).toContain("Formation 1 à découvrir");
+  await page.getByRole("button", { name: "Générer le lien de validation", exact: true }).click();
+  await expect(page.getByLabel("Lien de validation")).toHaveValue(/\/preview\//);
 });

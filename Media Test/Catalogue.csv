@@ -1,0 +1,121 @@
+﻿espace;canal;format;usage;largeur;hauteur;type_fichier;chemin
+01-Studio;Facebook;Fil carré;image;1080;1080;image/png;01-Studio/Facebook/facebook-square-1080x1080.png
+01-Studio;Facebook;Fil portrait;image;1080;1350;image/png;01-Studio/Facebook/facebook-portrait-1080x1350.png
+01-Studio;Facebook;Story;image;1080;1920;image/png;01-Studio/Facebook/facebook-story-1080x1920.png
+01-Studio;Facebook;Reel;video;1080;1920;image/png;01-Studio/Facebook/facebook-reel-1080x1920.png
+01-Studio;Facebook;Vidéo paysage;video;1920;1080;image/png;01-Studio/Facebook/facebook-video-1920x1080.png
+01-Studio;Instagram;Fil carré;image;1080;1080;image/png;01-Studio/Instagram/instagram-square-1080x1080.png
+01-Studio;Instagram;Fil portrait;image;1080;1350;image/png;01-Studio/Instagram/instagram-portrait-1080x1350.png
+01-Studio;Instagram;Story;image;1080;1920;image/png;01-Studio/Instagram/instagram-story-1080x1920.png
+01-Studio;Instagram;Story vidéo;video;1080;1920;image/png;01-Studio/Instagram/instagram-story_video-1080x1920.png
+01-Studio;Instagram;Reel;video;1080;1920;image/png;01-Studio/Instagram/instagram-reel-1080x1920.png
+01-Studio;TikTok;Vidéo verticale;video;1080;1920;image/png;01-Studio/TikTok/tiktok-vertical-1080x1920.png
+01-Studio;YouTube;In-stream;video;1920;1080;image/png;01-Studio/YouTube/youtube-instream-1920x1080.png
+01-Studio;YouTube;Short;video;1080;1920;image/png;01-Studio/YouTube/youtube-short-1080x1920.png
+01-Studio;Display;Rectangle;image;300;250;image/png;01-Studio/Display/display-rectangle-300x250.png
+01-Studio;Display;Demi-page;image;300;600;image/png;01-Studio/Display/display-halfpage-300x600.png
+01-Studio;Display;Leaderboard;image;728;90;image/png;01-Studio/Display/display-leaderboard-728x90.png
+01-Studio;Display;Billboard;image;970;250;image/png;01-Studio/Display/display-billboard-970x250.png
+01-Studio;Display;Mobile;image;320;100;image/png;01-Studio/Display/display-mobile-320x100.png
+02-Social-Ads;Facebook;Fil image 1:1;image;1080;1080;image/png;02-Social-Ads/Facebook/facebook-feed-image-1x1-1080x1080.png
+02-Social-Ads;Facebook;Fil image 4:5;image;1080;1350;image/png;02-Social-Ads/Facebook/facebook-feed-image-4x5-1080x1350.png
+02-Social-Ads;Facebook;Fil image 1.91:1;image;1200;628;image/png;02-Social-Ads/Facebook/facebook-feed-image-1.91x1-1200x628.png
+02-Social-Ads;Facebook;Fil image 16:9;image;1920;1080;image/png;02-Social-Ads/Facebook/facebook-feed-image-16x9-1920x1080.png
+02-Social-Ads;Facebook;Fil image 9:16;image;1080;1920;image/png;02-Social-Ads/Facebook/facebook-feed-image-9x16-1080x1920.png
+02-Social-Ads;Facebook;Fil vidéo 1:1;video;1080;1080;image/png;02-Social-Ads/Facebook/facebook-feed-video-1x1-1080x1080.png
+02-Social-Ads;Facebook;Fil vidéo 4:5;video;1080;1350;image/png;02-Social-Ads/Facebook/facebook-feed-video-4x5-1080x1350.png
+02-Social-Ads;Facebook;Fil vidéo 1.91:1;video;1200;628;image/png;02-Social-Ads/Facebook/facebook-feed-video-1.91x1-1200x628.png
+02-Social-Ads;Facebook;Fil vidéo 16:9;video;1920;1080;image/png;02-Social-Ads/Facebook/facebook-feed-video-16x9-1920x1080.png
+02-Social-Ads;Facebook;Fil vidéo 9:16;video;1080;1920;image/png;02-Social-Ads/Facebook/facebook-feed-video-9x16-1080x1920.png
+02-Social-Ads;Facebook;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Facebook/facebook-feed-carrousel-1x1-carte-01-1080x1080.png
+02-Social-Ads;Facebook;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Facebook/facebook-feed-carrousel-1x1-carte-02-1080x1080.png
+02-Social-Ads;Facebook;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Facebook/facebook-feed-carrousel-1x1-carte-03-1080x1080.png
+02-Social-Ads;Facebook;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Facebook/facebook-feed-carrousel-1x1-carte-04-1080x1080.png
+02-Social-Ads;Facebook;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Facebook/facebook-feed-carrousel-1x1-carte-05-1080x1080.png
+02-Social-Ads;Facebook;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Facebook/facebook-feed-carrousel-1x1-carte-06-1080x1080.png
+02-Social-Ads;Facebook;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Facebook/facebook-feed-carrousel-1x1-carte-07-1080x1080.png
+02-Social-Ads;Facebook;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Facebook/facebook-feed-carrousel-1x1-carte-08-1080x1080.png
+02-Social-Ads;Facebook;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Facebook/facebook-feed-carrousel-1x1-carte-09-1080x1080.png
+02-Social-Ads;Facebook;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Facebook/facebook-feed-carrousel-1x1-carte-10-1080x1080.png
+02-Social-Ads;Facebook;Story image 9:16;image;1080;1920;image/png;02-Social-Ads/Facebook/facebook-stories-image-9x16-1080x1920.png
+02-Social-Ads;Facebook;Story vidéo 9:16;video;1080;1920;image/png;02-Social-Ads/Facebook/facebook-stories-video-9x16-1080x1920.png
+02-Social-Ads;Facebook;Reel vidéo 9:16;video;1080;1920;image/png;02-Social-Ads/Facebook/facebook-reels-video-9x16-1080x1920.png
+02-Social-Ads;Instagram;Fil image 1:1;image;1080;1080;image/png;02-Social-Ads/Instagram/instagram-feed-image-1x1-1080x1080.png
+02-Social-Ads;Instagram;Fil image 4:5;image;1080;1350;image/png;02-Social-Ads/Instagram/instagram-feed-image-4x5-1080x1350.png
+02-Social-Ads;Instagram;Fil vidéo 1:1;video;1080;1080;image/png;02-Social-Ads/Instagram/instagram-feed-video-1x1-1080x1080.png
+02-Social-Ads;Instagram;Fil vidéo 4:5;video;1080;1350;image/png;02-Social-Ads/Instagram/instagram-feed-video-4x5-1080x1350.png
+02-Social-Ads;Instagram;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-1x1-carte-01-1080x1080.png
+02-Social-Ads;Instagram;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-1x1-carte-02-1080x1080.png
+02-Social-Ads;Instagram;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-1x1-carte-03-1080x1080.png
+02-Social-Ads;Instagram;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-1x1-carte-04-1080x1080.png
+02-Social-Ads;Instagram;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-1x1-carte-05-1080x1080.png
+02-Social-Ads;Instagram;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-1x1-carte-06-1080x1080.png
+02-Social-Ads;Instagram;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-1x1-carte-07-1080x1080.png
+02-Social-Ads;Instagram;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-1x1-carte-08-1080x1080.png
+02-Social-Ads;Instagram;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-1x1-carte-09-1080x1080.png
+02-Social-Ads;Instagram;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-1x1-carte-10-1080x1080.png
+02-Social-Ads;Instagram;Fil carrousel 4:5;carrousel;1080;1350;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-4x5-carte-01-1080x1350.png
+02-Social-Ads;Instagram;Fil carrousel 4:5;carrousel;1080;1350;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-4x5-carte-02-1080x1350.png
+02-Social-Ads;Instagram;Fil carrousel 4:5;carrousel;1080;1350;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-4x5-carte-03-1080x1350.png
+02-Social-Ads;Instagram;Fil carrousel 4:5;carrousel;1080;1350;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-4x5-carte-04-1080x1350.png
+02-Social-Ads;Instagram;Fil carrousel 4:5;carrousel;1080;1350;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-4x5-carte-05-1080x1350.png
+02-Social-Ads;Instagram;Fil carrousel 4:5;carrousel;1080;1350;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-4x5-carte-06-1080x1350.png
+02-Social-Ads;Instagram;Fil carrousel 4:5;carrousel;1080;1350;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-4x5-carte-07-1080x1350.png
+02-Social-Ads;Instagram;Fil carrousel 4:5;carrousel;1080;1350;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-4x5-carte-08-1080x1350.png
+02-Social-Ads;Instagram;Fil carrousel 4:5;carrousel;1080;1350;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-4x5-carte-09-1080x1350.png
+02-Social-Ads;Instagram;Fil carrousel 4:5;carrousel;1080;1350;image/png;02-Social-Ads/Instagram/instagram-feed-carrousel-4x5-carte-10-1080x1350.png
+02-Social-Ads;Instagram;Story image 9:16;image;1080;1920;image/png;02-Social-Ads/Instagram/instagram-stories-image-9x16-1080x1920.png
+02-Social-Ads;Instagram;Story vidéo 9:16;video;1080;1920;image/png;02-Social-Ads/Instagram/instagram-stories-video-9x16-1080x1920.png
+02-Social-Ads;Instagram;Reel vidéo 9:16;video;1080;1920;image/png;02-Social-Ads/Instagram/instagram-reels-video-9x16-1080x1920.png
+02-Social-Ads;LinkedIn;Fil image 1.91:1;image;1200;628;image/png;02-Social-Ads/LinkedIn/linkedin-feed-image-1.91x1-1200x628.png
+02-Social-Ads;LinkedIn;Fil image 1:1;image;1080;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-image-1x1-1080x1080.png
+02-Social-Ads;LinkedIn;Fil image 4:5;image;1080;1350;image/png;02-Social-Ads/LinkedIn/linkedin-feed-image-4x5-1080x1350.png
+02-Social-Ads;LinkedIn;Fil vidéo 16:9;video;1920;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-video-16x9-1920x1080.png
+02-Social-Ads;LinkedIn;Fil vidéo 1:1;video;1080;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-video-1x1-1080x1080.png
+02-Social-Ads;LinkedIn;Fil vidéo 4:5;video;1080;1350;image/png;02-Social-Ads/LinkedIn/linkedin-feed-video-4x5-1080x1350.png
+02-Social-Ads;LinkedIn;Fil vidéo 9:16;video;1080;1920;image/png;02-Social-Ads/LinkedIn/linkedin-feed-video-9x16-1080x1920.png
+02-Social-Ads;LinkedIn;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-carrousel-1x1-carte-01-1080x1080.png
+02-Social-Ads;LinkedIn;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-carrousel-1x1-carte-02-1080x1080.png
+02-Social-Ads;LinkedIn;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-carrousel-1x1-carte-03-1080x1080.png
+02-Social-Ads;LinkedIn;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-carrousel-1x1-carte-04-1080x1080.png
+02-Social-Ads;LinkedIn;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-carrousel-1x1-carte-05-1080x1080.png
+02-Social-Ads;LinkedIn;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-carrousel-1x1-carte-06-1080x1080.png
+02-Social-Ads;LinkedIn;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-carrousel-1x1-carte-07-1080x1080.png
+02-Social-Ads;LinkedIn;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-carrousel-1x1-carte-08-1080x1080.png
+02-Social-Ads;LinkedIn;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-carrousel-1x1-carte-09-1080x1080.png
+02-Social-Ads;LinkedIn;Fil carrousel 1:1;carrousel;1080;1080;image/png;02-Social-Ads/LinkedIn/linkedin-feed-carrousel-1x1-carte-10-1080x1080.png
+02-Social-Ads;TikTok;In-feed vidéo 9:16;video;1080;1920;image/png;02-Social-Ads/TikTok/tiktok-in_feed-video-9x16-1080x1920.png
+02-Social-Ads;YouTube;In-stream vidéo 16:9;video;1920;1080;image/png;02-Social-Ads/YouTube/youtube-in_stream-video-16x9-1920x1080.png
+02-Social-Ads;YouTube;In-stream vidéo 9:16;video;1080;1920;image/png;02-Social-Ads/YouTube/youtube-in_stream-video-9x16-1080x1920.png
+02-Social-Ads;YouTube;In-stream vidéo 1:1;video;1080;1080;image/png;02-Social-Ads/YouTube/youtube-in_stream-video-1x1-1080x1080.png
+02-Social-Ads;YouTube;In-feed vidéo 16:9;video;1920;1080;image/png;02-Social-Ads/YouTube/youtube-in_feed-video-16x9-1920x1080.png
+02-Social-Ads;YouTube;Shorts vidéo 9:16;video;1080;1920;image/png;02-Social-Ads/YouTube/youtube-shorts-video-9x16-1080x1920.png
+01-Studio;Facebook;Reel;video;1080;1920;video/mp4;01-Studio/Facebook/facebook-reel-1080x1920.mp4
+01-Studio;Facebook;Vidéo paysage;video;1920;1080;video/mp4;01-Studio/Facebook/facebook-video-1920x1080.mp4
+01-Studio;Instagram;Story vidéo;video;1080;1920;video/mp4;01-Studio/Instagram/instagram-story_video-1080x1920.mp4
+01-Studio;Instagram;Reel;video;1080;1920;video/mp4;01-Studio/Instagram/instagram-reel-1080x1920.mp4
+01-Studio;TikTok;Vidéo verticale;video;1080;1920;video/mp4;01-Studio/TikTok/tiktok-vertical-1080x1920.mp4
+01-Studio;YouTube;In-stream;video;1920;1080;video/mp4;01-Studio/YouTube/youtube-instream-1920x1080.mp4
+01-Studio;YouTube;Short;video;1080;1920;video/mp4;01-Studio/YouTube/youtube-short-1080x1920.mp4
+02-Social-Ads;Facebook;Fil vidéo 1:1;video;1080;1080;video/mp4;02-Social-Ads/Facebook/facebook-feed-video-1x1-1080x1080.mp4
+02-Social-Ads;Facebook;Fil vidéo 4:5;video;1080;1350;video/mp4;02-Social-Ads/Facebook/facebook-feed-video-4x5-1080x1350.mp4
+02-Social-Ads;Facebook;Fil vidéo 1.91:1;video;1200;628;video/mp4;02-Social-Ads/Facebook/facebook-feed-video-1.91x1-1200x628.mp4
+02-Social-Ads;Facebook;Fil vidéo 16:9;video;1920;1080;video/mp4;02-Social-Ads/Facebook/facebook-feed-video-16x9-1920x1080.mp4
+02-Social-Ads;Facebook;Fil vidéo 9:16;video;1080;1920;video/mp4;02-Social-Ads/Facebook/facebook-feed-video-9x16-1080x1920.mp4
+02-Social-Ads;Facebook;Story vidéo 9:16;video;1080;1920;video/mp4;02-Social-Ads/Facebook/facebook-stories-video-9x16-1080x1920.mp4
+02-Social-Ads;Facebook;Reel vidéo 9:16;video;1080;1920;video/mp4;02-Social-Ads/Facebook/facebook-reels-video-9x16-1080x1920.mp4
+02-Social-Ads;Instagram;Fil vidéo 1:1;video;1080;1080;video/mp4;02-Social-Ads/Instagram/instagram-feed-video-1x1-1080x1080.mp4
+02-Social-Ads;Instagram;Fil vidéo 4:5;video;1080;1350;video/mp4;02-Social-Ads/Instagram/instagram-feed-video-4x5-1080x1350.mp4
+02-Social-Ads;Instagram;Story vidéo 9:16;video;1080;1920;video/mp4;02-Social-Ads/Instagram/instagram-stories-video-9x16-1080x1920.mp4
+02-Social-Ads;Instagram;Reel vidéo 9:16;video;1080;1920;video/mp4;02-Social-Ads/Instagram/instagram-reels-video-9x16-1080x1920.mp4
+02-Social-Ads;LinkedIn;Fil vidéo 16:9;video;1920;1080;video/mp4;02-Social-Ads/LinkedIn/linkedin-feed-video-16x9-1920x1080.mp4
+02-Social-Ads;LinkedIn;Fil vidéo 1:1;video;1080;1080;video/mp4;02-Social-Ads/LinkedIn/linkedin-feed-video-1x1-1080x1080.mp4
+02-Social-Ads;LinkedIn;Fil vidéo 4:5;video;1080;1350;video/mp4;02-Social-Ads/LinkedIn/linkedin-feed-video-4x5-1080x1350.mp4
+02-Social-Ads;LinkedIn;Fil vidéo 9:16;video;1080;1920;video/mp4;02-Social-Ads/LinkedIn/linkedin-feed-video-9x16-1080x1920.mp4
+02-Social-Ads;TikTok;In-feed vidéo 9:16;video;1080;1920;video/mp4;02-Social-Ads/TikTok/tiktok-in_feed-video-9x16-1080x1920.mp4
+02-Social-Ads;YouTube;In-stream vidéo 16:9;video;1920;1080;video/mp4;02-Social-Ads/YouTube/youtube-in_stream-video-16x9-1920x1080.mp4
+02-Social-Ads;YouTube;In-stream vidéo 9:16;video;1080;1920;video/mp4;02-Social-Ads/YouTube/youtube-in_stream-video-9x16-1080x1920.mp4
+02-Social-Ads;YouTube;In-stream vidéo 1:1;video;1080;1080;video/mp4;02-Social-Ads/YouTube/youtube-in_stream-video-1x1-1080x1080.mp4
+02-Social-Ads;YouTube;In-feed vidéo 16:9;video;1920;1080;video/mp4;02-Social-Ads/YouTube/youtube-in_feed-video-16x9-1920x1080.mp4
+02-Social-Ads;YouTube;Shorts vidéo 9:16;video;1080;1920;video/mp4;02-Social-Ads/YouTube/youtube-shorts-video-9x16-1080x1920.mp4
+01-Studio;Google SEM;Annonce responsive Search;référence seulement, annonce texte;1200;628;image/png;01-Studio/Google SEM/google-sem-reference-1200x628.png

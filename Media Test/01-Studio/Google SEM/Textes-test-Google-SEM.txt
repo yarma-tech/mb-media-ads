@@ -1,0 +1,22 @@
+GOOGLE SEM - ANNONCE RESPONSIVE SEARCH
+Aucune image ni vidéo nécessaire pour ce format.
+
+Titres (un par ligne, 30 caractères maximum)
+Votre avenir commence ici
+Découvrez nos programmes
+Inscrivez-vous maintenant
+Étudiez à Montréal
+Préparez votre prochain pas
+
+Descriptions (une par ligne, 90 caractères maximum)
+Découvrez nos programmes et préparez votre prochaine étape. Renseignez-vous dès aujourd’hui.
+Une nouvelle aventure vous attend. Consultez les programmes et les modalités d’admission.
+
+URL de destination
+https://example.com/admissions
+
+Chemin 1
+programmes
+
+Chemin 2
+admissions

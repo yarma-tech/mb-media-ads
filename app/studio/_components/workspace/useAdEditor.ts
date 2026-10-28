@@ -1,4 +1,5 @@
 "use client";
+import { workspaceErrorMessage } from "@/lib/campaign-studio/workspace/messages";
 import { useState, useRef, useEffect, useCallback } from "react";
 import type {
   Ad,
@@ -6,6 +7,28 @@ import type {
   Campaign,
 } from "@/lib/campaign-studio/workspace/types";
 import { useWorkspace } from "./WorkspaceProvider";
+// A normal navigation or another tab always starts a distinct editor session.
+// A reload may resume this tab's existing lease; server owner/token checks stay unchanged.
+const resumedLocks = new Set<string>();
+function rememberLock(key: string, value: string) {
+  try {
+    sessionStorage.setItem(key, value);
+  } catch {}
+}
+function editorLockToken(key: string) {
+  let previous = "";
+  const navigation = performance.getEntriesByType("navigation")[0] as
+    PerformanceNavigationTiming | undefined;
+  if (navigation?.type === "reload" && !resumedLocks.has(key)) {
+    try {
+      previous = sessionStorage.getItem(key) ?? "";
+    } catch {}
+  }
+  resumedLocks.add(key);
+  const value = previous || crypto.randomUUID();
+  rememberLock(key, value);
+  return value;
+}
 const fields = (a: Ad): AdFields => ({
   name: a.name,
   copy: a.copy,
@@ -46,9 +69,13 @@ export function useAdEditor(
     modified = useRef(0),
     saving = useRef<Promise<unknown>>(Promise.resolve()),
     alive = useRef(true);
-  const cacheKey = `studio:draft:${data?.actor.id}:${ad.id}`;
+  const cached = useRef(false);
+  const finalSave = useRef<Promise<unknown> | null>(null);
+  const lockKey = `studio:edit-lock:${data?.actor.id}:${ad.id}`;
+  const cacheKey = `studio:${source === "validation" ? "validation-draft" : "draft"}:${data?.actor.id}:${ad.id}`;
   const save = useCallback(
     async (final = false) => {
+      if (final && finalSave.current) return finalSave.current;
       const value = latest.current;
       const patch = diff(baseline.current, value);
       if (!final && !Object.keys(patch).length) return;
@@ -75,15 +102,15 @@ export function useAdEditor(
           const newer = diff(value, latest.current);
           baseline.current = server;
           latest.current = { ...server, ...newer };
-          if (source === "configuration")
-            try {
-              if (!Object.keys(newer).length) localStorage.removeItem(cacheKey);
-              else
-                localStorage.setItem(
-                  cacheKey,
-                  JSON.stringify({ revision: updated.revision, patch: newer }),
-                );
-            } catch {}
+          try {
+            if (!Object.keys(newer).length) localStorage.removeItem(cacheKey);
+            else
+              localStorage.setItem(
+                cacheKey,
+                JSON.stringify({ revision: updated.revision, patch: newer }),
+              );
+          } catch {}
+          cached.current = !Object.keys(newer).length;
           if (alive.current) {
             setSaved(JSON.stringify(server));
             setDraft(latest.current);
@@ -94,11 +121,19 @@ export function useAdEditor(
         .catch((e) => {
           if (alive.current) {
             setStatus("error");
-            setError(e.message);
+            setError(workspaceErrorMessage(e, "command"));
           }
           throw e;
         });
       saving.current = promise;
+      if (final) {
+        finalSave.current = promise;
+        void promise
+          .finally(() => {
+            finalSave.current = null;
+          })
+          .catch(() => {});
+      }
       return promise;
     },
     [ad.id, c.id, run, source, unlocked, cacheKey],
@@ -115,7 +150,20 @@ export function useAdEditor(
     }
     let active = true;
     modified.current = Date.now();
-    const lockToken = crypto.randomUUID();
+    const lockToken = editorLockToken(lockKey);
+    const release = async () => {
+      const result = await run({
+        type: "release",
+        campaignId: c.id,
+        adId: ad.id,
+        token: lockToken,
+      });
+      try {
+        if (sessionStorage.getItem(lockKey) === lockToken)
+          sessionStorage.removeItem(lockKey);
+      } catch {}
+      return result;
+    };
     token.current = lockToken;
     void run({ type: "lock", campaignId: c.id, adId: ad.id, token: lockToken })
       .then((result) => {
@@ -126,17 +174,17 @@ export function useAdEditor(
         const value = fields(current);
         let restored: Partial<AdFields> = {};
         let conflict = false;
-        if (source === "configuration")
-          try {
-            const raw = localStorage.getItem(cacheKey);
-            if (raw) {
-              const cache = JSON.parse(raw);
-              if (cache && typeof cache.patch === "object") {
-                restored = cache.patch;
-                conflict = cache.revision !== current.revision;
-              }
+        try {
+          const raw = localStorage.getItem(cacheKey);
+          if (raw) {
+            const cache = JSON.parse(raw);
+            if (cache && typeof cache.patch === "object") {
+              restored = cache.patch;
+              conflict = cache.revision !== current.revision;
             }
-          } catch {}
+          }
+        } catch {}
+        cached.current = Object.keys(restored).length > 0;
         baseline.current = value;
         latest.current = { ...value, ...restored };
         setSaved(JSON.stringify(value));
@@ -151,17 +199,12 @@ export function useAdEditor(
       .catch((e) => {
         if (active) {
           setStatus("locked");
-          setError(e.message);
+          setError(workspaceErrorMessage(e, "command"));
         }
       });
     const interval = setInterval(() => {
       if (Date.now() - modified.current > 90000) {
-        void run({
-          type: "release",
-          campaignId: c.id,
-          adId: ad.id,
-          token: lockToken,
-        }).catch(() => {});
+        void release().catch(() => {});
         if (active) setStatus("locked");
       } else
         void run({
@@ -172,7 +215,7 @@ export function useAdEditor(
         }).catch((e) => {
           if (active) {
             setStatus("locked");
-            setError(e.message);
+            setError(workspaceErrorMessage(e, "command"));
           }
         });
     }, 30000);
@@ -180,13 +223,6 @@ export function useAdEditor(
       active = false;
       alive.current = false;
       clearInterval(interval);
-      const release = () =>
-        run({
-          type: "release",
-          campaignId: c.id,
-          adId: ad.id,
-          token: lockToken,
-        });
       if (
         source === "configuration" &&
         Object.keys(diff(baseline.current, latest.current)).length
@@ -198,8 +234,7 @@ export function useAdEditor(
       else void release().catch(() => {});
     };
     // A lock session belongs to one ad, not to each autosaved server revision.
-
-  }, [c.id, ad.id, enabled, run, cacheKey, source]);
+  }, [c.id, ad.id, enabled, run, cacheKey, lockKey, source]);
   useEffect(() => {
     if (!Object.keys(diff(baseline.current, latest.current)).length) {
       const value = fields(ad);
@@ -226,42 +261,49 @@ export function useAdEditor(
   }, [draft, saved, enabled, save, source, status]);
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
-      if (Object.keys(diff(baseline.current, latest.current)).length) {
+      if (
+        Object.keys(diff(baseline.current, latest.current)).length &&
+        !(source === "validation" && cached.current)
+      ) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
-  }, []);
+  }, [source]);
   const change = (patch: Partial<AdFields>) => {
     modified.current = Date.now();
     latest.current = { ...latest.current, ...patch };
     setDraft(latest.current);
-    if (source === "configuration")
-      try {
-        localStorage.setItem(
-          cacheKey,
-          JSON.stringify({
-            revision: ad.revision,
-            patch: diff(baseline.current, latest.current),
-          }),
-        );
-      } catch {
-        setError(
-          "Copie locale indisponible. Gardez cette page ouverte jusqu’à la sauvegarde serveur.",
-        );
-      }
+    cached.current = false;
+    try {
+      localStorage.setItem(
+        cacheKey,
+        JSON.stringify({
+          revision: ad.revision,
+          patch: diff(baseline.current, latest.current),
+        }),
+      );
+      cached.current = true;
+    } catch {
+      setError(
+        "Copie locale indisponible. Gardez cette page ouverte jusqu’à la sauvegarde serveur.",
+      );
+    }
     if (status === "error") setStatus("ready");
   };
   const retry = async () => {
+    rememberLock(lockKey, token.current);
     const result = await run({
       type: "lock",
       campaignId: c.id,
       adId: ad.id,
       token: token.current,
     });
-    const current = (result.campaign as Campaign).ads.find((a) => a.id === ad.id)!;
+    const current = (result.campaign as Campaign).ads.find(
+      (a) => a.id === ad.id,
+    )!;
     const patch = diff(baseline.current, latest.current);
     baseline.current = fields(current);
     latest.current = { ...baseline.current, ...patch };
@@ -281,5 +323,11 @@ export function useAdEditor(
     save,
     retry,
     dirty: JSON.stringify(draft) !== saved,
+    canClose: () =>
+      !Object.keys(diff(baseline.current, latest.current)).length ||
+      cached.current ||
+      window.confirm(
+        "La copie locale est indisponible. Fermer et abandonner vos corrections ?",
+      ),
   };
 }

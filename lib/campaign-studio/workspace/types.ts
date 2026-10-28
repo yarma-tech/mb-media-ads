@@ -51,6 +51,9 @@ export interface Media {
   height: number;
   duration: number | null;
   channel: Channel;
+  /** Assigned channels. Absent on older single-channel media. */
+  channels?: Channel[];
+  frameRate?: number | null;
   state: "uploading" | "ready" | "invalid";
   errors: string[];
 }

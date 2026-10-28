@@ -59,6 +59,15 @@ export const CommandSchema = z.discriminatedUnion("type", [
     mediaId: uuid.optional(),
   }),
   z.object({
+    type: z.literal("add_media_batch"),
+    ...target,
+    mediaIds: z.array(uuid).min(1).max(200),
+    channels: z
+      .array(ChannelSchema.exclude(["google"]))
+      .min(1)
+      .max(5),
+  }),
+  z.object({
     type: z.literal("edit"),
     ...target,
     adId: uuid,
@@ -108,6 +117,11 @@ export const CommandSchema = z.discriminatedUnion("type", [
     type: z.literal("upload"),
     ...target,
     channel: ChannelSchema,
+    channels: z
+      .array(ChannelSchema.exclude(["google"]))
+      .min(1)
+      .max(5)
+      .optional(),
     name: z.string().min(1).max(255),
     mime: z.enum([
       "image/jpeg",

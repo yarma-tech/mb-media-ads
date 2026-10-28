@@ -78,19 +78,17 @@ export async function verifyMedia(
     const errors: string[] = [];
     if (!isImage && (!duration || duration <= 0))
       errors.push("Durée de vidéo invalide.");
-    if (media.channel === "display" && mime === "image/gif") {
-      const [n, d] = String(stream.avg_frame_rate).split("/").map(Number);
-      if (duration && duration > 30)
-        errors.push("Animation Display limitée à 30 secondes.");
-      if (d && n / d >= 5)
-        errors.push("Animation Display : moins de 5 images par seconde.");
-    }
+    const [rateNumerator, rateDenominator] = String(stream.avg_frame_rate)
+      .split("/")
+      .map(Number);
+    const frameRate = rateDenominator ? rateNumerator / rateDenominator : null;
     return {
       ...media,
       mime,
       width: stream.width,
       height: stream.height,
       duration,
+      frameRate,
       state: errors.length ? "invalid" : "ready",
       errors,
     };

@@ -1,12 +1,18 @@
 "use client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import {
+  loginErrorMessage,
+  workspaceErrorMessage,
+} from "@/lib/campaign-studio/workspace/messages";
+import { usePathname } from "next/navigation";
+import { Suspense, useState, type FormEvent } from "react";
 import {
   authClient,
   WorkspaceProvider,
   useWorkspace,
 } from "./WorkspaceProvider";
+import { useWorkspaceNavigation } from "./WorkspaceNavigation";
+import CreateCampaign from "./CreateCampaign";
 import Configuration from "./Configuration";
 import Review from "./Review";
 import Icon from "../Icon";
@@ -23,15 +29,25 @@ const pages: { url: string; label: string; icon: IconName }[] = [
 ];
 export default function WorkspaceApp() {
   return (
-    <WorkspaceProvider>
-      <App />
-    </WorkspaceProvider>
+    <Suspense fallback={<p role="status">Ouverture du studio…</p>}>
+      <WorkspaceProvider>
+        <App />
+      </WorkspaceProvider>
+    </Suspense>
   );
 }
 function App() {
   const { data, loading, error, notice, login, logout, notify } =
     useWorkspace();
   const pathname = usePathname();
+  const navigation = useWorkspaceNavigation();
+  const context: Record<string, string> =
+    pathname === "/studio/configuration" &&
+    !navigation.params.get("campagne") &&
+    data?.campaigns[0]
+      ? { campagne: data.campaigns[0].id }
+      : {};
+  const studioHref = (path: string) => navigation.href(path, context);
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [busy, setBusy] = useState(false);
@@ -45,25 +61,27 @@ function App() {
     try {
       await login(email, password);
     } catch (e) {
-      notify((e as Error).message);
+      notify(workspaceErrorMessage(e, "signin"));
     } finally {
       setBusy(false);
     }
   }
   if (loading)
     return (
-      <main className={w.login}>
-        <p>Ouverture du studio…</p>
-      </main>
+      <section className={w.login} aria-label="Chargement du studio">
+        <p role="status">Ouverture du studio…</p>
+      </section>
     );
   if (!data)
     return (
-      <main className={w.login}>
+      <section className={w.login} aria-label="Connexion au studio">
         <form onSubmit={signIn}>
           <span className={w.wordmark}>m.</span>
           <h1>Campaign studio</h1>
           <p>Connectez-vous à votre espace de travail.</p>
-          {error && <p role="status">{error}</p>}
+          {loginErrorMessage(error) && (
+            <p role="status">{loginErrorMessage(error)}</p>
+          )}
           <label>
             E-mail
             <input
@@ -87,17 +105,24 @@ function App() {
           <button disabled={busy} className={w.primary}>
             {busy ? "Connexion…" : "Se connecter"}
           </button>
+          <p className={w.srOnly} role="status">
+            {busy ? "Connexion en cours…" : ""}
+          </p>
           {notice && <p role="alert">{notice}</p>}
         </form>
-      </main>
+      </section>
     );
   return (
     <div className={w.app}>
       <a href="#workspace-main" className={w.skip}>
         Aller au contenu
       </a>
-      <aside className={w.sidebar}>
-        <Link href="/studio" aria-label="Home" className={w.wordmark}>
+      <aside className={w.sidebar} aria-label="Menu principal du studio">
+        <Link
+          href={studioHref("/studio")}
+          aria-label="m. - Home"
+          className={w.wordmark}
+        >
           m.
         </Link>
         <nav aria-label="Navigation du studio">
@@ -109,7 +134,7 @@ function App() {
             .map((p) => (
               <Link
                 key={p.url}
-                href={p.url}
+                href={p.url.startsWith("/studio") ? studioHref(p.url) : p.url}
                 title={p.label}
                 aria-label={p.label}
                 aria-current={pathname === p.url ? "page" : undefined}
@@ -123,13 +148,18 @@ function App() {
           title="Se déconnecter"
           aria-label="Se déconnecter"
         >
-          <Icon name="external" />
+          <Icon name="logout" />
         </button>
       </aside>
-      <main id="workspace-main" className={w.main}>
+      <section
+        id="workspace-main"
+        tabIndex={-1}
+        className={w.main}
+        aria-label="Espace de travail du studio"
+      >
         <header className={w.header}>
           <nav aria-label="Fil d’Ariane">
-            <Link href="/studio">Home</Link>
+            <Link href={studioHref("/studio")}>Home</Link>
             {pathname !== "/studio" && (
               <>
                 <Icon name="chevron" size={13} />
@@ -152,7 +182,7 @@ function App() {
               const { error } = await authClient!.auth.updateUser({
                 password: newPassword,
               });
-              if (error) notify(error.message);
+              if (error) notify(workspaceErrorMessage(error, "command"));
               else {
                 notify("Mot de passe enregistré.");
                 setAccount(false);
@@ -174,6 +204,10 @@ function App() {
             <button className={w.primary}>Enregistrer</button>
           </form>
         )}
+        {pathname !== "/studio" &&
+          (pathname !== "/studio/acces" || data.actor.role !== "validator") && (
+            <h1 className={w.srOnly}>{current}</h1>
+          )}
         {error && (
           <p className={w.error} role="alert">
             {error}
@@ -191,6 +225,7 @@ function App() {
           </p>
         ) : (
           <Review
+            key={pathname + ":" + (navigation.params.get("campagne") ?? "all")}
             view={
               pathname === "/studio/on-air"
                 ? "live"
@@ -200,7 +235,7 @@ function App() {
             }
           />
         )}
-      </main>
+      </section>
       {notice && (
         <div className={w.toast} role="status">
           {notice}
@@ -216,11 +251,10 @@ function App() {
   );
 }
 function Home() {
-  const { data, run, notify } = useWorkspace();
-  const router = useRouter();
-  const [name, setName] = useState("");
+  const { data } = useWorkspace();
+  const navigation = useWorkspaceNavigation();
   const validator = data!.actor.role === "validator";
-  const pending = data!.campaigns
+  const pendingAds = data!.campaigns
     .flatMap((c) => c.ads)
     .filter((a) =>
       validator
@@ -228,25 +262,16 @@ function Home() {
         : a.createdBy === data!.actor.id &&
           ["draft", "changes_requested"].includes(a.status),
     );
-  async function create(e: FormEvent) {
-    e.preventDefault();
-    try {
-      const r = await run({ type: "create_campaign", name });
-      router.push(
-        "/studio/configuration?campagne=" + (r.campaign as { id: string }).id,
-      );
-    } catch (e) {
-      notify((e as Error).message);
-    }
-  }
   return (
     <>
       <h1 className={w.title}>Votre espace de travail</h1>
       <Link
         className={w.homeCounter}
-        href={validator ? "/studio/validation" : "/studio/configuration"}
+        href={navigation.href(
+          validator ? "/studio/validation" : "/studio/configuration",
+        )}
       >
-        <strong>{pending.length}</strong>
+        <strong>{pendingAds.length}</strong>
         <span>
           {validator
             ? "annonces à valider"
@@ -256,21 +281,19 @@ function Home() {
       </Link>
       <div className={w.heading}>
         <h2>Campagnes</h2>
-        <form onSubmit={create} className={w.inline}>
-          <input
-            aria-label="Nom de la nouvelle campagne"
-            placeholder="Nom de campagne"
-            required
-            maxLength={200}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <button className={w.primary}>Créer une campagne</button>
-        </form>
+        <CreateCampaign />
       </div>
       <div className={w.campaignList}>
         {data!.campaigns.map((c) => (
-          <Link href={"/studio/configuration?campagne=" + c.id} key={c.id}>
+          <Link
+            href={navigation.href("/studio/configuration", {
+              campagne: c.id,
+              ...(navigation.params.get("campagne") !== c.id
+                ? { etape: "", canaux: "" }
+                : {}),
+            })}
+            key={c.id}
+          >
             <span>
               <b>{c.name}</b>
               <small>

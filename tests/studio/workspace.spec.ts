@@ -18,7 +18,9 @@ test("configuration SEM et validation connectées", async ({ page }) => {
     .getByRole("button", { name: "Créer une campagne", exact: true })
     .click();
   await expect(page.getByLabel("Campagne à configurer")).toBeVisible();
-  await page.getByText(/Marque, URL et dates/).click();
+  await expect(
+    page.getByRole("form", { name: "Informations de campagne", exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("button", { name: "Créer une marque", exact: true })
     .click();
@@ -32,7 +34,12 @@ test("configuration SEM et validation connectées", async ({ page }) => {
     .selectOption({ label: "Marque recette" });
   await page.getByLabel("URL commune").fill("https://example.com/admissions");
   await page.getByLabel("URL commune").blur();
-  await page.getByRole("button", { name: /Google SEM/ }).click();
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
+  await page
+    .getByRole("group", { name: "Choisir les canaux" })
+    .getByRole("button", { name: "Google SEM", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await page.getByLabel(/Annonce responsive Search/).check();
   await page
     .getByRole("button", { name: "Confirmer et compléter les annonces" })
@@ -50,7 +57,9 @@ test("configuration SEM et validation connectées", async ({ page }) => {
     page.getByText("Prête à envoyer", { exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Envoyer", exact: true }).click();
-  await expect(page.getByRole("cell", { name: "À valider", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "À valider", exact: true }),
+  ).toBeVisible();
   await page.getByRole("link", { name: "Validation", exact: true }).click();
   await page
     .getByLabel("Filtrer par campagne")
@@ -71,7 +80,9 @@ test("configuration SEM et validation connectées", async ({ page }) => {
   await expect(page.getByLabel("Titres · un par ligne")).toBeDisabled();
   await page.getByRole("button", { name: "Reprendre l’édition" }).click();
   await expect(page.getByLabel("Titres · un par ligne")).toBeEditable();
-  await expect(page.getByLabel("Titres · un par ligne")).toHaveValue("Titre corrigé\nTitre deux\nTitre trois");
+  await expect(page.getByLabel("Titres · un par ligne")).toHaveValue(
+    "Titre corrigé\nTitre deux\nTitre trois",
+  );
   await page.clock.resume();
   await page
     .getByRole("button", { name: "Enregistrer et valider", exact: true })
@@ -127,25 +138,20 @@ test("dépôt média, reconnaissance et création de la ligne", async ({
     .getByRole("button", { name: "Créer une campagne", exact: true })
     .click();
   await expect(page.getByLabel("Campagne à configurer")).toBeVisible();
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
+  await page
+    .getByRole("group", { name: "Choisir les canaux" })
+    .getByRole("button", { name: "Facebook", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await page
     .locator("input[type=file]")
     .setInputFiles("public/deck-demo/cu-generique-square.jpg");
   await expect(
     page.getByText("cu-generique-square.jpg", { exact: true }),
   ).toBeVisible();
-  const library = page
-    .locator("section")
-    .filter({
-      has: page.getByRole("heading", { name: "Bibliothèque du canal" }),
-    });
-  await expect(
-    library.getByRole("checkbox", { name: "Fil carré", exact: true }),
-  ).toBeVisible({ timeout: 30000 });
-  await library
-    .getByRole("checkbox", { name: "Fil carré", exact: true })
-    .check();
-  await library
-    .getByRole("button", { name: "Créer les annonces choisies" })
+  await page
+    .getByRole("button", { name: "Créer l’annonce", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Nouvelle annonce", exact: true }),
@@ -174,38 +180,92 @@ test("vidéo finale transférée directement et reconnue", async ({ page }) => {
   const users = JSON.parse(await readFile(".env.studio-users.local", "utf8"));
   await page.goto(base + "/studio");
   await page.getByLabel("E-mail", { exact: true }).fill(users[1].email);
-  await page.getByLabel("Mot de passe", { exact: true }).fill(users[1].password);
+  await page
+    .getByLabel("Mot de passe", { exact: true })
+    .fill(users[1].password);
   await page.getByRole("button", { name: "Se connecter", exact: true }).click();
-  await page.getByLabel("Nom de la nouvelle campagne").fill("Vidéo - recette " + Date.now());
-  await page.getByRole("button", { name: "Créer une campagne", exact: true }).click();
-  await page.getByRole("button", { name: /YouTube/ }).click();
-  await page.locator("input[type=file]").setInputFiles("tests/studio/fixtures/video-640x360.mp4");
-  await expect(page.getByRole("checkbox", { name: "In-stream", exact: true })).toBeVisible({ timeout: 30000 });
+  await page
+    .getByLabel("Nom de la nouvelle campagne")
+    .fill("Vidéo - recette " + Date.now());
+  await page
+    .getByRole("button", { name: "Créer une campagne", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
+  await page
+    .getByRole("group", { name: "Choisir les canaux" })
+    .getByRole("button", { name: "YouTube", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
+  await page
+    .locator("input[type=file]")
+    .setInputFiles("tests/studio/fixtures/video-640x360.mp4");
+  await expect(
+    page.getByRole("button", { name: "Créer l’annonce", exact: true }),
+  ).toBeEnabled({ timeout: 30000 });
   await expect(page.getByText("640 × 360", { exact: false })).toBeVisible();
   const video = page.locator("video");
   await expect(video).toBeVisible();
-  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.videoWidth)).toBe(640);
+  await expect
+    .poll(() => video.evaluate((v: HTMLVideoElement) => v.videoWidth))
+    .toBe(640);
 });
 
-test("contraste des pages connectées sur ordinateur et mobile", async ({ page }) => {
+test("contraste des pages connectées sur ordinateur et mobile", async ({
+  page,
+}) => {
   const users = JSON.parse(await readFile(".env.studio-users.local", "utf8"));
   await page.goto(base + "/studio");
   await page.getByLabel("E-mail", { exact: true }).fill(users[0].email);
-  await page.getByLabel("Mot de passe", { exact: true }).fill(users[0].password);
+  await page
+    .getByLabel("Mot de passe", { exact: true })
+    .fill(users[0].password);
   await page.getByRole("button", { name: "Se connecter", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Votre espace de travail" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Votre espace de travail" }),
+  ).toBeVisible();
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
-    for (const route of ["", "/configuration", "/validation", "/on-air", "/terminees", "/acces"]) {
+    for (const route of [
+      "",
+      "/configuration",
+      "/validation",
+      "/on-air",
+      "/terminees",
+      "/acces",
+    ]) {
       await page.goto(base + "/studio" + route);
-      await expect(page.getByRole("button", { name: "Se déconnecter" })).toBeAttached();
+      await expect(
+        page.getByRole("button", { name: "Se déconnecter" }),
+      ).toBeAttached();
       await page.addScriptTag({ path: "node_modules/axe-core/axe.min.js" });
       const violations = await page.evaluate(async () => {
-        const axe = (window as unknown as { axe: { run: (options: unknown) => Promise<{ violations: { id: string; nodes: { html: string; failureSummary: string }[] }[] }> } }).axe;
-        return (await axe.run({ runOnly: { type: "rule", values: ["color-contrast"] } })).violations;
+        const axe = (
+          window as unknown as {
+            axe: {
+              run: (
+                options: unknown,
+              ) => Promise<{
+                violations: {
+                  id: string;
+                  nodes: { html: string; failureSummary: string }[];
+                }[];
+              }>;
+            };
+          }
+        ).axe;
+        return (
+          await axe.run({
+            runOnly: { type: "rule", values: ["color-contrast"] },
+          })
+        ).violations;
       });
       expect(violations, `${route} / ${width}`).toEqual([]);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), `${route} / ${width}`).toBe(false);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth > innerWidth,
+        ),
+        `${route} / ${width}`,
+      ).toBe(false);
     }
   }
 });
@@ -214,24 +274,47 @@ test("connexion commune entre Studio et Social Ads", async ({ page }) => {
   const users = JSON.parse(await readFile(".env.studio-users.local", "utf8"));
   await page.goto(base + "/studio");
   await page.getByLabel("E-mail", { exact: true }).fill(users[0].email);
-  await page.getByLabel("Mot de passe", { exact: true }).fill(users[0].password);
+  await page
+    .getByLabel("Mot de passe", { exact: true })
+    .fill(users[0].password);
   await page.getByRole("button", { name: "Se connecter", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Votre espace de travail" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Votre espace de travail" }),
+  ).toBeVisible();
   await page.goto(base + "/social");
-  await expect(page.getByRole("heading", { name: "Vos plans d’annonces" })).toBeVisible();
-  const { campaignFixture } = await import("../../lib/social-ads/__fixtures__/campaign");
+  await expect(
+    page.getByRole("heading", { name: "Vos plans d’annonces" }),
+  ).toBeVisible();
+  const { campaignFixture } =
+    await import("../../lib/social-ads/__fixtures__/campaign");
   await page.getByLabel("Classeur de campagne").setInputFiles({
     name: "Recette-social.xlsx",
-    mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     buffer: Buffer.from(await campaignFixture()),
   });
-  await expect(page.getByText(/12 annonces valides/)).toBeVisible({ timeout: 30000 });
-  await page.getByRole("button", { name: "Créer le plan avec 12 annonces", exact: true }).click();
-  await expect(page.getByRole("link", { name: "Exporter les textes (.txt)", exact: true })).toBeVisible({ timeout: 30000 });
-  const exportUrl = await page.getByRole("link", { name: "Exporter les textes (.txt)", exact: true }).getAttribute("href");
+  await expect(page.getByText(/12 annonces valides/)).toBeVisible({
+    timeout: 30000,
+  });
+  await page
+    .getByRole("button", {
+      name: "Créer le plan avec 12 annonces",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("link", { name: "Exporter les textes (.txt)", exact: true }),
+  ).toBeVisible({ timeout: 30000 });
+  const exportUrl = await page
+    .getByRole("link", { name: "Exporter les textes (.txt)", exact: true })
+    .getAttribute("href");
   const exported = await page.request.get(base + exportUrl);
   expect(exported.status()).toBe(200);
   expect(await exported.text()).toContain("Formation 1 à découvrir");
-  await page.getByRole("button", { name: "Générer le lien de validation", exact: true }).click();
-  await expect(page.getByLabel("Lien de validation")).toHaveValue(/\/preview\//);
+  await page
+    .getByRole("button", { name: "Générer le lien de validation", exact: true })
+    .click();
+  await expect(page.getByLabel("Lien de validation")).toHaveValue(
+    /\/preview\//,
+  );
 });

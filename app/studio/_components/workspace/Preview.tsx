@@ -108,7 +108,15 @@ export default function Preview({
             <img src={src} alt={media.name} />
           )
         ) : (
-          <span>Média à associer</span>
+          <span>
+            {!media
+              ? "Média à associer"
+              : media.state === "ready"
+                ? "Préparation de l’aperçu…"
+                : media.state === "invalid"
+                  ? "Non conforme"
+                  : "Transfert à terminer"}
+          </span>
         )}
       </div>
       {ad.channel === "youtube" && (

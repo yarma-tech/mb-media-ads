@@ -1,6 +1,9 @@
 "use client";
 import { useState, useRef, useEffect, type MutableRefObject } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import CreateCampaign from "./CreateCampaign";
+import CampaignInfoForm from "./CampaignInfoForm";
+import { useWorkspaceNavigation } from "./WorkspaceNavigation";
 import type {
   Ad,
   AdFields,
@@ -12,6 +15,7 @@ import {
   CATALOG,
   CHANNELS,
   compatibleFormats,
+  mediaChannels,
 } from "@/lib/campaign-studio/workspace/catalog";
 import { isComplete } from "@/lib/campaign-studio/workspace/workflow";
 import { useWorkspace } from "./WorkspaceProvider";
@@ -31,13 +35,29 @@ export const STATUS = {
 };
 export default function Configuration() {
   const { data } = useWorkspace();
-  const params = useSearchParams(),
-    router = useRouter();
+  const { params, update, href } = useWorkspaceNavigation();
   const id = params.get("campagne");
   const campaign =
-    data!.campaigns.find((c) => c.id === id) ?? data!.campaigns[0];
+    !id || id === "all"
+      ? data!.campaigns[0]
+      : data!.campaigns.find((c) => c.id === id);
   if (!campaign)
-    return <p>Créez une campagne depuis la Home pour commencer.</p>;
+    return (
+      <div className={w.empty}>
+        <p>
+          {data!.campaigns.length
+            ? "Sélectionnez une campagne disponible depuis la Home."
+            : "Créez votre première campagne pour commencer."}
+        </p>
+        {data!.campaigns.length ? (
+          <Link href={href("/studio", { campagne: "" })}>
+            Voir les campagnes
+          </Link>
+        ) : (
+          <CreateCampaign />
+        )}
+      </div>
+    );
   return (
     <>
       <div className={w.toolbar}>
@@ -45,7 +65,7 @@ export default function Configuration() {
           aria-label="Campagne à configurer"
           value={campaign.id}
           onChange={(e) =>
-            router.push("/studio/configuration?campagne=" + e.target.value)
+            update({ campagne: e.target.value, etape: "", canaux: "" })
           }
         >
           {data!.campaigns.map((c) => (
@@ -60,15 +80,301 @@ export default function Configuration() {
     </>
   );
 }
+type ConfigurationStage = "details" | "channels" | "media" | "editor";
 function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
-  const { data, run, notify } = useWorkspace();
-  const [channel, setChannel] = useState<Channel>("facebook"),
-    [formats, setFormats] = useState<string[]>([]),
+  const { params, update } = useWorkspaceNavigation();
+  const { run } = useWorkspace();
+  const allChannels = Object.keys(CHANNELS) as Channel[];
+  const fromUrl = (params.get("canaux") ?? "")
+    .split(",")
+    .filter((id): id is Channel => allChannels.includes(id as Channel));
+  const [chosen, setChosen] = useState<Channel[]>(() =>
+    fromUrl.length
+      ? [...new Set(fromUrl)]
+      : [
+          ...new Set([
+            ...c.ads.map((a) => a.channel),
+            ...c.media.flatMap(mediaChannels),
+          ]),
+        ],
+  );
+  const requestedStage = params.get("etape");
+  const stage =
+    c.status === "finished"
+      ? "editor"
+      : requestedStage === "details" ||
+          requestedStage === "channels" ||
+          requestedStage === "media" ||
+          requestedStage === "editor"
+        ? requestedStage
+        : c.ads.length
+          ? "editor"
+          : c.media.length
+            ? "media"
+            : "details";
+  function setStage(etape: ConfigurationStage) {
+    update({ etape });
+  }
+  const [importing, setImporting] = useState(false);
+  const step = useRef<HTMLElement>(null);
+  useEffect(() => {
+    step.current?.querySelector<HTMLHeadingElement>("h2")?.focus();
+  }, [stage]);
+  const channel = (
+    allChannels.includes(params.get("canal") as Channel)
+      ? params.get("canal")
+      : (fromUrl[0] ?? "facebook")
+  ) as Channel;
+  function continueToMedia() {
+    update({
+      canaux: chosen.join(","),
+      canal: chosen[0],
+      etape:
+        !c.ads.length && chosen.some((id) => id !== "google")
+          ? "media"
+          : "editor",
+    });
+  }
+  const steps = (
+    <CampaignSteps
+      stage={stage}
+      onChange={setStage}
+      disabled={importing || c.status === "finished"}
+    />
+  );
+  if (stage === "details")
+    return (
+      <>
+        {steps}
+        <section
+          ref={step}
+          className={w.campaignStart}
+          aria-label="Informations de la campagne"
+        >
+          <h2 tabIndex={-1}>Marque et campagne</h2>
+          <CampaignInfoForm
+            campaign={c}
+            onContinue={() => setStage("channels")}
+          />
+        </section>
+      </>
+    );
+  if (stage === "channels")
+    return (
+      <>
+        {steps}
+        <section
+          ref={step}
+          className={w.channelStart}
+          aria-label="Choisir les canaux de la campagne"
+        >
+          <div>
+            <h2 tabIndex={-1}>Sur quels canaux ?</h2>
+            <p>Choisissez un ou plusieurs canaux.</p>
+          </div>
+          <div
+            role="group"
+            aria-label="Choisir les canaux"
+            className={w.channelChoices}
+          >
+            {allChannels.map((id) => (
+              <button
+                key={id}
+                aria-pressed={chosen.includes(id)}
+                onClick={() =>
+                  setChosen(
+                    allChannels.filter((candidate) =>
+                      candidate === id
+                        ? !chosen.includes(id)
+                        : chosen.includes(candidate),
+                    ),
+                  )
+                }
+              >
+                {CHANNELS[id]}
+                <span aria-hidden="true">
+                  {chosen.includes(id) ? "✓" : "+"}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className={w.inline}>
+            <button
+              className={w.primary}
+              disabled={!chosen.length}
+              onClick={continueToMedia}
+            >
+              Continuer
+            </button>
+            {(c.ads.length > 0 || c.media.length > 0) && (
+              <button
+                onClick={() => setStage(c.ads.length ? "editor" : "media")}
+              >
+                Annuler
+              </button>
+            )}
+          </div>
+        </section>
+      </>
+    );
+  if (stage === "media") {
+    const mediaTargets = chosen.filter((id) => id !== "google");
+    return (
+      <>
+        {steps}
+        <section
+          ref={step}
+          className={w.mediaStart}
+          aria-label="Préparer les annonces depuis les médias"
+        >
+          <div className={w.heading}>
+            <span>{chosen.map((id) => CHANNELS[id]).join(" · ")}</span>
+            <button disabled={importing} onClick={() => setStage("channels")}>
+              Modifier les canaux
+            </button>
+          </div>
+          {mediaTargets.length > 0 && (
+            <MediaLibrary
+              campaign={c}
+              channel={mediaTargets[0]}
+              channels={mediaTargets}
+              batchMode
+              onBusyChange={setImporting}
+              onAllCreated={() =>
+                update({ etape: "editor", canal: mediaTargets[0] })
+              }
+              onCreate={async (media, formats) => {
+                await run({
+                  type: "add",
+                  campaignId: c.id,
+                  channel: mediaTargets[0],
+                  mediaId: media.id,
+                  formats,
+                });
+              }}
+            />
+          )}
+          {chosen.includes("google") && (
+            <p>
+              Google SEM : les annonces texte se complètent dans le tableau.
+            </p>
+          )}
+          <button
+            className={w.textOnly}
+            disabled={importing}
+            onClick={() => setStage("editor")}
+          >
+            Saisir les textes sans médias
+          </button>
+        </section>
+      </>
+    );
+  }
+  const visible = fromUrl.length ? fromUrl : allChannels;
+  return (
+    <>
+      {steps}
+      {c.status === "active" && (
+        <div className={w.setupActions}>
+          <button
+            onClick={() => {
+              if (!chosen.length) setStage("channels");
+              else
+                setStage(
+                  chosen.some((id) => id !== "google") ? "media" : "channels",
+                );
+            }}
+          >
+            Ajouter des médias en lot
+          </button>
+        </div>
+      )}
+      <ChannelEditor
+        key={channel}
+        campaign={c}
+        channel={channel}
+        visibleChannels={visible}
+        setChannel={(canal) => update({ canal })}
+      />
+    </>
+  );
+}
+function CampaignSteps({
+  stage,
+  onChange,
+  disabled,
+}: {
+  stage: ConfigurationStage;
+  onChange: (stage: ConfigurationStage) => void;
+  disabled: boolean;
+}) {
+  const current = stage === "details" ? 1 : stage === "channels" ? 2 : 3;
+  const steps = [
+    { label: "Campagne", stage: "details" },
+    { label: "Canaux", stage: "channels" },
+    { label: "Annonces", stage: "editor" },
+  ] as const;
+  return (
+    <nav aria-label="Étapes de configuration" className={w.campaignSteps}>
+      <ol>
+        {steps.map((item, index) => (
+          <li key={item.stage}>
+            <button
+              disabled={disabled || index + 1 > current}
+              aria-current={index + 1 === current ? "step" : undefined}
+              onClick={() => {
+                if (index + 1 !== current) onChange(item.stage);
+              }}
+            >
+              {index + 1} {item.label}
+            </button>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+function ChannelEditor({
+  campaign: c,
+  channel,
+  setChannel,
+  visibleChannels,
+}: {
+  campaign: Campaign;
+  channel: Channel;
+  setChannel: (channel: Channel) => void;
+  visibleChannels: Channel[];
+}) {
+  const { run, notify, pending } = useWorkspace();
+  const [formats, setFormats] = useState<string[]>([]),
     [selected, setSelected] = useState<string[]>([]),
     [activeId, setActiveId] = useState(""),
     [unlocked, setUnlocked] = useState<string[]>([]),
-    [batch, setBatch] = useState(false),
-    [brandForm, setBrandForm] = useState(false);
+    [batch, setBatch] = useState(false);
+  const channelTabs = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = channelTabs.current;
+    const active = nav?.querySelector<HTMLButtonElement>(
+      '[aria-pressed="true"]',
+    );
+    if (!nav || !active) return;
+    const reveal = () => {
+      const bounds = nav.getBoundingClientRect();
+      const tab = active.getBoundingClientRect();
+      if (tab.left < bounds.left || tab.right > bounds.right) {
+        nav.scrollLeft +=
+          tab.left < bounds.left
+            ? tab.left - bounds.left - 4
+            : tab.right - bounds.right + 4;
+      }
+    };
+    reveal();
+    const observer = new ResizeObserver(reveal);
+    observer.observe(nav);
+    observer.observe(active);
+    return () => observer.disconnect();
+  }, [channel]);
   const rows = c.ads.filter((a) => a.channel === channel);
   const active = rows.find((a) => a.id === activeId) ?? rows[0];
   const activeReady =
@@ -82,130 +388,50 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
   const command = (values: Record<string, unknown>) =>
     run({ campaignId: c.id, ...values });
   const flushRef = useRef<null | (() => Promise<unknown>)>(null);
+  const submitting = useRef(false);
+  const [submission, setSubmission] = useState<"idle" | "sending">("idle");
   async function submit(ids: string[]) {
-    await flushRef.current?.();
-    const r = await command({ type: "submit", adIds: ids });
-    const skipped = r.skipped as unknown[];
-    notify(
-      `${ids.length - skipped.length} annonce(s) envoyée(s). ${skipped.length ? skipped.length + " annonce(s) à compléter ou déjà soumise(s)." : ""}`,
-    );
+    if (submitting.current) return;
+    submitting.current = true;
+    setSubmission("sending");
+    try {
+      await flushRef.current?.();
+      const r = await command({ type: "submit", adIds: ids });
+      const skipped = r.skipped as unknown[];
+      notify(
+        `${ids.length - skipped.length} annonce(s) envoyée(s). ${skipped.length ? skipped.length + " annonce(s) à compléter ou déjà soumise(s)." : ""}`,
+      );
+    } finally {
+      submitting.current = false;
+      setSubmission("idle");
+    }
   }
   return (
     <>
-      <details className={w.campaignSettings}>
-        <summary>{c.name} · Marque, URL et dates</summary>
-        <div className={w.settingsGrid}>
-          <label>
-            Marque
-            <select
-              value={c.brandId ?? ""}
-              onChange={(e) =>
-                void command({
-                  type: "campaign",
-                  fields: { brandId: e.target.value || null },
-                }).catch(() => {})
-              }
-            >
-              <option value="">À choisir</option>
-              {data!.brands.map((b) => (
-                <option value={b.id} key={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button onClick={() => setBrandForm((v) => !v)}>
-            Créer une marque
-          </button>
-          <label>
-            URL commune
-            <input
-              key={c.defaultUrl}
-              defaultValue={c.defaultUrl}
-              placeholder="https://…"
-              onBlur={(e) => {
-                if (e.target.value !== c.defaultUrl)
-                  void command({
-                    type: "campaign",
-                    fields: { defaultUrl: e.target.value },
-                  }).catch(() => {});
+      <nav
+        ref={channelTabs}
+        className={w.channelTabs}
+        aria-label="Canal de configuration"
+      >
+        {Object.entries(CHANNELS)
+          .filter(([id]) => visibleChannels.includes(id as Channel))
+          .map(([id, label]) => (
+            <button
+              key={id}
+              aria-pressed={channel === id}
+              onClick={() => {
+                setChannel(id as Channel);
+                setFormats([]);
+                setSelected([]);
+                setActiveId("");
               }}
-            />
-          </label>
-          <label>
-            Début
-            <input
-              type="date"
-              value={c.startDate ?? ""}
-              onChange={(e) =>
-                void command({
-                  type: "campaign",
-                  fields: { startDate: e.target.value || null },
-                }).catch(() => {})
-              }
-            />
-          </label>
-          <label>
-            Fin · 23 h 59 Montréal
-            <input
-              type="date"
-              value={c.endDate ?? ""}
-              onChange={(e) =>
-                void command({
-                  type: "campaign",
-                  fields: { endDate: e.target.value || null },
-                }).catch(() => {})
-              }
-            />
-          </label>
-        </div>
-        {brandForm && (
-          <form
-            className={w.settingsGrid}
-            onSubmit={async (e) => {
-              e.preventDefault();
-              const f = new FormData(e.currentTarget);
-              await run({
-                type: "create_brand",
-                name: f.get("name"),
-                logo: f.get("logo"),
-                website: f.get("website"),
-              });
-              setBrandForm(false);
-            }}
-          >
-            <label>
-              Nom
-              <input name="name" required />
-            </label>
-            <label>
-              Logo · URL
-              <input name="logo" type="url" />
-            </label>
-            <label>
-              Site web
-              <input name="website" type="url" />
-            </label>
-            <button className={w.primary}>Créer</button>
-          </form>
-        )}
-      </details>
-      <nav className={w.channelTabs} aria-label="Canal de configuration">
-        {Object.entries(CHANNELS).map(([id, label]) => (
-          <button
-            key={id}
-            aria-pressed={channel === id}
-            onClick={() => {
-              setChannel(id as Channel);
-              setFormats([]);
-              setSelected([]);
-              setActiveId("");
-            }}
-          >
-            {label}
-            <small>{c.ads.filter((a) => a.channel === id).length || ""}</small>
-          </button>
-        ))}
+            >
+              {label}
+              <small>
+                {c.ads.filter((a) => a.channel === id).length || ""}
+              </small>
+            </button>
+          ))}
       </nav>
       {c.status === "finished" ? (
         <p className={w.error}>
@@ -249,13 +475,15 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
           </div>
           <button
             className={w.primary}
-            disabled={!formats.length}
+            disabled={!formats.length || pending("add", c.id)}
             onClick={async () => {
               await command({ type: "add", channel, formats });
               setFormats([]);
             }}
           >
-            Confirmer et compléter les annonces
+            {pending("add", c.id)
+              ? "Création…"
+              : "Confirmer et compléter les annonces"}
           </button>
         </details>
       )}
@@ -265,17 +493,25 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
         </span>
         <div className={w.inline}>
           <button
-            disabled={!selected.length || c.status === "finished"}
+            disabled={
+              !selected.length ||
+              c.status === "finished" ||
+              submission === "sending"
+            }
             onClick={() => setBatch((v) => !v)}
           >
             Appliquer un champ en batch
           </button>
           <button
             className={w.primary}
-            disabled={!selected.length || c.status === "finished"}
+            disabled={
+              !selected.length ||
+              c.status === "finished" ||
+              submission === "sending"
+            }
             onClick={() => void submit(selected).catch(() => {})}
           >
-            Envoyer la sélection
+            {submission === "sending" ? "Envoi…" : "Envoyer la sélection"}
           </button>
         </div>
       </div>
@@ -345,8 +581,10 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
             />
             Remplacer les valeurs existantes (sinon champs vides uniquement)
           </label>
-          <button className={w.primary}>
-            Appliquer à {selected.length} ligne(s)
+          <button className={w.primary} disabled={pending("batch", c.id)}>
+            {pending("batch", c.id)
+              ? "Enregistrement…"
+              : `Appliquer à ${selected.length} ligne(s)`}
           </button>
         </form>
       )}
@@ -370,6 +608,7 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
               setUnlocked([...unlocked, active.id]);
           }}
           onSubmit={submit}
+          submitting={submission === "sending"}
           flushRef={flushRef}
         />
       ) : (
@@ -401,6 +640,7 @@ function TableSession({
   setActive,
   onUnlock,
   onSubmit,
+  submitting,
   flushRef,
 }: {
   c: Campaign;
@@ -413,20 +653,27 @@ function TableSession({
   setActive: (id: string) => void;
   onUnlock: () => void;
   onSubmit: (ids: string[]) => Promise<void>;
+  submitting: boolean;
   flushRef: MutableRefObject<null | (() => Promise<unknown>)>;
 }) {
-  const { data, run, notify } = useWorkspace();
+  const { data, run, notify, pending } = useWorkspace();
   const editor = useAdEditor(c, active, enabled, "configuration", unlocked);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [upload, setUpload] = useState<
+    | { stage: "idle" }
+    | { stage: "uploading"; progress: number }
+    | { stage: "verifying" }
+  >({ stage: "idle" });
   async function attach(file: File) {
-    setUploadProgress(0);
+    setUpload({ stage: "uploading", progress: 0 });
     try {
       const m = await uploadFile(
         file,
         c,
         active.channel,
         run,
-        setUploadProgress,
+        (progress) => setUpload({ stage: "uploading", progress }),
+        undefined,
+        () => setUpload({ stage: "verifying" }),
       );
       if (
         m.state !== "ready" ||
@@ -443,7 +690,7 @@ function TableSession({
     } catch (e) {
       notify((e as Error).message);
     } finally {
-      setUploadProgress(null);
+      setUpload({ stage: "idle" });
     }
   }
   const editable =
@@ -488,9 +735,11 @@ function TableSession({
             Reprendre l’édition
           </button>
         )}
-        {uploadProgress !== null && (
+        {upload.stage !== "idle" && (
           <p role="status">
-            Transfert vers la ligne active : {uploadProgress} %
+            {upload.stage === "verifying"
+              ? "Vérification du fichier…"
+              : `Transfert vers la ligne active : ${upload.progress} %`}
           </p>
         )}
         <div role="status" className={w.saveState}>
@@ -516,7 +765,22 @@ function TableSession({
             </span>
           )}
         </div>
-        <div className={w.tableScroll}>
+        <div
+          className={w.tableScroll}
+          onFocusCapture={(e) => {
+            const container = e.currentTarget;
+            const target = e.target as HTMLElement;
+            requestAnimationFrame(() => {
+              if (!container.isConnected || !target.isConnected) return;
+              const bounds = container.getBoundingClientRect();
+              const field = target.getBoundingClientRect();
+              if (field.left < bounds.left + 6)
+                container.scrollLeft += field.left - bounds.left - 6;
+              else if (field.right > bounds.right - 6)
+                container.scrollLeft += field.right - bounds.right + 6;
+            });
+          }}
+        >
           <table className={w.editTable}>
             <thead>
               <tr>
@@ -614,7 +878,7 @@ function TableSession({
                                 .filter(
                                   (m) =>
                                     m.state === "ready" &&
-                                    m.channel === a.channel &&
+                                    mediaChannels(m).includes(a.channel) &&
                                     compatibleFormats(m, a.channel).some(
                                       (f) => f.id === a.format,
                                     ),
@@ -632,7 +896,7 @@ function TableSession({
                                 disabled={
                                   !isActive ||
                                   !editable ||
-                                  uploadProgress !== null
+                                  upload.stage !== "idle"
                                 }
                                 accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
                                 onChange={(e) => {
@@ -708,6 +972,7 @@ function TableSession({
                           </button>
                         ) : ["on_air", "stopped"].includes(a.status) ? (
                           <button
+                            disabled={pending("version", c.id, a.id)}
                             onClick={() =>
                               void run({
                                 type: "version",
@@ -725,18 +990,18 @@ function TableSession({
                           </button>
                         ) : (
                           <button
-                            disabled={!isActive || !editable}
+                            disabled={!isActive || !editable || submitting}
                             onClick={async () => {
                               try {
-                                await editor.save();
                                 await onSubmit([a.id]);
                               } catch {}
                             }}
                           >
-                            Envoyer
+                            {submitting ? "Envoi…" : "Envoyer"}
                           </button>
                         )}
                         <button
+                          disabled={pending("duplicate", c.id, a.id)}
                           onClick={() =>
                             void run({
                               type: "duplicate",
@@ -756,7 +1021,7 @@ function TableSession({
           </table>
         </div>
       </div>
-      <aside className={w.previewPane}>
+      <aside className={w.previewPane} aria-label="Aperçu de l’annonce">
         <label className={w.adName}>
           Nom de l’annonce
           <input

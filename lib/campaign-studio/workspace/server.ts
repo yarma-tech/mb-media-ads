@@ -18,9 +18,11 @@ import {
   CATALOG,
   CHANNELS,
   compatibleFormats,
+  mediaChannels,
   uniqueMediaFor,
 } from "./catalog";
 import type { Actor, AdFields, Campaign, Media } from "./types";
+import { createMediaAds } from "./media-batch";
 import { verifyMedia } from "./verify-media";
 export class StudioError extends Error {
   constructor(
@@ -360,6 +362,17 @@ export async function execute(raw: unknown, actor: Actor) {
         throw new StudioError("La fin doit suivre le début.");
       break;
     }
+    case "add_media_batch": {
+      const result = createMediaAds(
+        c,
+        command.mediaIds,
+        command.channels,
+        actor,
+        now,
+      );
+      if (result.campaign !== c) await commit(c, result.campaign, actor);
+      return result;
+    }
     case "add":
       for (const format of command.formats) {
         next = addAd(next, command.channel, format, actor, now);
@@ -369,7 +382,7 @@ export async function execute(raw: unknown, actor: Actor) {
               (m) =>
                 m.id === command.mediaId &&
                 m.state === "ready" &&
-                m.channel === command.channel &&
+                mediaChannels(m).includes(command.channel) &&
                 compatibleFormats(m, command.channel).some(
                   (f) => f.id === format,
                 ),
@@ -556,6 +569,9 @@ export async function execute(raw: unknown, actor: Actor) {
         height: 0,
         duration: null,
         channel: command.channel,
+        ...(command.channels
+          ? { channels: [...new Set([command.channel, ...command.channels])] }
+          : {}),
         state: "uploading",
         errors: [],
       };
@@ -599,26 +615,35 @@ export async function execute(raw: unknown, actor: Actor) {
         revision: c.revision + 1,
         media: c.media.map((m) => (m.id === media.id ? verified : m)),
       };
-      if (!compatibleFormats(verified, verified.channel).length) {
+      if (
+        !mediaChannels(verified).some(
+          (channel) => compatibleFormats(verified, channel).length,
+        )
+      ) {
         verified.state = "invalid";
-        verified.errors.push("Aucun format compatible pour ce canal.");
+        verified.errors.push(
+          "Aucun format compatible pour les canaux choisis.",
+        );
       }
       if (verified.state === "ready") {
         const candidates = next.ads.filter(
           (a) =>
             ["draft", "changes_requested"].includes(a.status) &&
             !a.mediaId &&
-            a.channel === verified.channel &&
+            mediaChannels(verified).includes(a.channel) &&
             compatibleFormats(verified, a.channel).some(
               (f) => f.id === a.format,
             ),
         );
-        if (
-          candidates.length === 1 &&
-          uniqueMediaFor(candidates[0].format, verified.channel, next.media)
-            ?.id === verified.id
-        ) {
-          const a = candidates[0];
+        for (const a of candidates) {
+          if (
+            candidates.filter(
+              (other) =>
+                other.channel === a.channel && other.format === a.format,
+            ).length !== 1 ||
+            uniqueMediaFor(a.format, a.channel, next.media)?.id !== verified.id
+          )
+            continue;
           // Verification must succeed independently of an open editor. Never
           // change an ad behind its local draft, including the uploader's own.
           const { data: activeLock, error: lockError } = await db
@@ -628,30 +653,31 @@ export async function execute(raw: unknown, actor: Actor) {
             .gt("expires_at", now)
             .maybeSingle();
           if (lockError) throw lockError;
-          if (!activeLock) next = {
-            ...next,
-            ads: next.ads.map((x) =>
-              x.id === a.id
-                ? {
-                    ...x,
-                    mediaId: verified.id,
-                    revision: x.revision + 1,
-                    history: [
-                      ...x.history,
-                      {
-                        id: crypto.randomUUID(),
-                        at: now,
-                        actorId: actor.id,
-                        actorName: actor.name,
-                        action: "media_matched",
-                        before: { mediaId: null },
-                        after: { mediaId: verified.id },
-                      },
-                    ],
-                  }
-                : x,
-            ),
-          };
+          if (!activeLock)
+            next = {
+              ...next,
+              ads: next.ads.map((x) =>
+                x.id === a.id
+                  ? {
+                      ...x,
+                      mediaId: verified.id,
+                      revision: x.revision + 1,
+                      history: [
+                        ...x.history,
+                        {
+                          id: crypto.randomUUID(),
+                          at: now,
+                          actorId: actor.id,
+                          actorName: actor.name,
+                          action: "media_matched",
+                          before: { mediaId: null },
+                          after: { mediaId: verified.id },
+                        },
+                      ],
+                    }
+                  : x,
+              ),
+            };
         }
       }
       break;

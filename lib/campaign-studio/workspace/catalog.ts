@@ -1,5 +1,12 @@
 import { MEDIA_LIMIT_BYTES } from "./upload-limits";
 import type { Channel, Media } from "./types";
+export function mediaChannels(
+  media: Pick<Media, "channel" | "channels">,
+): Channel[] {
+  return media.channels?.length
+    ? [...new Set(media.channels)]
+    : [media.channel];
+}
 export const CHANNELS: Record<Channel, string> = {
   facebook: "Facebook",
   instagram: "Instagram",
@@ -54,7 +61,8 @@ export const CATALOG: Record<Channel, Format[]> = {
   google: [f("search", "Annonce responsive Search", 0, 0, "text")],
 };
 export function compatibleFormats(
-  media: Pick<Media, "mime" | "width" | "height" | "bytes">,
+  media: Pick<Media, "mime" | "width" | "height" | "bytes"> &
+    Partial<Pick<Media, "duration" | "frameRate">>,
   channel: Channel,
 ): Format[] {
   if (
@@ -65,8 +73,15 @@ export function compatibleFormats(
     media.bytes <= 0
   )
     return [];
-  if (media.mime.startsWith("video/") && media.bytes > MEDIA_LIMIT_BYTES) return [];
+  if (media.mime.startsWith("video/") && media.bytes > MEDIA_LIMIT_BYTES)
+    return [];
   if (channel === "display" && media.bytes > 150_000) return [];
+  if (
+    channel === "display" &&
+    media.mime === "image/gif" &&
+    ((media.duration ?? 0) > 30 || (media.frameRate ?? 0) >= 5)
+  )
+    return [];
   const kind = media.mime.startsWith("video/")
     ? "video"
     : media.mime.startsWith("image/")
@@ -88,7 +103,7 @@ export function uniqueMediaFor(
 ): Media | null {
   const matches = media.filter(
     (m) =>
-      m.channel === channel &&
+      mediaChannels(m).includes(channel) &&
       m.state === "ready" &&
       compatibleFormats(m, channel).some((f) => f.id === format),
   );

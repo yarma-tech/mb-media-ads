@@ -1,4 +1,5 @@
 "use client";
+import { workspaceErrorMessage } from "@/lib/campaign-studio/workspace/messages";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import type {
@@ -7,6 +8,7 @@ import type {
   Channel,
 } from "@/lib/campaign-studio/workspace/types";
 import { CHANNELS } from "@/lib/campaign-studio/workspace/catalog";
+import { useWorkspaceNavigation } from "./WorkspaceNavigation";
 import { useWorkspace } from "./WorkspaceProvider";
 import { useAdEditor } from "./useAdEditor";
 import Preview from "./Preview";
@@ -19,12 +21,20 @@ export default function Review({
 }: {
   view: "validation" | "live" | "finished";
 }) {
-  const { data, run, notify } = useWorkspace();
-  const [status, setStatus] = useState<"pending" | "approved">("pending"),
-    [mode, setMode] = useState<"grid" | "carousel">("grid"),
-    [campaignId, setCampaignId] = useState("all"),
-    [query, setQuery] = useState(""),
-    [editing, setEditing] = useState<{
+  const { data, run, notify, pending } = useWorkspace();
+  const navigation = useWorkspaceNavigation();
+  const status =
+    navigation.params.get("statut") === "approved" ? "approved" : "pending";
+  const mode =
+    navigation.params.get("vue") === "carousel" ? "carousel" : "grid";
+  const campaignId = navigation.params.get("campagne") || "all";
+  const query = navigation.params.get("q") || "";
+  const searchRef = useRef<HTMLInputElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+  const resumeFocus = useRef(false);
+  const actions = useRef(new Set<string>());
+  const [acting, setActing] = useState<string[]>([]);
+  const [editing, setEditing] = useState<{
       campaign: string;
       ad: string;
       mode: "edit" | "comment";
@@ -56,6 +66,12 @@ export default function Review({
         .find(({ c, a }) => c.id === editing.campaign && a.id === editing.ad)
     : null;
   const remaining = items.filter((i) => !visited.includes(i.a.id));
+  useEffect(() => {
+    if (resumeFocus.current && remaining.length) {
+      carouselRef.current?.focus();
+      resumeFocus.current = false;
+    }
+  }, [remaining.length]);
   async function animate(id: string, direction: number) {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const el = document.querySelector(`[data-workspace-ad="${id}"]`);
@@ -77,6 +93,9 @@ export default function Review({
     a: Ad,
     type: "approve" | "publish" | "stop",
   ) {
+    if (actions.current.has(a.id)) return;
+    actions.current.add(a.id);
+    setActing((ids) => [...ids, a.id]);
     try {
       if (type === "approve") await animate(a.id, 1);
       await run({
@@ -92,7 +111,11 @@ export default function Review({
             ? "Annonce marquée On air."
             : "Annonce arrêtée.",
       );
-    } catch {}
+    } catch {
+    } finally {
+      actions.current.delete(a.id);
+      setActing((ids) => ids.filter((id) => id !== a.id));
+    }
   }
   function card({ c, a }: { c: Campaign; a: Ad }) {
     return (
@@ -107,7 +130,12 @@ export default function Review({
           </span>
         </div>
         {view === "validation" && validator && (
-          <div className={w.validationActions}>
+          <fieldset
+            className={w.validationActions}
+            disabled={acting.includes(a.id) || pending("undo", c.id, a.id)}
+            aria-label="Actions de validation"
+            aria-busy={acting.includes(a.id)}
+          >
             {a.status === "approved" && (
               <button
                 aria-label="Annuler la validation"
@@ -157,14 +185,20 @@ export default function Review({
                 Passer On air
               </button>
             )}
-          </div>
+          </fieldset>
         )}
         {view === "live" && (
           <div className={w.inline}>
             {validator && (
-              <button onClick={() => void action(c, a, "stop")}>Arrêter</button>
+              <button
+                disabled={acting.includes(a.id)}
+                onClick={() => void action(c, a, "stop")}
+              >
+                Arrêter
+              </button>
             )}
             <button
+              disabled={pending("version", c.id, a.id)}
               onClick={async () => {
                 await run({ type: "version", campaignId: c.id, adId: a.id });
                 notify("Nouvelle version créée dans Configuration.");
@@ -187,7 +221,12 @@ export default function Review({
           )}
         <details className={w.history}>
           <summary>Détails et historique</summary>
-          <Link href={"/studio/configuration?campagne=" + c.id}>
+          <Link
+            href={navigation.href("/studio/configuration", {
+              campagne: c.id,
+              canal: a.channel,
+            })}
+          >
             Ouvrir la configuration →
           </Link>
           {a.stopReason && (
@@ -215,7 +254,7 @@ export default function Review({
               <button
                 aria-pressed={status === "pending"}
                 onClick={() => {
-                  setStatus("pending");
+                  navigation.update({ statut: "pending" });
                   setVisited([]);
                 }}
               >
@@ -224,7 +263,7 @@ export default function Review({
               <button
                 aria-pressed={status === "approved"}
                 onClick={() => {
-                  setStatus("approved");
+                  navigation.update({ statut: "approved" });
                   setVisited([]);
                 }}
               >
@@ -234,13 +273,13 @@ export default function Review({
             <div className={w.segment} data-second={mode === "carousel"}>
               <button
                 aria-pressed={mode === "grid"}
-                onClick={() => setMode("grid")}
+                onClick={() => navigation.update({ vue: "grid" })}
               >
                 Par canal
               </button>
               <button
                 aria-pressed={mode === "carousel"}
-                onClick={() => setMode("carousel")}
+                onClick={() => navigation.update({ vue: "carousel" })}
               >
                 Carrousel
               </button>
@@ -250,7 +289,10 @@ export default function Review({
         <select
           aria-label="Filtrer par campagne"
           value={campaignId}
-          onChange={(e) => setCampaignId(e.target.value)}
+          onChange={(e) => {
+            navigation.update({ campagne: e.target.value });
+            setVisited([]);
+          }}
         >
           <option value="all">Toutes les campagnes</option>
           {data!.campaigns.map((c) => (
@@ -262,11 +304,15 @@ export default function Review({
         <label className={w.search}>
           <Icon name="search" size={16} />
           <input
+            ref={searchRef}
             type="search"
             aria-label="Rechercher une annonce"
             placeholder="Rechercher…"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              navigation.update({ q: e.target.value }, true);
+              setVisited([]);
+            }}
           />
         </label>
       </div>
@@ -278,44 +324,85 @@ export default function Review({
               (campaignId === "all" || c.id === campaignId),
           )
           .map((c) => <FinishedCampaign key={c.id} c={c} />)}
-      {view === "validation" && mode === "carousel" ? (
-        remaining[0] ? (
-          <div className={w.carousel}>
-            <div className={w.heading}>
-              <span>
-                {CHANNELS[remaining[0].a.channel]} · {remaining.length}{" "}
-                annonce(s)
-              </span>
+      {items.length > 0 &&
+        (view === "validation" && mode === "carousel" ? (
+          remaining[0] ? (
+            <div
+              className={w.carousel}
+              ref={carouselRef}
+              tabIndex={-1}
+              role="group"
+              aria-label="Annonce courante"
+            >
+              <div className={w.heading}>
+                <h2 className={w.carouselHeading}>
+                  {CHANNELS[remaining[0].a.channel]} · {remaining.length} à
+                  parcourir
+                </h2>
+                <button
+                  onClick={() => setVisited([...visited, remaining[0].a.id])}
+                >
+                  Suivante →
+                </button>
+              </div>
+              {card(remaining[0])}
+            </div>
+          ) : (
+            <div className={w.empty}>
+              <p>Toutes les annonces de cette sélection ont été parcourues.</p>
               <button
-                onClick={() => setVisited([...visited, remaining[0].a.id])}
+                onClick={() => {
+                  resumeFocus.current = true;
+                  setVisited([]);
+                }}
               >
-                Suivante →
+                Revoir les annonces parcourues
               </button>
             </div>
-            {card(remaining[0])}
-          </div>
+          )
         ) : (
-          <p className={w.empty}>
-            Toutes les annonces de cette sélection ont été parcourues.
-          </p>
-        )
-      ) : (
-        Object.entries(CHANNELS).map(([channel, label]) => {
-          const list = items.filter(
-            (i) => i.a.channel === (channel as Channel),
-          );
-          return list.length ? (
-            <section className={w.channelGroup} key={channel}>
-              <h2>
-                {label} <small>{list.length}</small>
-              </h2>
-              <div className={w.reviewGrid}>{list.map(card)}</div>
-            </section>
-          ) : null;
-        })
-      )}
+          Object.entries(CHANNELS).map(([channel, label]) => {
+            const list = items.filter(
+              (i) => i.a.channel === (channel as Channel),
+            );
+            return list.length ? (
+              <section className={w.channelGroup} key={channel}>
+                <h2>
+                  {label} <small>{list.length}</small>
+                </h2>
+                <div className={w.reviewGrid}>{list.map(card)}</div>
+              </section>
+            ) : null;
+          })
+        ))}
       {!items.length && (
-        <p className={w.empty}>Aucune annonce dans cette vue.</p>
+        <div className={w.empty}>
+          <p>
+            {query
+              ? "Aucune annonce pour cette recherche."
+              : view === "validation"
+                ? status === "pending"
+                  ? "Aucune annonce à valider."
+                  : "Aucune annonce validée."
+                : view === "live"
+                  ? "Aucune annonce On air."
+                  : "Aucune annonce arrêtée."}
+          </p>
+          {query ? (
+            <button
+              onClick={() => {
+                navigation.update({ q: "" }, true);
+                searchRef.current?.focus();
+              }}
+            >
+              Effacer la recherche
+            </button>
+          ) : campaignId !== "all" ? (
+            <button onClick={() => navigation.update({ campagne: "all" })}>
+              Voir toutes les campagnes
+            </button>
+          ) : null}
+        </div>
       )}
       {editor &&
         editing &&
@@ -367,21 +454,27 @@ function FinishedCampaign({ c }: { c: Campaign }) {
     </div>
   );
 }
-function useDialog(onClose: () => void) {
+function useDialog(onClose: () => void, initialFocus?: string) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
-    ref.current?.showModal();
+    const dialog = ref.current;
+    dialog?.showModal();
+    if (initialFocus) dialog?.querySelector<HTMLElement>(initialFocus)?.focus();
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = overflow;
-      previous?.focus();
+      dialog?.close();
+      previous?.focus({ preventScroll: true });
     };
-  }, []);
+  }, [initialFocus]);
   return {
     ref,
-    onCancel: onClose,
+    onCancel: (e: React.SyntheticEvent<HTMLDialogElement>) => {
+      e.preventDefault();
+      onClose();
+    },
     onClick: (e: React.MouseEvent<HTMLDialogElement>) => {
       if (e.target === e.currentTarget) {
         const r = e.currentTarget.getBoundingClientRect();
@@ -405,11 +498,19 @@ function EditModal({
   ad: Ad;
   onClose: () => void;
 }) {
-  const dialog = useDialog(onClose);
   const editor = useAdEditor(c, ad, true, "validation", true);
+  const close = () => {
+    if (editor.status !== "saving" && editor.canClose()) onClose();
+  };
+  const dialog = useDialog(close);
   return (
     <dialog {...dialog} className={w.dialog} aria-labelledby="edit-ad-title">
-      <button className={w.close} aria-label="Fermer" onClick={onClose}>
+      <button
+        className={w.close}
+        aria-label="Fermer"
+        disabled={editor.status === "saving"}
+        onClick={close}
+      >
         ×
       </button>
       <div className={w.dialogSplit}>
@@ -426,14 +527,24 @@ function EditModal({
           {editor.status === "locked" && (
             <div role="status">
               <p>Édition en pause. Vos changements sont conservés.</p>
-              <button type="button" onClick={() => void editor.retry().catch(() => {})}>
+              <button
+                type="button"
+                onClick={() => void editor.retry().catch(() => {})}
+              >
                 Reprendre l’édition
               </button>
             </div>
           )}
+          <p className={w.srOnly} role="status">
+            {editor.status === "loading"
+              ? "Ouverture de l’annonce…"
+              : editor.status === "saving"
+                ? "Enregistrement en cours…"
+                : ""}
+          </p>
           <fieldset
             className={w.editFields}
-            disabled={["loading", "locked"].includes(editor.status)}
+            disabled={["loading", "locked", "saving"].includes(editor.status)}
           >
             <h2 id="edit-ad-title">Modifier et valider</h2>
             <p>
@@ -501,12 +612,18 @@ function EditModal({
                 onChange={(e) => editor.change({ url: e.target.value })}
               />
             </label>
-            {editor.error && <p className={w.error}>{editor.error}</p>}
+            {editor.error && (
+              <p className={w.error} role="alert">
+                {editor.error}
+              </p>
+            )}
             <button
               className={w.primary}
               disabled={!["ready", "error"].includes(editor.status)}
             >
-              Enregistrer et valider
+              {editor.status === "saving"
+                ? "Enregistrement…"
+                : "Enregistrer et valider"}
             </button>
           </fieldset>
         </form>
@@ -525,24 +642,41 @@ function CommentModal({
   onClose: () => void;
   beforeRequest: () => Promise<void>;
 }) {
-  const dialog = useDialog(onClose);
   const { run } = useWorkspace();
+  const sendingRef = useRef(false);
   const [text, setText] = useState(""),
-    [sending, setSending] = useState(false);
+    [sending, setSending] = useState(false),
+    [error, setError] = useState("");
+  const close = () => {
+    if (
+      !sendingRef.current &&
+      (!text.trim() || confirm("Abandonner ce commentaire ?"))
+    )
+      onClose();
+  };
+  const dialog = useDialog(close, "textarea");
   return (
     <dialog
       {...dialog}
       className={w.commentDialog}
       aria-labelledby="comment-title"
     >
-      <button className={w.close} aria-label="Fermer" onClick={onClose}>
+      <button
+        className={w.close}
+        aria-label="Fermer"
+        disabled={sending}
+        onClick={close}
+      >
         ×
       </button>
       <h2 id="comment-title">Demander une modification</h2>
       <form
         onSubmit={async (e) => {
           e.preventDefault();
+          if (sendingRef.current) return;
+          sendingRef.current = true;
           setSending(true);
+          setError("");
           try {
             await beforeRequest();
             await run({
@@ -553,7 +687,10 @@ function CommentModal({
               comment: text,
             });
             onClose();
+          } catch (e) {
+            setError(workspaceErrorMessage(e, "command"));
           } finally {
+            sendingRef.current = false;
             setSending(false);
           }
         }}
@@ -562,14 +699,25 @@ function CommentModal({
           Votre commentaire
           <textarea
             required
-            autoFocus
+            disabled={sending}
             rows={5}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              setText(e.target.value);
+              setError("");
+            }}
           />
         </label>
+        <p className={w.srOnly} role="status">
+          {sending ? "Envoi de la demande en cours…" : ""}
+        </p>
+        {error && (
+          <p className={w.error} role="alert">
+            {error}
+          </p>
+        )}
         <button className={w.primary} disabled={sending || !text.trim()}>
-          Envoyer la demande
+          {sending ? "Envoi…" : "Envoyer la demande"}
         </button>
       </form>
     </dialog>

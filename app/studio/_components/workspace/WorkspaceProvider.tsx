@@ -1,5 +1,6 @@
 "use client";
 import { createBrowserClient } from "@supabase/ssr";
+import { workspaceErrorMessage } from "@/lib/campaign-studio/workspace/messages";
 import {
   createContext,
   useContext,
@@ -45,6 +46,7 @@ interface Context {
   error: string;
   notice: string;
   run: (command: Record<string, unknown>) => Promise<Record<string, unknown>>;
+  pending: (type: string, campaignId?: string, itemId?: string) => boolean;
   refresh: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -64,6 +66,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [notice, notify] = useState("");
+  const [pendingCommands, setPendingCommands] = useState<
+    Record<string, unknown>[]
+  >([]);
+  const inFlight = useRef(new Map<string, Promise<Record<string, unknown>>>());
   const current = useRef<Snapshot | null>(null);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const busy = useRef(0);
@@ -90,13 +96,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     void Promise.resolve()
       .then(refresh)
       .catch((e) => {
-        if (alive) setError(e.message);
+        if (alive) setError(workspaceErrorMessage(e, "refresh"));
       })
       .finally(() => {
         if (alive) setLoading(false);
       });
     const interval = setInterval(() => {
-      if (!busy.current) void refresh().catch((e) => setError(e.message));
+      if (!busy.current)
+        void refresh().catch((e) =>
+          setError(workspaceErrorMessage(e, "refresh")),
+        );
     }, 15000);
     return () => {
       alive = false;
@@ -110,7 +119,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   }, [notice]);
   const run = useCallback(
     (command: Record<string, unknown>) => {
+      const key = JSON.stringify(command);
+      const existing = inFlight.current.get(key);
+      if (existing) return existing;
       busy.current++;
+      setPendingCommands((commands) => [...commands, command]);
       const task = queue.current
         .catch(() => {})
         .then(async () => {
@@ -160,12 +173,17 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           return result as Record<string, unknown>;
         })
         .catch((e) => {
-          notify(e.message);
+          notify(workspaceErrorMessage(e, "command"));
           throw e;
         })
         .finally(() => {
           busy.current--;
+          inFlight.current.delete(key);
+          setPendingCommands((commands) =>
+            commands.filter((c) => c !== command),
+          );
         });
+      inFlight.current.set(key, task);
       queue.current = task;
       return task;
     },
@@ -180,6 +198,13 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         notice,
         run,
         refresh,
+        pending: (type, campaignId, itemId) =>
+          pendingCommands.some(
+            (c) =>
+              c.type === type &&
+              (!campaignId || c.campaignId === campaignId) &&
+              (!itemId || c.adId === itemId || c.mediaId === itemId),
+          ),
         notify,
         login: async (email, password) => {
           const { error } = await authClient!.auth.signInWithPassword({

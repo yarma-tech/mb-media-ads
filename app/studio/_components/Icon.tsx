@@ -13,6 +13,7 @@ const paths = {
   comment: "M21 11a8 8 0 0 1-8 8H7l-5 3V11a9 9 0 0 1 19 0ZM7 9h9M7 13h6",
   clock: "M12 7v5l3 2M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0",
   calendar: "M4 5h16v16H4zM4 10h16M8 2v6M16 2v6",
+  logout: "M9 3H4v18h5M10 12h11m-4-4 4 4-4 4",
   external: "M13 3h8v8M21 3 10 14M9 3H3v18h18v-6",
   download: "M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5",
   reset: "M3 3v6h6M3 9a9 9 0 1 1 0 6",

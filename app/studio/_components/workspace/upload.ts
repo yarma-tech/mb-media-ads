@@ -1,5 +1,9 @@
 "use client";
-import { MEDIA_LIMIT_MB, MEDIA_LIMIT_BYTES } from "@/lib/campaign-studio/workspace/upload-limits";
+import {
+  MEDIA_LIMIT_MB,
+  MEDIA_LIMIT_BYTES,
+} from "@/lib/campaign-studio/workspace/upload-limits";
+import { mediaChannels } from "@/lib/campaign-studio/workspace/catalog";
 import { Upload } from "tus-js-client";
 import type {
   Campaign,
@@ -14,9 +18,12 @@ export async function uploadFile(
   channel: Channel,
   run: Run,
   onProgress: (n: number) => void = () => {},
-  onTransfer: (upload: Upload) => void = () => {},
+  onTransfer: (upload: Upload, media: Media) => void = () => {},
+  onVerifying: (media: Media) => void = () => {},
+  channels?: Channel[],
 ): Promise<Media> {
-  if (file.size > MEDIA_LIMIT_BYTES) throw new Error(`${MEDIA_LIMIT_MB} Mo maximum par fichier.`);
+  if (file.size > MEDIA_LIMIT_BYTES)
+    throw new Error(`${MEDIA_LIMIT_MB} Mo maximum par fichier.`);
   if (
     ![
       "image/jpeg",
@@ -34,7 +41,8 @@ export async function uploadFile(
       m.state === "uploading" &&
       m.name === file.name &&
       m.bytes === file.size &&
-      m.channel === channel,
+      mediaChannels(m).slice().sort().join(",") ===
+        [...new Set(channels ?? [channel])].sort().join(","),
   );
   const result =
     candidates.length === 1
@@ -47,6 +55,7 @@ export async function uploadFile(
           type: "upload",
           campaignId: campaign.id,
           channel,
+          ...(channels ? { channels } : {}),
           name: file.name,
           mime: file.type,
           bytes: file.size,
@@ -79,15 +88,16 @@ export async function uploadFile(
       onProgress: (sent, total) => onProgress(Math.round((sent / total) * 100)),
       onSuccess: () => resolve(),
     });
-    onTransfer(transfer);
     void transfer
       .findPreviousUploads()
       .then((previous) => {
         if (previous.length) transfer.resumeFromPreviousUpload(previous[0]);
+        onTransfer(transfer, media);
         transfer.start();
       })
       .catch(reject);
   });
+  onVerifying(media);
   const verified = await run({
     type: "verify_media",
     campaignId: campaign.id,

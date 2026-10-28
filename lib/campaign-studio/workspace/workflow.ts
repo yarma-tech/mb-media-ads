@@ -1,4 +1,4 @@
-import { CATALOG, compatibleFormats } from "./catalog";
+import { CATALOG, compatibleFormats, mediaChannels } from "./catalog";
 import type { Actor, Ad, AdFields, Campaign, Channel, Event } from "./types";
 const id = () => crypto.randomUUID();
 function humanValidator(a: Actor) {
@@ -131,7 +131,7 @@ export function isComplete(ad: Ad, c: Campaign): string[] {
     if (
       !media ||
       media.state !== "ready" ||
-      media.channel !== ad.channel ||
+      !mediaChannels(media).includes(ad.channel) ||
       !compatibleFormats(media, ad.channel).some((f) => f.id === ad.format)
     )
       errors.push("Média conforme au canal requis");

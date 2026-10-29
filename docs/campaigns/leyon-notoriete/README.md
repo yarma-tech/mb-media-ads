@@ -3,7 +3,7 @@
 Créée le 29 octobre 2026 pour présentation interne. Source de marque : https://leyon.pro/.
 
 - 18 annonces, thème unique Notoriété, 3 par canal : Facebook, Instagram, TikTok, YouTube, Display, Google SEM.
-- Personnages fictifs générés par IA. Logo officiel et police Inter issus du projet Léyon.
+- Personnages fictifs générés par IA. Logotype seul en BINSEKA Medium 500, conforme aux deux références fournies par le propriétaire. Aucun symbole accolé. Police Inter pour les textes publicitaires.
 - 6 animations de 240 images à 30 fps (8 secondes vidéo), exports H.264. Les conteneurs peuvent inclure un léger padding audio technique.
 - Visuels et sources de rendu locaux : `output/leyon-notoriete/`. Images originales conservées; médias importés dans le stockage privé Studio.
 - Copy et scénarios : `CAMPAGNE.md`; données structurées : `campagne.json`; dimensions et durées : `media-verification.json`.

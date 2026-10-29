@@ -8,7 +8,7 @@ Source de marque : https://leyon.pro/
 
 ## Direction
 
-Blanc, vert très foncé #0E1613, menthe #40C9A2. Logo officiel, typographie Inter. Trois professionnels indépendants. Même promesse : Léyon prépare les devis et factures, vous validez.
+Blanc, vert très foncé #0E1613, menthe #40C9A2. Logotype Léyon en BINSEKA Medium 500, sans icône. Typographie Inter pour les annonces. Trois professionnels indépendants. Même promesse : Léyon prépare les devis et factures, vous validez.
 
 ## Vidéos
 

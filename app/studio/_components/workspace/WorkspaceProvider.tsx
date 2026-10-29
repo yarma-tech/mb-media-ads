@@ -73,6 +73,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const current = useRef<Snapshot | null>(null);
   const queue = useRef<Promise<unknown>>(Promise.resolve());
   const busy = useRef(0);
+  const refreshGeneration = useRef(0);
   const headers = useCallback(async () => {
     const {
       data: { session },
@@ -84,8 +85,10 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     };
   }, []);
   const refresh = useCallback(async () => {
+    const generation = refreshGeneration.current;
     const r = await fetch("/api/studio", { headers: await headers() });
     const next = await r.json();
+    if (generation !== refreshGeneration.current) return;
     if (!r.ok) throw new Error(next.error);
     current.current = next;
     setData(next);
@@ -122,6 +125,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
       const key = JSON.stringify(command);
       const existing = inFlight.current.get(key);
       if (existing) return existing;
+      if (command.type === "delete_campaign") refreshGeneration.current++;
       busy.current++;
       setPendingCommands((commands) => [...commands, command]);
       const task = queue.current
@@ -132,7 +136,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           );
           const body = {
             ...command,
-            ...(c && !["lock", "release"].includes(String(command.type))
+            ...(c &&
+            command.revision === undefined &&
+            !["lock", "release"].includes(String(command.type))
               ? { revision: c.revision }
               : {}),
           };
@@ -144,6 +150,28 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           const result = await response.json();
           if (!response.ok)
             throw new Error(result.error ?? "Échec de l’enregistrement.");
+          if (typeof result.deletedCampaignId === "string" && current.current) {
+            refreshGeneration.current++;
+            const old = current.current;
+            const removed = old.campaigns.find(
+              (c) => c.id === result.deletedCampaignId,
+            );
+            const mediaIds = new Set(removed?.media.map((m) => m.id) ?? []);
+            const adIds = new Set(removed?.ads.map((a) => a.id) ?? []);
+            current.current = {
+              ...old,
+              campaigns: old.campaigns.filter(
+                (c) => c.id !== result.deletedCampaignId,
+              ),
+              mediaUrls: Object.fromEntries(
+                Object.entries(old.mediaUrls).filter(
+                  ([id]) => !mediaIds.has(id),
+                ),
+              ),
+              locks: old.locks.filter((lock) => !adIds.has(lock.ad_id)),
+            };
+            setData(current.current);
+          }
           if (result.campaign && current.current) {
             const old = current.current;
             const campaign = result.campaign as Campaign;

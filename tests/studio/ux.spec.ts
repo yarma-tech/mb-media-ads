@@ -172,6 +172,31 @@ async function fixture(
         });
       let c = data.campaigns.find((c) => c.id === cmd.campaignId);
       const result: Record<string, unknown> = {};
+      if (cmd.type === "delete_campaign") {
+        if (
+          data.actor.kind !== "human" ||
+          (data.actor.role !== "validator" && c?.createdBy !== data.actor.id)
+        )
+          return route.fulfill({
+            status: 403,
+            json: { error: "Suppression non autorisée." },
+          });
+        if (
+          c &&
+          (c.revision !== cmd.revision || c.name !== cmd.confirmationName)
+        )
+          return route.fulfill({
+            status: 409,
+            json: {
+              error:
+                "La campagne a changé. Fermez puis rouvrez la confirmation.",
+            },
+          });
+        data.campaigns = data.campaigns.filter(
+          (item) => item.id !== cmd.campaignId,
+        );
+        return route.fulfill({ json: { deletedCampaignId: cmd.campaignId } });
+      }
       if (strictLocks && cmd.type === "lock") {
         const previous = leases.get(cmd.adId);
         if (previous && previous !== cmd.token)
@@ -298,6 +323,10 @@ async function fixture(
     get brands() {
       return data.brands;
     },
+    setActor: (value: Actor) => {
+      data.actor = value;
+    },
+    snapshot: () => structuredClone(data),
     empty: () => {
       data.campaigns = [];
     },
@@ -2691,4 +2720,222 @@ test("Google SEM : aperçu réaliste, tous les textes conservés dans l’édite
   await expect(page.getByLabel("Descriptions · une par ligne")).toHaveValue(
     ad.descriptions.join("\n"),
   );
+});
+
+for (const width of [1440, 390]) {
+  test(`suppression campagne : confirmation, annulation et persistance à ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    const f = await fixture(page);
+    const deleted = f.campaigns[1];
+    const other = f.campaigns[0];
+    await page.goto(base + `/studio?campagne=${deleted.id}`);
+    const trigger = page.getByRole("button", {
+      name: "Supprimer la campagne Beta",
+      exact: true,
+    });
+    await trigger.click();
+    const dialog = page.getByRole("dialog", {
+      name: "Supprimer la campagne",
+      exact: true,
+    });
+    const confirm = dialog.getByRole("button", {
+      name: /^(Supprimer définitivement|Suppression…)$/,
+    });
+    await expect(confirm).toBeDisabled();
+    await dialog
+      .getByLabel("Nom de campagne à confirmer", { exact: true })
+      .fill("Autre campagne");
+    await expect(confirm).toBeDisabled();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    expect(f.commands.filter((c) => c.type === "delete_campaign")).toHaveLength(
+      0,
+    );
+    await expect(trigger).toBeFocused();
+    await trigger.click();
+    await dialog
+      .getByLabel("Nom de campagne à confirmer", { exact: true })
+      .fill("Beta");
+    await page.screenshot({
+      path: testInfo.outputPath(`confirmation-${width}.png`),
+      fullPage: true,
+    });
+    const release = f.hold("delete_campaign");
+    await confirm.click();
+    await expect(confirm).toBeDisabled();
+    await page.keyboard.press("Enter");
+    await expect
+      .poll(() => f.commands.filter((c) => c.type === "delete_campaign").length)
+      .toBe(1);
+    release();
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toHaveCount(0);
+    expect(f.campaigns.map((c) => c.id)).toEqual([other.id]);
+    expect(f.brands).toHaveLength(1);
+    expect(new URL(page.url()).searchParams.get("campagne")).not.toBe(
+      deleted.id,
+    );
+    await page.reload();
+    await expect(trigger).toHaveCount(0);
+    await expect(
+      page.getByRole("link").filter({ hasText: "Alpha" }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+}
+
+test("suppression campagne : échec conserve la campagne et permet une reprise volontaire", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  f.fail("delete_campaign", "Suppression indisponible. Réessayez.");
+  await page
+    .getByRole("button", { name: "Supprimer la campagne Beta", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Supprimer la campagne",
+    exact: true,
+  });
+  await dialog
+    .getByLabel("Nom de campagne à confirmer", { exact: true })
+    .fill("Beta");
+  await dialog
+    .getByRole("button", { name: "Supprimer définitivement", exact: true })
+    .click();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "Suppression indisponible",
+  );
+  expect(f.campaigns).toHaveLength(2);
+  await expect(
+    dialog.getByLabel("Nom de campagne à confirmer", { exact: true }),
+  ).toHaveValue("Beta");
+  expect(f.commands.filter((c) => c.type === "delete_campaign")).toHaveLength(
+    1,
+  );
+  f.fail("");
+  await dialog
+    .getByRole("button", { name: "Supprimer définitivement", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  expect(f.campaigns.map((c) => c.name)).toEqual(["Alpha"]);
+});
+
+test("suppression campagne : droits du créateur et refus des autres campagnes", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  const preparer: Actor = {
+    kind: "human",
+    role: "preparer",
+    id: "22222222-2222-4222-8222-222222222222",
+    name: "Préparation test",
+  };
+  f.campaigns[0].createdBy = preparer.id;
+  f.setActor(preparer);
+  await page.reload();
+  await expect(
+    page.getByRole("button", {
+      name: "Supprimer la campagne Alpha",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Supprimer la campagne Beta",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+});
+
+test("suppression campagne : confirmation périmée ne reprend pas la nouvelle révision", async ({
+  page,
+}) => {
+  await page.clock.install();
+  const f = await fixture(page);
+  const initialRevision = f.campaigns[1].revision;
+  await page
+    .getByRole("button", { name: "Supprimer la campagne Beta", exact: true })
+    .click();
+  f.campaigns[1].revision++;
+  const refreshed = page.waitForResponse(
+    (r) => new URL(r.url()).pathname === "/api/studio",
+  );
+  await page.clock.fastForward(15001);
+  await refreshed;
+  const dialog = page.getByRole("dialog", {
+    name: "Supprimer la campagne",
+    exact: true,
+  });
+  await dialog
+    .getByLabel("Nom de campagne à confirmer", { exact: true })
+    .fill("Beta");
+  await dialog
+    .getByRole("button", { name: "Supprimer définitivement", exact: true })
+    .click();
+  await expect(dialog.getByRole("alert")).toContainText("La campagne a changé");
+  expect(f.commands.find((c) => c.type === "delete_campaign")?.revision).toBe(
+    initialRevision,
+  );
+  expect(f.campaigns).toHaveLength(2);
+});
+
+test("suppression campagne : un ancien rafraîchissement ne ressuscite pas la carte", async ({
+  page,
+}) => {
+  await page.clock.install();
+  const f = await fixture(page);
+  let release!: () => void;
+  const hold = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let started!: () => void;
+  const seen = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  await page.route(
+    "**/api/studio",
+    async (route) => {
+      const stale = f.snapshot();
+      started();
+      await hold;
+      await route.fulfill({ json: stale });
+    },
+    { times: 1 },
+  );
+  await page.clock.fastForward(15001);
+  await seen;
+  await page
+    .getByRole("button", { name: "Supprimer la campagne Beta", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Supprimer la campagne",
+    exact: true,
+  });
+  await dialog
+    .getByLabel("Nom de campagne à confirmer", { exact: true })
+    .fill("Beta");
+  await dialog
+    .getByRole("button", { name: "Supprimer définitivement", exact: true })
+    .click();
+  await expect(dialog).toHaveCount(0);
+  const refreshed = page.waitForResponse(
+    (r) => new URL(r.url()).pathname === "/api/studio",
+  );
+  release();
+  await refreshed;
+  await expect(
+    page.getByRole("button", {
+      name: "Supprimer la campagne Beta",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("link").filter({ hasText: "Alpha" }),
+  ).toBeVisible();
 });

@@ -192,6 +192,93 @@ export async function execute(raw: unknown, actor: Actor) {
   const command: Command = parsed.data,
     db = database(),
     now = new Date().toISOString();
+  if (command.type === "delete_campaign") {
+    if (actor.kind !== "human")
+      throw new StudioError("Suppression réservée à un humain.", 403);
+    const { data: row, error: readError } = await db
+      .from("studio_campaigns")
+      .select("document")
+      .eq("id", command.campaignId)
+      .maybeSingle();
+    if (readError) throw readError;
+    // A repeated request after a successful deletion must not fail or delete
+    // anything else. There is no remaining document or storage list to process.
+    if (!row) return { deletedCampaignId: command.campaignId };
+    const campaign = row.document as Campaign;
+    if (actor.role !== "validator" && campaign.createdBy !== actor.id)
+      throw new StudioError(
+        "Seuls le créateur et un Validateur peuvent supprimer cette campagne.",
+        403,
+      );
+    if (
+      command.revision !== campaign.revision ||
+      command.confirmationName !== campaign.name
+    )
+      throw new StudioError(
+        "La campagne a changé. Fermez cette fenêtre, actualisez puis confirmez à nouveau sa suppression.",
+        409,
+      );
+    const { data: removed, error: deleteError } = await db
+      .from("studio_campaigns")
+      .delete()
+      .eq("id", campaign.id)
+      .eq("revision", command.revision)
+      .select("document")
+      .maybeSingle();
+    if (deleteError) throw deleteError;
+    if (!removed)
+      throw new StudioError(
+        "La campagne a changé. Fermez cette fenêtre, actualisez puis confirmez à nouveau sa suppression.",
+        409,
+      );
+
+    // Delete the database document first. Removing files before the revision
+    // check could destroy media still referenced by a concurrently edited campaign.
+    const paths = [
+      ...new Set(
+        (removed.document as Campaign).media.map((m) => m.path).filter(Boolean),
+      ),
+    ];
+    const ownPaths = paths.filter(
+      (path) =>
+        path.startsWith(campaign.id + "/") &&
+        !path.includes("\\") &&
+        path
+          .split("/")
+          .every(
+            (segment) => segment !== "" && segment !== "." && segment !== "..",
+          ),
+    );
+    const failedPaths = paths.filter((path) => !ownPaths.includes(path));
+    for (let i = 0; i < ownPaths.length; i += 1000) {
+      const batch = ownPaths.slice(i, i + 1000);
+      let cleaned = false;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const { error } = await db.storage.from("studio-media").remove(batch);
+          if (!error) {
+            cleaned = true;
+            break;
+          }
+        } catch {
+          /* A bounded retry is safe: removing a missing object is idempotent. */
+        }
+      }
+      if (!cleaned) failedPaths.push(...batch);
+    }
+    if (failedPaths.length) {
+      console.error("Studio campaign deleted; media cleanup required", {
+        campaignId: campaign.id,
+        paths: failedPaths,
+      });
+      return {
+        deletedCampaignId: campaign.id,
+        warning:
+          "Campagne supprimée. Certains médias n’ont pas pu être effacés du stockage. Leur nettoyage reste à effectuer.",
+      };
+    }
+    return { deletedCampaignId: campaign.id };
+  }
   if (
     [
       "decide",

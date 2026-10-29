@@ -29,6 +29,13 @@ export const FieldsSchema = z
   .strict();
 const target = { campaignId: uuid, revision: z.number().int().nonnegative() };
 export const CommandSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("delete_campaign"),
+      ...target,
+      confirmationName: z.string().min(1).max(200),
+    })
+    .strict(),
   z.object({
     type: z.literal("create_campaign"),
     name: z.string().trim().min(1).max(200),

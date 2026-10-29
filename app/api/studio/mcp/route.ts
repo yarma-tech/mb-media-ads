@@ -8,6 +8,7 @@ import { CommandSchema } from "@/lib/campaign-studio/workspace/commands";
 import { z } from "zod";
 export const maxDuration = 60;
 const hidden = new Set([
+  "delete_campaign",
   "decide",
   "publish",
   "stop",

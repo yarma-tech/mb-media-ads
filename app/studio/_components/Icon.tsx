@@ -32,6 +32,7 @@ const paths = {
   reset: "M3 3v6h6M3 9a9 9 0 1 1 0 6",
   menu: "M4 6h16M4 12h16M4 18h16",
   close: "m5 5 14 14M5 19 19 5",
+  trash: "M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7",
   more: "M5 11v2M12 11v2M19 11v2",
   grid: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
   heart: "M20 5a5 5 0 0 0-8 1 5 5 0 0 0-8-1c-4 5 4 10 8 14 4-4 12-9 8-14Z",

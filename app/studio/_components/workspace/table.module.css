@@ -289,7 +289,11 @@
   max-width: 100%;
 }
 .recovery td > div {
+  position: sticky;
+  left: 0;
+  max-width: calc(100vw - 48px);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 16px;
   padding: 10px 14px;
@@ -343,4 +347,39 @@
   .layout * {
     scroll-behavior: auto !important;
   }
+}
+
+.reorder {
+  padding: 18px;
+  border: 1px solid #e4e8ed;
+  border-radius: 16px;
+  background: #fff;
+  color: #14251f;
+  box-shadow: 0 16px 50px #14251f26;
+  min-width: 240px;
+  max-width: calc(100vw - 32px);
+}
+.reorder strong {
+  display: block;
+  margin-bottom: 12px;
+}
+.table .reorder button {
+  cursor: pointer;
+  padding: 0 10px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: 6px;
+}
+.table button[data-unavailable] {
+  color: #65766d;
+}
+.footer button[data-unavailable] {
+  background: #eaf0ec;
+  color: #334a40;
+}
+.preview {
+  scroll-margin-top: 20px;
 }

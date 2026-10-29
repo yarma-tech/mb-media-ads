@@ -862,3 +862,104 @@
   font-size: 11px;
   color: #626b83;
 }
+
+/* Text cutoffs are placement/viewport conventions, not universal Meta limits.
+   Measure actual line capacity, including the expansion affordance. */
+.preview .copyContent {
+  --copy-lines: 3;
+  display: block;
+  position: relative;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.preview .copyPending {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--copy-lines);
+  overflow: hidden;
+}
+.preview .copyMeasure {
+  position: absolute;
+  inset: 0 0 auto;
+  display: block;
+  visibility: hidden;
+  pointer-events: none;
+  font: inherit;
+  line-height: inherit;
+  white-space: inherit;
+  overflow-wrap: inherit;
+}
+.preview .copyToggle {
+  display: inline;
+  width: auto;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  line-height: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.preview .copyToggle:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.instagram .copyContent,
+.immersive .copyContent,
+.youtube .copyContent {
+  --copy-lines: 2;
+}
+.tiktok .copyContent {
+  --copy-lines: 4;
+}
+.immersive .overlayCopy {
+  max-height: 55%;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  pointer-events: auto;
+}
+.immersive .copyExpanded {
+  padding-right: 0;
+}
+.preview .destination b,
+.immersive .overlayCopy strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.preview .destination small,
+.search .searchIdentity small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.preview .additional p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+.search .headlines {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+@media (max-width: 700px) {
+  .facebook .copyContent,
+  .short .copyContent {
+    --copy-lines: 1;
+  }
+  .facebook .destination b {
+    -webkit-line-clamp: 1;
+  }
+}

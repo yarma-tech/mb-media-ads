@@ -212,6 +212,36 @@ async function fixture(
         leases.get(cmd.adId) === cmd.token
       )
         leases.delete(cmd.adId);
+      if (
+        strictLocks &&
+        cmd.type === "edit" &&
+        leases.get(cmd.adId) !== cmd.lockToken
+      )
+        return route.fulfill({
+          status: 409,
+          json: { error: "Bail expiré ou autre éditeur" },
+        });
+      if (cmd.type === "batch" && c) {
+        const skipped: string[] = [];
+        for (const id of cmd.adIds) {
+          const ad = c.ads.find((item) => item.id === id);
+          if (!ad || ["approved", "on_air", "stopped"].includes(ad.status)) {
+            skipped.push(id);
+            continue;
+          }
+          const fields = Object.fromEntries(
+            Object.entries(cmd.fields).filter(
+              ([key]) =>
+                cmd.replace ||
+                !ad[key as keyof typeof ad] ||
+                (Array.isArray(ad[key as keyof typeof ad]) &&
+                  !(ad[key as keyof typeof ad] as unknown[]).length),
+            ),
+          );
+          c = editAd(c, id, fields, actor, "configuration", now);
+        }
+        result.skipped = skipped;
+      }
       if (cmd.type === "create_brand") {
         const brand = {
           id: "created-brand",
@@ -331,6 +361,8 @@ async function fixture(
       data.campaigns = [];
     },
     commands,
+    expireLeases: () => leases.clear(),
+    claimElsewhere: (adId: string) => leases.set(adId, "another-editor-token"),
     setMediaUrl: (id: string, url: string) => {
       data.mediaUrls[id] = url;
     },
@@ -2938,4 +2970,327 @@ test("suppression campagne : un ancien rafraîchissement ne ressuscite pas la ca
   await expect(
     page.getByRole("link").filter({ hasText: "Alpha" }),
   ).toBeVisible();
+});
+
+test("tableau mobile : une pause sans modification ne bloque pas la reprise de saisie", async ({
+  page,
+}, testInfo) => {
+  await page.clock.install();
+  const f = await fixture(page, "draft", false, true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=google",
+  );
+  const field = page.getByLabel("Thématique de Beta annonce", { exact: true });
+  await expect
+    .poll(() => f.commands.filter((c) => c.type === "lock").length)
+    .toBeGreaterThan(0);
+  await page.clock.fastForward(120001);
+  await expect(
+    page.getByRole("button", { name: "Reprendre l’édition", exact: true }),
+  ).toHaveCount(0);
+  await field.fill("Reprise après lecture");
+  await page.clock.runFor(1000);
+  await expect
+    .poll(() => f.campaigns[1].ads[0].theme)
+    .toBe("Reprise après lecture");
+  await page.screenshot({
+    path: testInfo.outputPath("mobile-saisie-apres-pause.png"),
+  });
+});
+
+test("tableau Google : le batch initial cible bien les titres affichés", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft");
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=google",
+  );
+  await page.getByLabel("Sélectionner toutes les annonces du canal").check();
+  await page
+    .getByRole("button", { name: "Appliquer un champ en batch" })
+    .click();
+  await expect(
+    page.getByRole("combobox", { name: "Champ", exact: true }),
+  ).toHaveValue("headlines");
+  await page
+    .getByLabel("Valeur à appliquer")
+    .fill("Premier titre\nDeuxième titre\nTroisième titre");
+  await page
+    .getByRole("button", { name: "Appliquer à 1 ligne(s)", exact: true })
+    .click();
+  await expect
+    .poll(() => f.commands.filter((c) => c.type === "batch").length)
+    .toBe(1);
+  expect(f.commands.find((c) => c.type === "batch")?.fields).toEqual({
+    headlines: ["Premier titre", "Deuxième titre", "Troisième titre"],
+  });
+});
+
+test("tableau : retour d’un onglet suspendu reprend le bail avant sauvegarde", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft", false, true);
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=google",
+  );
+  await expect
+    .poll(() => f.commands.filter((c) => c.type === "lock").length)
+    .toBeGreaterThan(0);
+  f.expireLeases();
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event("visibilitychange")),
+  );
+  const before = f.commands.length;
+  await page
+    .getByLabel("Thématique de Beta annonce", { exact: true })
+    .fill("Après suspension");
+  await expect.poll(() => f.campaigns[1].ads[0].theme).toBe("Après suspension");
+  const writes = f.commands.slice(before).map((c) => c.type);
+  expect(writes.indexOf("lock")).toBeLessThan(writes.indexOf("edit"));
+  const tokens = f.commands
+    .filter((c) => c.type === "lock")
+    .map((c) => c.token);
+  expect(new Set(tokens).size).toBe(1);
+});
+
+test("tableau : autre éditeur après suspension préserve la saisie et bloque l’écriture", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft", false, true);
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=google",
+  );
+  await expect
+    .poll(() => f.commands.filter((c) => c.type === "lock").length)
+    .toBeGreaterThan(0);
+  f.claimElsewhere(f.campaigns[1].ads[0].id);
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event("visibilitychange")),
+  );
+  const field = page.getByLabel("Thématique de Beta annonce", { exact: true });
+  await field.fill("À conserver");
+  await expect(
+    page.getByRole("button", { name: "Reprendre l’édition", exact: true }),
+  ).toBeVisible();
+  await expect(field).toHaveValue("À conserver");
+  expect(f.commands.filter((c) => c.type === "edit")).toHaveLength(0);
+});
+
+test("tableau mobile : outils, aperçu visible, envoi incomplet et déplacement tactile", async ({
+  page,
+}, testInfo) => {
+  const f = await fixture(page, "draft", true);
+  f.setMediaUrl("ready-media", base + "/deck-demo/cu-generique-square.jpg");
+  const c = addAd(f.campaigns[1], "facebook", "square", actor, now);
+  c.ads[1].name = "Deuxième annonce";
+  f.campaigns[1] = c;
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(
+    base + "/studio/configuration?campagne=" + c.id + "&canal=facebook",
+  );
+  await page
+    .getByRole("button", { name: "Appliquer un champ en batch" })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "Sélectionnez les lignes" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Valeur à appliquer")).toBeVisible();
+  await page.getByLabel("Sélectionner toutes les annonces du canal").check();
+  await page.getByLabel("Valeur à appliquer").fill("Message commun");
+  await page
+    .getByRole("button", { name: "Appliquer à 2 ligne(s)", exact: true })
+    .click();
+  await expect
+    .poll(() => f.campaigns[1].ads.every((a) => a.copy === "Message commun"))
+    .toBe(true);
+  await page
+    .getByRole("button", { name: "Ajouter des annonces", exact: true })
+    .click();
+  await expect(
+    page.locator("details[open]").filter({ hasText: "Choisir des formats" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Aperçu", exact: true }).click();
+  const preview = page.getByRole("complementary", {
+    name: "Aperçu de l’annonce",
+    exact: true,
+  });
+  await expect(preview).toBeInViewport();
+  const closeNotice = page.getByRole("button", {
+    name: "Fermer la notification",
+    exact: true,
+  });
+  if (await closeNotice.count()) await closeNotice.click();
+  await page.screenshot({
+    path: testInfo.outputPath("mobile-apercu-visible.png"),
+  });
+  await page
+    .getByRole("button", { name: "Fermer l’aperçu", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Envoyer Deuxième annonce", exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "À compléter : Média conforme" }),
+  ).toBeVisible();
+  expect(f.commands.filter((c) => c.type === "submit")).toHaveLength(0);
+  await page
+    .getByRole("button", { name: "Déplacer Beta annonce", exact: true })
+    .click();
+  const move = page.getByRole("dialog", {
+    name: "Déplacer Beta annonce",
+    exact: true,
+  });
+  await expect(move).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("mobile-deplacement.png"),
+  });
+  await expect(
+    move.getByRole("button", { name: "Monter", exact: true }),
+  ).toBeDisabled();
+  await move.getByRole("button", { name: "Descendre", exact: true }).click();
+  await expect
+    .poll(() => f.campaigns[1].ads.map((a) => a.name))
+    .toEqual(["Deuxième annonce", "Beta annonce"]);
+  await expect(move).not.toBeVisible();
+});
+
+test("tableau : déverrouiller directement une autre ligne approuvée", async ({
+  page,
+}) => {
+  const f = await fixture(page, "approved");
+  const c = addAd(f.campaigns[1], "google", "search", actor, now);
+  c.ads[1].name = "Autre annonce";
+  c.ads[1].status = "approved";
+  c.ads[1].headlines = ["Premier titre", "Deuxième titre", "Troisième titre"];
+  c.ads[1].descriptions = ["Première description", "Deuxième description"];
+  f.campaigns[1] = c;
+  await page.goto(
+    base + "/studio/configuration?campagne=" + c.id + "&canal=google",
+  );
+  page.once("dialog", (dialog) => dialog.accept());
+  await page
+    .getByRole("button", { name: "Déverrouiller Autre annonce", exact: true })
+    .click();
+  const field = page.getByLabel("Thématique de Autre annonce", { exact: true });
+  await expect(field).toBeEditable();
+  await field.fill("Correction volontaire");
+  await expect
+    .poll(() => f.campaigns[1].ads[1].theme)
+    .toBe("Correction volontaire");
+  expect(f.campaigns[1].ads[1].status).toBe("pending");
+});
+
+test("tableau : révision distante changée demande une reprise explicite sans perdre le texte", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft", false, true);
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=google",
+  );
+  await expect
+    .poll(() => f.commands.filter((c) => c.type === "lock").length)
+    .toBeGreaterThan(0);
+  f.expireLeases();
+  f.campaigns[1].ads[0].theme = "Version distante";
+  f.campaigns[1].ads[0].revision++;
+  await page.evaluate(() =>
+    document.dispatchEvent(new Event("visibilitychange")),
+  );
+  const field = page.getByLabel("Thématique de Beta annonce", { exact: true });
+  await field.fill("Correction locale à conserver");
+  const retry = page.getByRole("button", {
+    name: "Reprendre l’édition",
+    exact: true,
+  });
+  await expect(retry).toBeVisible();
+  await expect(page.getByRole("table").getByRole("alert")).toContainText(
+    "a changé pendant votre absence",
+  );
+  await expect(field).toHaveValue("Correction locale à conserver");
+  expect(f.commands.filter((c) => c.type === "edit")).toHaveLength(0);
+  await retry.click();
+  await expect
+    .poll(() => f.campaigns[1].ads[0].theme)
+    .toBe("Correction locale à conserver");
+  await expect(retry).toHaveCount(0);
+});
+
+test("tableau : format, détails, média de ligne, historique et navigation aperçu", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft", true);
+  const c = addAd(f.campaigns[1], "facebook", "square", actor, now);
+  c.ads[1].name = "Dernière annonce";
+  f.campaigns[1] = c;
+  await page.goto(
+    base + "/studio/configuration?campagne=" + c.id + "&canal=facebook",
+  );
+  const format = page.getByLabel("Format de Beta annonce", { exact: true });
+  await format.selectOption("portrait");
+  await expect.poll(() => f.campaigns[1].ads[0].format).toBe("portrait");
+  await format.selectOption("square");
+  await expect.poll(() => f.campaigns[1].ads[0].format).toBe("square");
+  await page
+    .getByRole("button", { name: "Aperçu de Beta annonce", exact: true })
+    .click();
+  const preview = page.getByRole("complementary", {
+    name: "Aperçu de l’annonce",
+    exact: true,
+  });
+  await expect(
+    preview.getByRole("button", { name: "Annonce précédente" }),
+  ).toBeDisabled();
+  await preview.getByText("Détails de l’annonce", { exact: true }).click();
+  await page
+    .getByLabel("Nom de l’annonce active", { exact: true })
+    .fill("Nom vérifié");
+  await expect.poll(() => f.campaigns[1].ads[0].name).toBe("Nom vérifié");
+  const media = page.getByLabel("Média de Nom vérifié", { exact: true });
+  await media.selectOption("");
+  await expect.poll(() => f.campaigns[1].ads[0].mediaId).toBeNull();
+  await media.selectOption("ready-media");
+  await expect.poll(() => f.campaigns[1].ads[0].mediaId).toBe("ready-media");
+  await page
+    .getByLabel("Joindre un média")
+    .setInputFiles("public/deck-demo/cu-generique-square.jpg");
+  await expect
+    .poll(() => f.campaigns[1].ads[0].mediaId)
+    .toBe("uploaded-media-1");
+  await preview.locator("summary").filter({ hasText: "Historique" }).click();
+  await expect(
+    preview.getByText("Nom vérifié", { exact: true }).last(),
+  ).toBeVisible();
+  await preview
+    .getByRole("button", { name: "Annonce suivante", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Nom de l’annonce active", { exact: true }),
+  ).toHaveValue("Dernière annonce");
+  await expect(
+    preview.getByRole("button", { name: "Annonce suivante", exact: true }),
+  ).toBeDisabled();
+  await preview
+    .getByRole("button", { name: "Annonce précédente", exact: true })
+    .click();
+  await expect(
+    page.getByLabel("Nom de l’annonce active", { exact: true }),
+  ).toHaveValue("Nom vérifié");
 });

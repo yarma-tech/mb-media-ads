@@ -367,6 +367,7 @@ function ChannelEditor({
   const focusTarget = useRef<CellTarget | null>(null);
   const readRowsRef = useRef<null | (() => Ad[])>(null);
   const channelTabs = useRef<HTMLElement>(null);
+  const formatPicker = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     const nav = channelTabs.current;
     const active = nav?.querySelector<HTMLButtonElement>(
@@ -396,7 +397,9 @@ function ChannelEditor({
     !["on_air", "stopped"].includes(active.status) &&
     (active.status !== "approved" || unlocked.includes(active.id)) &&
     c.status === "active";
-  const [field, setField] = useState("copy"),
+  const [field, setField] = useState(
+      channel === "google" ? "headlines" : "copy",
+    ),
     [batchValue, setBatchValue] = useState(""),
     [replace, setReplace] = useState(false);
   const command = (values: Record<string, unknown>) =>
@@ -439,6 +442,8 @@ function ChannelEditor({
                   setFormats([]);
                   setSelected([]);
                   setActiveId("");
+                  setBatch(false);
+                  setField(id === "google" ? "headlines" : "copy");
                 }}
               >
                 <ChannelIcon channel={id as Channel} />
@@ -458,7 +463,9 @@ function ChannelEditor({
             <button
               aria-label="Copier tout"
               title="Copier tout"
-              onClick={() =>
+              onClick={() => {
+                if (!rows.length)
+                  return notify("Aucune annonce à copier dans ce canal.");
                 void navigator.clipboard
                   .writeText(copyAdsText(c, readRowsRef.current?.() ?? rows))
                   .then(() => notify("Tableau copié."))
@@ -466,31 +473,38 @@ function ChannelEditor({
                     notify(
                       "Copie indisponible. Autorisez le presse-papiers de ce navigateur.",
                     ),
-                  )
-              }
+                  );
+              }}
             >
               <Icon name="copy" />
             </button>
             <button
               aria-label="Appliquer un champ en batch"
               title="Appliquer à la sélection"
-              disabled={
-                !selected.length ||
-                c.status === "finished" ||
-                submission === "sending"
-              }
-              onClick={() => setBatch((v) => !v)}
+              disabled={c.status === "finished" || submission === "sending"}
+              aria-expanded={batch}
+              onClick={() => {
+                if (!selected.length)
+                  notify(
+                    "Sélectionnez les lignes auxquelles appliquer ce texte.",
+                  );
+                setBatch((v) => !v);
+              }}
             >
               <Icon name="batch" />
             </button>
             <button
               aria-label="Ajouter des annonces"
               title="Ajouter des annonces"
-              onClick={() =>
-                document
-                  .querySelector<HTMLDetailsElement>(`.${w.formatPicker}`)
-                  ?.setAttribute("open", "")
-              }
+              disabled={c.status === "finished"}
+              onClick={() => {
+                if (!formatPicker.current) return;
+                formatPicker.current.open = true;
+                formatPicker.current.scrollIntoView({
+                  block: "nearest",
+                  behavior: "smooth",
+                });
+              }}
             >
               <Icon name="plus" />
             </button>
@@ -498,7 +512,13 @@ function ChannelEditor({
               aria-label="Aperçu"
               title="Aperçu"
               aria-pressed={previewOpen}
-              onClick={() => setPreviewOpen((v) => !v)}
+              onClick={() => {
+                if (!active)
+                  return notify(
+                    "Ajoutez une annonce pour afficher son aperçu.",
+                  );
+                setPreviewOpen((v) => !v);
+              }}
             >
               <Icon name="eye" />
             </button>
@@ -528,7 +548,11 @@ function ChannelEditor({
           Terminées.
         </p>
       ) : (
-        <details open={!rows.length} className={w.formatPicker}>
+        <details
+          ref={formatPicker}
+          open={!rows.length}
+          className={w.formatPicker}
+        >
           <summary>Choisir des formats ou ajouter des annonces</summary>
           <button
             type="button"
@@ -573,8 +597,12 @@ function ChannelEditor({
             className={w.primary}
             disabled={!formats.length || pending("add", c.id)}
             onClick={async () => {
-              await command({ type: "add", channel, formats });
-              setFormats([]);
+              try {
+                await command({ type: "add", channel, formats });
+                setFormats([]);
+              } catch {
+                /* The provider displays the error and preserves the selection. */
+              }
             }}
           >
             {pending("add", c.id)
@@ -589,6 +617,8 @@ function ChannelEditor({
           className={w.batch}
           onSubmit={async (e) => {
             e.preventDefault();
+            if (!selected.length)
+              return notify("Sélectionnez au moins une ligne.");
             if (
               replace &&
               !confirm(
@@ -600,19 +630,23 @@ function ChannelEditor({
               field === "headlines" || field === "descriptions"
                 ? { [field]: batchValue.split("\n").filter(Boolean) }
                 : { [field]: batchValue };
-            await flushRef.current?.();
-            const result = await command({
-              type: "batch",
-              adIds: selected,
-              fields,
-              replace,
-            });
-            notify(
-              "Batch enregistré. " +
-                ((result.skipped as unknown[])?.length ?? 0) +
-                " ligne(s) protégée(s) ignorée(s).",
-            );
-            setBatch(false);
+            try {
+              await flushRef.current?.();
+              const result = await command({
+                type: "batch",
+                adIds: selected,
+                fields,
+                replace,
+              });
+              notify(
+                "Batch enregistré. " +
+                  ((result.skipped as unknown[])?.length ?? 0) +
+                  " ligne(s) protégée(s) ignorée(s).",
+              );
+              setBatch(false);
+            } catch {
+              /* Preserve the batch form so it can be retried. */
+            }
           }}
         >
           <label>
@@ -650,7 +684,10 @@ function ChannelEditor({
             />
             Remplacer les valeurs existantes (sinon champs vides uniquement)
           </label>
-          <button className={w.primary} disabled={pending("batch", c.id)}>
+          <button
+            className={w.primary}
+            disabled={!selected.length || pending("batch", c.id)}
+          >
             {pending("batch", c.id)
               ? "Enregistrement…"
               : `Appliquer à ${selected.length} ligne(s)`}
@@ -667,13 +704,15 @@ function ChannelEditor({
           selected={selected}
           setSelected={setSelected}
           setActive={setActiveId}
-          onUnlock={() => {
+          onUnlock={(id) => {
             if (
               confirm(
                 "Modifier cette annonce annulera son approbation. Elle devra être validée à nouveau.",
               )
-            )
-              setUnlocked([...unlocked, active.id]);
+            ) {
+              setActiveId(id);
+              setUnlocked([...unlocked, id]);
+            }
           }}
           onSubmit={submit}
           submitting={submission === "sending"}

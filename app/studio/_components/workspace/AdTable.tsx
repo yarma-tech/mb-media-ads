@@ -37,7 +37,7 @@ type Props = {
   selected: string[];
   setSelected: (ids: string[]) => void;
   setActive: (id: string) => void;
-  onUnlock: () => void;
+  onUnlock: (id: string) => void;
   onSubmit: (ids: string[]) => Promise<void>;
   submitting: boolean;
   flushRef: MutableRefObject<null | (() => Promise<unknown>)>;
@@ -73,6 +73,14 @@ export default function TableSession(p: Props) {
   const [toolsHost, setToolsHost] = useState<HTMLDivElement | null>(null);
   const { run, notify } = useWorkspace();
   const table = useRef<HTMLTableElement>(null);
+  const previewPanel = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (p.previewOpen && window.matchMedia("(max-width: 1100px)").matches)
+      previewPanel.current?.scrollIntoView({
+        block: "start",
+        behavior: "smooth",
+      });
+  }, [p.previewOpen, p.active.id]);
   const columns = (
     p.active.channel === "google"
       ? ["theme", "headlines", "descriptions", "url", "path1", "path2"]
@@ -229,12 +237,15 @@ export default function TableSession(p: Props) {
           </span>
           <button
             className={w.primary}
-            disabled={
-              !ready.length || p.submitting || p.c.status === "finished"
-            }
-            onClick={() =>
-              void p.onSubmit(ready.map((a) => a.id)).catch(() => {})
-            }
+            disabled={p.submitting || p.c.status === "finished"}
+            data-unavailable={!ready.length || undefined}
+            onClick={() => {
+              if (!ready.length)
+                return notify(
+                  "Complétez au moins une annonce avant de l’envoyer en validation. Les champs manquants sont indiqués dans son statut.",
+                );
+              void p.onSubmit(ready.map((a) => a.id)).catch(() => {});
+            }}
           >
             {p.submitting ? "Envoi…" : "Envoyer les annonces prêtes"}
             <Icon name="arrow" />
@@ -242,7 +253,11 @@ export default function TableSession(p: Props) {
         </div>
       </div>
       {p.previewOpen && (
-        <aside className={t.preview} aria-label="Aperçu de l’annonce">
+        <aside
+          ref={previewPanel}
+          className={t.preview}
+          aria-label="Aperçu de l’annonce"
+        >
           <div className={w.heading}>
             <h2>Aperçu</h2>
             <button
@@ -313,6 +328,7 @@ function AdRow(
     isActive && p.unlocked,
   );
   const [uploading, setUploading] = useState(false);
+  const reorder = useRef<HTMLDivElement>(null);
   const editable = !protectedRow && editor.status !== "locked";
   const current = { ...a, ...editor.draft } as Ad;
   useEffect(() => {
@@ -382,9 +398,12 @@ function AdRow(
           <button
             aria-label={"Déplacer " + a.name}
             title="Déplacer la ligne"
+            aria-haspopup="dialog"
+            onClick={() => reorder.current?.togglePopover()}
             draggable={!frozen}
             disabled={frozen}
             onDragStart={(e) => {
+              reorder.current?.hidePopover();
               p.setDragging(a.id);
               e.dataTransfer.setData("text/plain", a.id);
               e.dataTransfer.effectAllowed = "move";
@@ -403,6 +422,38 @@ function AdRow(
           >
             <Icon name="grip" size={15} />
           </button>
+          <div
+            ref={reorder}
+            popover="auto"
+            role="dialog"
+            aria-label={"Déplacer " + a.name}
+            className={t.reorder}
+          >
+            <strong>Déplacer cette annonce</strong>
+            <button
+              disabled={p.rows.indexOf(a) === 0}
+              onClick={() => {
+                const i = p.rows.indexOf(a);
+                if (i > 0) void p.onMove(a.id, p.rows[i - 1].id);
+                reorder.current?.hidePopover();
+              }}
+            >
+              <Icon name="arrow" style={{ transform: "rotate(-90deg)" }} />
+              Monter
+            </button>
+            <button
+              disabled={p.rows.indexOf(a) === p.rows.length - 1}
+              onClick={() => {
+                const i = p.rows.indexOf(a);
+                if (i < p.rows.length - 1)
+                  void p.onMove(a.id, p.rows[i + 2]?.id ?? null);
+                reorder.current?.hidePopover();
+              }}
+            >
+              <Icon name="arrow" style={{ transform: "rotate(90deg)" }} />
+              Descendre
+            </button>
+          </div>
         </td>
         <td className={t.iconCell}>
           <input
@@ -489,8 +540,8 @@ function AdRow(
               <button
                 title="Déverrouiller"
                 aria-label={"Déverrouiller " + a.name}
-                disabled={!isActive}
-                onClick={p.onUnlock}
+                disabled={frozen}
+                onClick={() => p.onUnlock(a.id)}
               >
                 <Icon name="lock" size={16} />
               </button>
@@ -512,15 +563,34 @@ function AdRow(
               </button>
             ) : (
               <button
-                title="Envoyer"
+                title={
+                  missing.length
+                    ? "À compléter : " + missing.join(" · ")
+                    : "Envoyer"
+                }
                 aria-label={"Envoyer " + a.name}
-                disabled={
+                disabled={p.submitting || c.status === "finished"}
+                data-unavailable={
                   !editable ||
                   !!missing.length ||
                   !["draft", "changes_requested"].includes(a.status) ||
-                  p.submitting
+                  undefined
                 }
-                onClick={() => void p.onSubmit([a.id]).catch(() => {})}
+                onClick={() => {
+                  if (!editable)
+                    return notify(
+                      a.status === "approved"
+                        ? "Cette annonce est déjà validée. Déverrouillez-la pour la modifier."
+                        : "Cette annonce est ouverte dans un autre éditeur. Votre saisie reste conservée.",
+                    );
+                  if (missing.length)
+                    return notify("À compléter : " + missing.join(" · "));
+                  if (!["draft", "changes_requested"].includes(a.status))
+                    return notify(
+                      "Cette annonce a déjà été envoyée en validation.",
+                    );
+                  void p.onSubmit([a.id]).catch(() => {});
+                }}
               >
                 <Icon name="send" size={16} />
               </button>

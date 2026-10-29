@@ -43,7 +43,7 @@ Les fichiers finaux partent directement du navigateur vers Supabase Storage via 
 
 Le catalogue courant est dans `lib/campaign-studio/workspace/catalog.ts`. Les formats Display exigent les dimensions exactes et 150 Ko maximum. Les annonces Search exigent au moins trois titres et deux descriptions. Les aperçus illustrent l’annonce ; Google peut réellement combiner les éléments autrement.
 
-Chaque annonce possède un verrou temporaire et chaque campagne une révision. Une écriture périmée est refusée. Les champs modifiés seuls sont envoyés ; une saisie non sauvegardée est conservée localement dans le tableau. Après inactivité, reprendre explicitement l’édition. La validation conserve les corrections dans sa fenêtre jusqu’à sa fermeture.
+Chaque annonce possède un verrou temporaire et chaque campagne une révision. Une écriture périmée est refusée. Les champs modifiés seuls sont envoyés ; une saisie non sauvegardée est conservée localement dans le tableau. Le bail est renouvelé tant que l’éditeur reste ouvert. Après suspension du navigateur mobile, il est repris automatiquement avant la sauvegarde si aucune autre personne ne l’a acquis. Un conflit réel conserve la saisie et demande une reprise explicite. La validation conserve les corrections dans sa fenêtre jusqu’à sa fermeture.
 
 L’association automatique ne se fait qu’avec une seule ligne et un seul média compatibles, sans éditeur ouvert sur la ligne. Sinon, choisir le média dans le tableau.
 

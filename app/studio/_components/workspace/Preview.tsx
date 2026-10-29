@@ -3,6 +3,7 @@
 import type { Ad, Campaign } from "@/lib/campaign-studio/workspace/types";
 import { useWorkspace } from "./WorkspaceProvider";
 import ChannelIcon from "./ChannelIcon";
+import PreviewCopy, { previewExcerpt } from "./PreviewCopy";
 import Icon from "../Icon";
 import s from "./preview.module.css";
 
@@ -248,11 +249,30 @@ export default function Preview({
       </span>
     </div>
   );
-  const copy = ad.copy && <p className={s.copy}>{ad.copy}</p>;
+  const copy = ad.copy && (
+    <PreviewCopy
+      key={`${ad.id}:${ad.channel}:${ad.format}:${ad.copy}`}
+      text={ad.copy}
+      maximum={
+        ad.channel === "youtube"
+          ? 90
+          : ad.channel === "tiktok"
+            ? 100
+            : undefined
+      }
+      expandable={ad.channel !== "youtube"}
+    />
+  );
   const destination = (
     <div className={s.destination}>
       <span>
-        {ad.headline && <b>{ad.headline}</b>}
+        {ad.headline && (
+          <b>
+            {ad.channel === "youtube"
+              ? previewExcerpt(ad.headline, 40)
+              : ad.headline}
+          </b>
+        )}
         {domain && <small>{domain}</small>}
       </span>
       {ad.cta && <span className={s.cta}>{ad.cta}</span>}
@@ -289,13 +309,17 @@ export default function Preview({
             </span>
           </div>
           <h3 className={s.headlines}>
-            {ad.headlines.filter(Boolean).slice(0, 3).join(" | ") ||
+            {ad.headlines
+              .filter(Boolean)
+              .slice(0, 3)
+              .map((text) => previewExcerpt(text, 30))
+              .join(" | ") ||
               ad.headline ||
               "Aucun titre renseigné"}
           </h3>
           <div className={s.additional}>
             {descriptions.slice(0, 2).map((text, i) => (
-              <p key={i}>{text}</p>
+              <p key={i}>{previewExcerpt(text, 90)}</p>
             ))}
           </div>
           {(ad.headlines.filter(Boolean).length > 3 ||
@@ -370,7 +394,13 @@ export default function Preview({
               </b>
             )}
             {copy}
-            {ad.headline && <strong>{ad.headline}</strong>}
+            {ad.headline && (
+              <strong>
+                {ad.channel === "youtube"
+                  ? previewExcerpt(ad.headline, 40)
+                  : ad.headline}
+              </strong>
+            )}
             {additional}
             {domain && <small>{domain}</small>}
             {ad.cta && (

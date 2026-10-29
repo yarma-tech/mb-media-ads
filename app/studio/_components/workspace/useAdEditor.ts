@@ -68,13 +68,34 @@ export function useAdEditor(
   const token = useRef(""),
     latest = useRef(draft),
     baseline = useRef(draft),
-    modified = useRef(0),
+    renewedAt = useRef(0),
+    baselineRevision = useRef(ad.revision),
     saving = useRef<Promise<unknown>>(Promise.resolve()),
     alive = useRef(true);
   const cached = useRef(false);
   const finalSave = useRef<Promise<unknown> | null>(null);
   const lockKey = `studio:edit-lock:${data?.actor.id}:${ad.id}`;
   const cacheKey = `studio:${source === "validation" ? "validation-draft" : "draft"}:${data?.actor.id}:${ad.id}`;
+  const renewLease = useCallback(async () => {
+    const result = await run({
+      type: "lock",
+      campaignId: c.id,
+      adId: ad.id,
+      token: token.current,
+    });
+    const current = (result.campaign as Campaign).ads.find(
+      (item) => item.id === ad.id,
+    )!;
+    if (
+      current.revision !== baselineRevision.current &&
+      Object.keys(diff(baseline.current, latest.current)).length
+    )
+      throw new Error(
+        "Cette annonce a changé pendant votre absence. Votre saisie est conservée. Vérifiez-la avant de reprendre l’édition.",
+      );
+    renewedAt.current = Date.now();
+    return result;
+  }, [run, c.id, ad.id]);
   const save = useCallback(
     async (final = false) => {
       if (final && finalSave.current) return finalSave.current;
@@ -88,6 +109,9 @@ export function useAdEditor(
       const promise = saving.current
         .catch(() => {})
         .then(async () => {
+          // Mobile browsers may suspend renewal timers. Reclaim the same lease
+          // before sending a stale editor's changes; a competing owner still wins.
+          if (Date.now() - renewedAt.current > 25000) await renewLease();
           const result = await run({
             type: "edit",
             campaignId: c.id,
@@ -103,6 +127,7 @@ export function useAdEditor(
           const server = fields(updated);
           const newer = diff(value, latest.current);
           baseline.current = server;
+          baselineRevision.current = updated.revision;
           latest.current = { ...server, ...newer };
           try {
             if (!Object.keys(newer).length) localStorage.removeItem(cacheKey);
@@ -138,7 +163,7 @@ export function useAdEditor(
       }
       return promise;
     },
-    [ad.id, c.id, run, source, unlocked, cacheKey],
+    [ad.id, c.id, run, source, unlocked, cacheKey, renewLease],
   );
   const saveRef = useRef(save);
   useEffect(() => {
@@ -157,7 +182,6 @@ export function useAdEditor(
         setError("");
       }
     });
-    modified.current = Date.now();
     const lockToken = editorLockToken(lockKey);
     const release = async () => {
       const result = await run({
@@ -194,6 +218,8 @@ export function useAdEditor(
         } catch {}
         cached.current = Object.keys(restored).length > 0;
         baseline.current = value;
+        baselineRevision.current = current.revision;
+        renewedAt.current = Date.now();
         latest.current = { ...value, ...restored };
         setSaved(JSON.stringify(value));
         setDraft(latest.current);
@@ -210,27 +236,26 @@ export function useAdEditor(
           setError(workspaceErrorMessage(e, "command"));
         }
       });
-    const interval = setInterval(() => {
-      if (Date.now() - modified.current > 90000) {
-        void release().catch(() => {});
-        if (active) setStatus("locked");
-      } else
-        void run({
-          type: "lock",
-          campaignId: c.id,
-          adId: ad.id,
-          token: lockToken,
-        }).catch((e) => {
-          if (active) {
-            setStatus("locked");
-            setError(workspaceErrorMessage(e, "command"));
-          }
-        });
-    }, 30000);
+    const renew = () => {
+      void renewLease().catch((e) => {
+        if (active) {
+          setStatus("locked");
+          setError(workspaceErrorMessage(e, "command"));
+        }
+      });
+    };
+    // Reading an open editor is not a conflict. Keep its lease alive until
+    // navigation; the server still expires leases from closed/suspended tabs.
+    const interval = setInterval(renew, 30000);
+    const visibility = () => {
+      renewedAt.current = 0;
+    };
+    document.addEventListener("visibilitychange", visibility);
     return () => {
       active = false;
       alive.current = false;
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", visibility);
       if (
         source === "configuration" &&
         Object.keys(diff(baseline.current, latest.current)).length
@@ -242,11 +267,12 @@ export function useAdEditor(
       else void release().catch(() => {});
     };
     // A lock session belongs to one ad, not to each autosaved server revision.
-  }, [c.id, ad.id, enabled, run, cacheKey, lockKey, source]);
+  }, [c.id, ad.id, enabled, run, cacheKey, lockKey, source, renewLease]);
   useEffect(() => {
     if (!Object.keys(diff(baseline.current, latest.current)).length) {
       const value = fields(ad);
       baseline.current = value;
+      baselineRevision.current = ad.revision;
       latest.current = value;
       queueMicrotask(() => {
         setSaved(JSON.stringify(value));
@@ -281,7 +307,6 @@ export function useAdEditor(
     return () => window.removeEventListener("beforeunload", handler);
   }, [source]);
   const change = (patch: Partial<AdFields>) => {
-    modified.current = Date.now();
     latest.current = { ...latest.current, ...patch };
     setDraft(latest.current);
     cached.current = false;
@@ -314,11 +339,12 @@ export function useAdEditor(
     )!;
     const patch = diff(baseline.current, latest.current);
     baseline.current = fields(current);
+    baselineRevision.current = current.revision;
+    renewedAt.current = Date.now();
     latest.current = { ...baseline.current, ...patch };
     setSaved(JSON.stringify(baseline.current));
     setDraft(latest.current);
     await refresh();
-    modified.current = Date.now();
     setError("");
     setStatus("ready");
     if (source === "configuration") await save();

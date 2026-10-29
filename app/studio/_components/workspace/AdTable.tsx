@@ -19,11 +19,13 @@ import {
   mediaChannels,
 } from "@/lib/campaign-studio/workspace/catalog";
 import { isComplete } from "@/lib/campaign-studio/workspace/workflow";
+import { textGuidance } from "@/lib/campaign-studio/workspace/text-guidance";
 import { useWorkspace } from "./WorkspaceProvider";
 import { useAdEditor } from "./useAdEditor";
 import { uploadFile } from "./upload";
 import Preview from "./Preview";
 import History from "./History";
+import CharacterCountdown from "./CharacterCountdown";
 import Icon from "../Icon";
 import w from "./workspace.module.css";
 import t from "./table.module.css";
@@ -146,7 +148,9 @@ export default function TableSession(p: Props) {
             requestAnimationFrame(() => {
               if (!target.isConnected) return;
               const bounds = container.getBoundingClientRect();
-              const field = target.getBoundingClientRect();
+              const field = (
+                target.closest(`td.${t.countedCell}`) ?? target
+              ).getBoundingClientRect();
               if (field.left < bounds.left + 6)
                 container.scrollLeft += field.left - bounds.left - 6;
               else if (field.right > bounds.right - 6)
@@ -486,36 +490,53 @@ function AdRow(
             ))}
           </select>
         </td>
-        {p.columns.map((k) => (
-          <td
-            key={k}
-            data-empty={
-              !current[k] || (Array.isArray(current[k]) && !current[k]?.length)
-            }
-          >
-            <textarea
-              data-cell={k}
-              data-ad={a.id}
-              data-protected={protectedRow ? "true" : undefined}
-              aria-label={name(k)}
-              readOnly={isActive ? !editable : protectedRow}
-              value={
-                Array.isArray(current[k])
-                  ? (current[k] as string[]).join("\n")
-                  : String(current[k] ?? "")
+        {p.columns.map((k) => {
+          const guidance = textGuidance(current, k);
+          const countId = `character-count-${a.id}-${k}`;
+          const value = Array.isArray(current[k])
+            ? (current[k] as string[])
+            : String(current[k] ?? "");
+          return (
+            <td
+              key={k}
+              className={guidance ? t.countedCell : undefined}
+              data-empty={
+                !current[k] ||
+                (Array.isArray(current[k]) && !current[k]?.length)
               }
-              rows={1}
-              onChange={(e) =>
-                editor.change({
-                  [k]:
-                    k === "headlines" || k === "descriptions"
-                      ? e.target.value.split("\n")
-                      : e.target.value,
-                })
-              }
-            />
-          </td>
-        ))}
+            >
+              <textarea
+                data-cell={k}
+                data-ad={a.id}
+                data-protected={protectedRow ? "true" : undefined}
+                aria-label={name(k)}
+                aria-describedby={guidance ? countId : undefined}
+                readOnly={isActive ? !editable : protectedRow}
+                value={
+                  Array.isArray(current[k])
+                    ? (current[k] as string[]).join("\n")
+                    : String(current[k] ?? "")
+                }
+                rows={1}
+                onChange={(e) =>
+                  editor.change({
+                    [k]:
+                      k === "headlines" || k === "descriptions"
+                        ? e.target.value.split("\n")
+                        : e.target.value,
+                  })
+                }
+              />
+              {guidance && (
+                <CharacterCountdown
+                  id={countId}
+                  value={value}
+                  guidance={guidance}
+                />
+              )}
+            </td>
+          );
+        })}
         <td className={t.status} title={missing.join(" · ")}>
           {a.status === "changes_requested" ? (
             <Icon name="comment" size={15} />

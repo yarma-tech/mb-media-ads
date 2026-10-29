@@ -78,6 +78,39 @@
 .table textarea:read-only {
   cursor: default;
 }
+.countedCell {
+  position: relative;
+}
+.table .countedCell textarea {
+  width: calc(100% - 34px);
+}
+.countdown {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  cursor: help;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease;
+}
+.countdownDescription {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .table input[type="checkbox"] {
   width: 17px;
   height: 17px;

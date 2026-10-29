@@ -3294,3 +3294,140 @@ test("tableau : format, détails, média de ligne, historique et navigation aper
     page.getByLabel("Nom de l’annonce active", { exact: true }),
   ).toHaveValue("Nom vérifié");
 });
+
+for (const width of [1440, 390]) {
+  test(`compteurs tableau ${width}px : décompte libre, discret et navigation clavier intacte`, async ({
+    page,
+  }, testInfo) => {
+    const f = await fixture(page, "draft", true, true);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(
+      base +
+        "/studio/configuration?campagne=" +
+        f.campaigns[1].id +
+        "&canal=facebook",
+    );
+    const field = page.getByLabel("Texte de Beta annonce", { exact: true });
+    const cell = field.locator("..");
+    const counter = cell.locator("[data-character-countdown]");
+    const expectBadgeInScrollViewport = async (badge: typeof counter) => {
+      await expect
+        .poll(async () =>
+          badge.evaluate((element) => {
+            const scroll = element.closest("table")!.parentElement!;
+            const viewport = scroll.getBoundingClientRect();
+            const bounds = element.getBoundingClientRect();
+            return (
+              bounds.left >= viewport.left && bounds.right <= viewport.right
+            );
+          }),
+        )
+        .toBe(true);
+    };
+    await expect(counter).toHaveAttribute("data-remaining", "150");
+    await expect(counter).toHaveAttribute(
+      "title",
+      /longueur recommandée de 150/,
+    );
+    await expect(page.locator("[data-character-countdown]")).toHaveCount(2);
+    await expect(field).not.toHaveAttribute("maxlength");
+    const initialHeight = (await cell.boundingBox())!.height;
+    const initialColor = await counter.evaluate(
+      (el) => getComputedStyle(el).color,
+    );
+    await field.fill("a".repeat(149));
+    await expectBadgeInScrollViewport(counter);
+    await expect(counter).toHaveAttribute("data-remaining", "1");
+    await expect
+      .poll(() => counter.evaluate((el) => getComputedStyle(el).color))
+      .not.toBe(initialColor);
+    await page.screenshot({
+      path: testInfo.outputPath(`compteur-proche-${width}.png`),
+    });
+    await field.press("End");
+    await field.press("a");
+    await expect(counter).toHaveAttribute("data-remaining", "0");
+    await field.press("b");
+    await expect(counter).toHaveAttribute("data-remaining", "-1");
+    await expect(field).toHaveValue("a".repeat(150) + "b");
+    await expect(counter).toHaveCSS("color", "rgb(105, 64, 22)");
+    await expect
+      .poll(() => f.campaigns[1].ads[0].copy)
+      .toBe("a".repeat(150) + "b");
+    expect((await cell.boundingBox())!.height).toBe(initialHeight);
+    expect(initialHeight).toBeLessThanOrEqual(49);
+    const badgeBox = (await counter.boundingBox())!;
+    const cellBox = (await cell.boundingBox())!;
+    const fieldBox = (await field.boundingBox())!;
+    expect(fieldBox.x + fieldBox.width).toBeLessThanOrEqual(badgeBox.x);
+    expect(badgeBox.width).toBe(26);
+    expect(badgeBox.height).toBe(26);
+    expect(
+      cellBox.x + cellBox.width - badgeBox.x - badgeBox.width,
+    ).toBeLessThanOrEqual(6);
+    expect(
+      cellBox.y + cellBox.height - badgeBox.y - badgeBox.height,
+    ).toBeLessThanOrEqual(6);
+    await page.screenshot({
+      path: testInfo.outputPath(`compteur-depasse-${width}.png`),
+    });
+    await field.press("Tab");
+    await expect(
+      page.getByLabel("Titre de Beta annonce", { exact: true }),
+    ).toBeFocused();
+    await expectBadgeInScrollViewport(
+      page
+        .getByLabel("Titre de Beta annonce", { exact: true })
+        .locator("..")
+        .locator("[data-character-countdown]"),
+    );
+    await page.keyboard.press("Shift+Tab");
+    await expect(field).toBeFocused();
+    await expectBadgeInScrollViewport(counter);
+    await page
+      .getByLabel("Format de Beta annonce", { exact: true })
+      .selectOption("story");
+    await expect(counter).toHaveAttribute("data-limit", "125");
+    await expect(counter).toHaveAttribute("data-remaining", "-26");
+    expect((await cell.boundingBox())!.height).toBe(initialHeight);
+    await field.fill("e\u0301👨‍👩‍👧‍👦");
+    await expect(counter).toHaveAttribute("data-remaining", "123");
+  });
+}
+
+test("compteurs tableau Google : budget par variante, pas par somme de la cellule", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft");
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=google",
+  );
+  const field = page.getByLabel("Titres · 30 caractères de Beta annonce", {
+    exact: true,
+  });
+  const counter = field.locator("..").locator("[data-character-countdown]");
+  await expect(page.locator("[data-character-countdown]")).toHaveCount(4);
+  await field.fill("a".repeat(20) + "\n" + "b".repeat(31) + "\nTitre trois");
+  await expect(counter).toHaveAttribute("data-remaining", "-1");
+  await expect(counter).toHaveAttribute("title", /Texte 2, le plus long/);
+  await expect(counter).toHaveAttribute("title", /limite du champ de 30/);
+  await field.press("Tab");
+  const descriptions = page.getByLabel(
+    "Descriptions · 90 caractères de Beta annonce",
+    { exact: true },
+  );
+  await expect(descriptions).toBeFocused();
+  await descriptions.fill("Court\n" + "x".repeat(91));
+  await expect(
+    descriptions.locator("..").locator("[data-character-countdown]"),
+  ).toHaveAttribute("data-remaining", "-1");
+  const path = page.getByLabel("Chemin 1 de Beta annonce", { exact: true });
+  await path.fill("abcdefghijklmnop");
+  await expect(
+    path.locator("..").locator("[data-character-countdown]"),
+  ).toHaveAttribute("data-remaining", "-1");
+  await expect(path).toHaveValue("abcdefghijklmnop");
+});

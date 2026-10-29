@@ -3,6 +3,7 @@
 import type { Ad, Campaign } from "@/lib/campaign-studio/workspace/types";
 import { useWorkspace } from "./WorkspaceProvider";
 import ChannelIcon from "./ChannelIcon";
+import Icon from "../Icon";
 import s from "./preview.module.css";
 
 export function MediaPreview({
@@ -70,12 +71,148 @@ export function MediaPreview({
   );
 }
 
+export function SearchSceneHeader({ query }: { query: string }) {
+  return (
+    <div className={s.searchSceneHeader} aria-hidden="true">
+      <div className={s.searchTop}>
+        <span className={s.googleWord}>
+          <i>G</i>
+          <i>o</i>
+          <i>o</i>
+          <i>g</i>
+          <i>l</i>
+          <i>e</i>
+        </span>
+        <span className={s.searchBar}>
+          {query}
+          <Icon name="close" size={17} />
+          <Icon name="search" size={19} />
+        </span>
+      </div>
+      <div className={s.searchTabs}>
+        <b>Tout</b>
+        <span>Actualités</span>
+        <span>Images</span>
+        <span>Vidéos</span>
+        <span>Maps</span>
+        <span>Plus</span>
+      </div>
+    </div>
+  );
+}
+
+export function PublisherScene({ items }: { items: { c: Campaign; a: Ad }[] }) {
+  const upper = items.find((i) =>
+    ["leaderboard", "billboard", "mobile"].includes(i.a.format),
+  );
+  const side = items.find((i) => i.a.format === "halfpage");
+  const rectangle =
+    items.find((i) => i.a.format === "rectangle") ??
+    items.find((i) => i !== upper && i !== side);
+  return (
+    <div
+      className={s.publisherScene}
+      aria-label="Simulation des bannières dans Le Devoir"
+    >
+      <div className={s.browserChrome}>
+        <span aria-hidden="true">● ● ●</span>
+        <small>ledevoir.com</small>
+        <Icon name="more" size={17} />
+      </div>
+      {upper && (
+        <div className={s.publisherTopAd}>
+          <MediaPreview campaign={upper.c} ad={upper.a} />
+        </div>
+      )}
+      <div className={s.publisherUtility}>
+        <span>
+          <Icon name="menu" size={15} /> Toutes les sections
+        </span>
+        <span>Infolettres</span>
+        <span>Édition numérique</span>
+        <b>S’abonner au Devoir</b>
+      </div>
+      <div className={s.publisherContent}>
+        <div className={s.publisherMain}>
+          <div className={s.masthead}>
+            <span>LE</span>DEVOIR
+          </div>
+          <div className={s.publisherNav}>
+            Opinion　 Actualités　 Politique　 Économie　 Culture　 Monde
+          </div>
+          <div className={s.editorialLayout}>
+            <div className={s.editorial}>
+              <small>LA VIE DES QUARTIERS</small>
+              <h3>
+                Des espaces
+                <br />
+                qui rapprochent
+              </h3>
+              <p>
+                Parcs, culture et initiatives citoyennes : des milieux de vie
+                qui se réinventent au quotidien.
+              </p>
+              <span className={s.articleRule} />
+              <small>7 min.</small>
+            </div>
+            <div className={s.editorialIllustration} aria-hidden="true">
+              <svg viewBox="0 0 300 360" preserveAspectRatio="xMidYMid slice">
+                <rect width="300" height="360" fill="#dce5df" />
+                <path
+                  d="M0 170 80 70l30 45 65-90 125 145v190H0"
+                  fill="#a6b7ac"
+                />
+                <path d="M95 360 160 160l100 200" fill="#e9e8dc" />
+                <path
+                  d="M18 0v360M45 0l20 360M282 0v360"
+                  stroke="#586d59"
+                  strokeWidth="13"
+                />
+                <circle cx="52" cy="90" r="70" fill="#758c62" />
+                <circle cx="282" cy="130" r="82" fill="#b0b78d" />
+                <circle cx="80" cy="12" r="72" fill="#8fa779" />
+                <path
+                  d="M140 310v30m12-30 4 30m-22-55 4 28h19l-3-28"
+                  stroke="#294136"
+                  strokeWidth="8"
+                />
+                <circle cx="145" cy="272" r="9" fill="#294136" />
+              </svg>
+            </div>
+            <div className={s.publisherAside}>
+              {rectangle && (
+                <MediaPreview campaign={rectangle.c} ad={rectangle.a} />
+              )}
+              <div className={s.editorial}>
+                <small>À NE PAS MANQUER</small>
+                <p>Des initiatives locales pour faire vivre les quartiers.</p>
+                <span className={s.articleRule} />
+                <p>Le plein air, un vecteur de bien-être en ville.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {side && (
+          <div className={s.publisherSideAd}>
+            <MediaPreview campaign={side.c} ad={side.a} />
+          </div>
+        )}
+      </div>
+      <small className={s.simulation}>
+        Aperçu en situation · contenu éditorial illustratif
+      </small>
+    </div>
+  );
+}
+
 export default function Preview({
   ad,
   campaign,
+  grouped = false,
 }: {
   ad: Ad;
   campaign: Campaign;
+  grouped?: boolean;
 }) {
   const { data } = useWorkspace();
   const brand =
@@ -85,16 +222,26 @@ export default function Preview({
   try {
     domain = new URL(url).hostname;
   } catch {}
+  const initials =
+    (brand?.name || "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0])
+      .join("") || "·";
+  const avatar = brand?.logo ? (
+    <img src={brand.logo} alt="" />
+  ) : (
+    <span className={s.monogram}>{initials}</span>
+  );
   const identity = (
     <div className={s.identity}>
-      {brand?.logo ? (
-        <img src={brand.logo} alt="" />
-      ) : (
-        <span className={s.monogram}>{brand?.name.charAt(0) || "·"}</span>
-      )}
+      {avatar}
       <span>
         <b>{brand?.name || "Marque non renseignée"}</b>
-        <small>Sponsorisé</small>
+        <small>
+          Sponsorisé <span aria-hidden="true">· ◉</span>
+        </small>
       </span>
       <span className={s.more} aria-hidden="true">
         •••
@@ -111,92 +258,128 @@ export default function Preview({
       {ad.cta && <span className={s.cta}>{ad.cta}</span>}
     </div>
   );
-  const additionalCopy = ad.descriptions.filter(Boolean).length > 0 && (
+  const descriptions = ad.descriptions.filter(Boolean);
+  const additional = descriptions.length > 0 && (
     <div className={s.additional}>
-      {ad.descriptions.filter(Boolean).map((text, i) => (
+      {descriptions.map((text, i) => (
         <p key={i}>{text}</p>
       ))}
     </div>
   );
+  const isStory = ["story", "story_video"].includes(ad.format);
+  const isReel = ad.format === "reel";
+  const short = ad.channel === "youtube" && ad.format === "short";
   if (ad.channel === "google")
     return (
-      <div className={`${s.preview} ${s.search}`}>
-        <div className={s.searchBar}>
-          <ChannelIcon channel="google" size={25} />
-          <span>{domain || "Destination non renseignée"}</span>
-          <span aria-hidden="true">⌕</span>
+      <div
+        className={`${s.preview} ${s.search} ${grouped ? s.groupedSearch : ""}`}
+      >
+        {!grouped && <SearchSceneHeader query={brand?.name || domain} />}
+        <div className={s.searchResult}>
+          <b className={s.sponsored}>Sponsorisé</b>
+          <div className={s.searchIdentity}>
+            {avatar}
+            <span>
+              <b>{brand?.name || "Marque non renseignée"}</b>
+              <small>
+                {url}
+                {ad.path1 ? "/" + ad.path1 : ""}
+                {ad.path2 ? "/" + ad.path2 : ""}
+              </small>
+            </span>
+          </div>
+          <h3 className={s.headlines}>
+            {ad.headlines.filter(Boolean).slice(0, 3).join(" | ") ||
+              ad.headline ||
+              "Aucun titre renseigné"}
+          </h3>
+          <div className={s.additional}>
+            {descriptions.slice(0, 2).map((text, i) => (
+              <p key={i}>{text}</p>
+            ))}
+          </div>
+          {(ad.headlines.filter(Boolean).length > 3 ||
+            descriptions.length > 2) && (
+            <small className={s.combinationNote}>
+              Exemple de combinaison · tous les textes restent disponibles dans
+              l’éditeur.
+            </small>
+          )}
         </div>
-        <small className={s.tag}>
-          Aperçu Google SEM · Tous les textes fournis
-        </small>
-        {identity}
-        <small>
-          {domain}
-          {ad.path1 ? "/" + ad.path1 : ""}
-          {ad.path2 ? "/" + ad.path2 : ""}
-        </small>
-        <div className={s.headlines}>
-          {ad.headlines.filter(Boolean).map((text, i) => (
-            <h3 key={i}>{text}</h3>
-          ))}
-        </div>
-        {!ad.headlines.some(Boolean) && (
-          <p className={s.empty}>Aucun titre renseigné</p>
-        )}
-        {ad.headline && <h3>{ad.headline}</h3>}
-        {copy}
-        {additionalCopy}
-        {ad.cta && <span className={s.cta}>{ad.cta}</span>}
-        <small className={s.tag}>
-          L’affichage et les combinaisons réels varient selon Google et
-          l’appareil.
-        </small>
       </div>
     );
   if (ad.channel === "display")
-    return (
-      <div className={`${s.preview} ${s.publisher}`}>
-        <div className={s.masthead}>Le Devoir</div>
-        <div className={s.publisherNav}>
-          Actualités · Politique · Société · Culture
-        </div>
-        <small className={s.simulation}>
-          Simulation locale d’un emplacement publicitaire. Aucun partenariat ni
-          placement confirmé avec Le Devoir.
-        </small>
-        <div className={s.editorial} aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </div>
-        <div className={s.displayAd}>
-          <small>PUBLICITÉ · APERÇU</small>
-          <MediaPreview ad={ad} campaign={campaign} />
-          {copy}
-          {destination}
-          {additionalCopy}
-        </div>
-        <div className={s.editorial} aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </div>
-      </div>
-    );
-  if (ad.channel === "tiktok")
-    return (
-      <div className={`${s.preview} ${s.tiktok}`}>
-        <header className={s.platform}>
-          <ChannelIcon channel="tiktok" size={22} />
-          <b>TikTok</b>
-          <span>Pour toi</span>
-        </header>
+    return grouped ? (
+      <div className={`${s.preview} ${s.bannerPreview}`}>
         <MediaPreview ad={ad} campaign={campaign} />
-        <div className={s.socialBody}>
-          {identity}
-          {copy}
-          {destination}
-          {additionalCopy}
+      </div>
+    ) : (
+      <PublisherScene items={[{ a: ad, c: campaign }]} />
+    );
+  if (ad.channel === "tiktok" || isStory || isReel || short)
+    return (
+      <div
+        className={`${s.preview} ${s.immersive} ${ad.channel === "tiktok" ? s.tiktok : ""} ${isStory ? s.story : ""} ${short ? s.short : ""}`}
+      >
+        {short && (
+          <header className={s.platform}>
+            <Icon name="menu" />
+            <ChannelIcon channel="youtube" tone="brand" />
+            <b>YouTube</b>
+            <Icon name="search" />
+          </header>
+        )}
+        <div className={s.immersiveFrame}>
+          <MediaPreview ad={ad} campaign={campaign} />
+          <div className={s.overlayTop}>
+            {ad.channel === "tiktok" ? (
+              <div className={s.forYou}>
+                <span>Following</span>
+                <b>For You</b>
+                <Icon name="search" />
+              </div>
+            ) : (
+              <>
+                {isStory && (
+                  <div className={s.storyProgress} aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                  </div>
+                )}
+                {identity}
+              </>
+            )}
+          </div>
+          {!isStory && (
+            <div className={s.reactions} aria-hidden="true">
+              <Icon name="heart" size={25} />
+              <Icon name="comment" size={24} />
+              <Icon name="send" size={24} />
+            </div>
+          )}
+          {(isReel || short) && (
+            <span className={s.centerPlay} aria-hidden="true">
+              ▶
+            </span>
+          )}
+          <div className={s.overlayCopy}>
+            {ad.channel === "tiktok" && (
+              <b>
+                @{(brand?.name || "marque").toLowerCase().replace(/\s+/g, "")}
+              </b>
+            )}
+            {copy}
+            {ad.headline && <strong>{ad.headline}</strong>}
+            {additional}
+            {domain && <small>{domain}</small>}
+            {ad.cta && (
+              <span className={s.cta}>
+                {ad.cta}
+                <Icon name="chevron" size={17} />
+              </span>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -204,16 +387,19 @@ export default function Preview({
     return (
       <div className={`${s.preview} ${s.youtube}`}>
         <header className={s.platform}>
-          <ChannelIcon channel="youtube" size={25} />
+          <Icon name="menu" />
+          <ChannelIcon channel="youtube" tone="brand" />
           <b>YouTube</b>
-          <span>⋮</span>
+          <span>
+            <Icon name="search" />
+          </span>
         </header>
         <MediaPreview ad={ad} campaign={campaign} />
-        <div className={s.socialBody}>
+        <div className={s.youtubeBody}>
           {identity}
           {copy}
           {destination}
-          {additionalCopy}
+          {additional}
         </div>
       </div>
     );
@@ -227,13 +413,18 @@ export default function Preview({
       {ad.channel === "instagram" && (
         <>
           <div className={s.socialActions} aria-hidden="true">
-            ♡ &nbsp; ◯ &nbsp; ↗ <span>♧</span>
+            <Icon name="heart" size={24} />
+            <Icon name="comment" size={24} />
+            <Icon name="send" size={24} />
+            <span>
+              <Icon name="bookmark" size={23} />
+            </span>
           </div>
           {copy}
         </>
       )}
       {destination}
-      {additionalCopy}
+      {additional}
     </div>
   );
 }

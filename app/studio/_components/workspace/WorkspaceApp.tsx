@@ -19,13 +19,11 @@ import Icon from "../Icon";
 import type { IconName } from "../Icon";
 import w from "./workspace.module.css";
 const pages: { url: string; label: string; icon: IconName }[] = [
-  { url: "/studio", label: "Accueil", icon: "grid" },
-  { url: "/studio/configuration", label: "Configuration", icon: "edit" },
-  { url: "/studio/validation", label: "Validation", icon: "review" },
-  { url: "/studio/on-air", label: "On air", icon: "live" },
-  { url: "/studio/terminees", label: "Terminées", icon: "clock" },
-  { url: "/studio/acces", label: "Accès", icon: "info" },
-  { url: "/social", label: "Social Ads", icon: "external" },
+  { url: "/studio", label: "Accueil", icon: "home" },
+  { url: "/studio/configuration", label: "Configuration", icon: "campaign" },
+  { url: "/studio/validation", label: "Validation", icon: "approved" },
+  { url: "/studio/on-air", label: "On air", icon: "play" },
+  { url: "/studio/statistiques", label: "Statistiques", icon: "bars" },
 ];
 export default function WorkspaceApp() {
   return (
@@ -56,7 +54,13 @@ function App() {
   const [account, setAccount] = useState(false),
     [newPassword, setNewPassword] = useState("");
   const current =
-    pages.find((p) => p.url === pathname)?.label ?? "Statistiques";
+    pages.find((p) => p.url === pathname)?.label ??
+    (pathname === "/studio/acces" ? "Accès" : "Terminées");
+  const configuration = pathname === "/studio/configuration";
+  const selectedCampaign =
+    data?.campaigns.find(
+      (campaign) => campaign.id === navigation.params.get("campagne"),
+    ) ?? data?.campaigns[0];
   async function signIn(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -114,6 +118,11 @@ function App() {
         </form>
       </section>
     );
+  const initials = data.actor.name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("");
   return (
     <div className={w.app}>
       <a href="#workspace-main" className={w.skip}>
@@ -145,13 +154,35 @@ function App() {
               </Link>
             ))}
         </nav>
-        <button
-          onClick={() => void logout()}
-          title="Se déconnecter"
-          aria-label="Se déconnecter"
-        >
-          <Icon name="logout" />
-        </button>
+        <details className={w.profile}>
+          <summary
+            aria-label={`${initials} - Compte et outils`}
+            title="Compte et outils"
+          >
+            <span aria-hidden="true">{initials}</span>
+          </summary>
+          <div className={w.profileMenu}>
+            <strong>{data.actor.name}</strong>
+            <small>
+              {data.actor.role === "validator" ? "Validateur" : "Préparateur"}
+            </small>
+            <button onClick={() => setAccount((v) => !v)}>Mon compte</button>
+            <Link href={studioHref("/studio/terminees")}>
+              <Icon name="clock" /> Campagnes terminées
+            </Link>
+            {data.actor.role === "validator" && (
+              <Link href={studioHref("/studio/acces")}>
+                <Icon name="info" /> Accès
+              </Link>
+            )}
+            <Link href="/social">
+              <Icon name="external" /> Social Ads
+            </Link>
+            <button onClick={() => void logout()}>
+              <Icon name="logout" /> Se déconnecter
+            </button>
+          </div>
+        </details>
       </aside>
       <section
         id="workspace-main"
@@ -162,19 +193,48 @@ function App() {
         <header className={w.header}>
           <nav aria-label="Fil d’Ariane">
             <Link href={studioHref("/studio")}>Accueil</Link>
-            {pathname !== "/studio" && (
+            {configuration || pathname === "/studio" ? (
+              <>
+                <Icon name="chevron" size={13} />
+                {configuration ? (
+                  <Link href={studioHref("/studio")}>Campagnes</Link>
+                ) : (
+                  <b>Campagnes</b>
+                )}
+                {configuration &&
+                  navigation.params.get("nouvelle") !== "1" &&
+                  selectedCampaign && (
+                    <>
+                      <Icon name="chevron" size={13} />
+                      <select
+                        className={w.breadcrumbCampaign}
+                        aria-label="Campagne à configurer"
+                        value={selectedCampaign.id}
+                        onChange={(event) =>
+                          navigation.update({
+                            campagne: event.target.value,
+                            etape: "",
+                            canaux: "",
+                            canal: "",
+                          })
+                        }
+                      >
+                        {data.campaigns.map((campaign) => (
+                          <option key={campaign.id} value={campaign.id}>
+                            {campaign.name}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  )}
+              </>
+            ) : (
               <>
                 <Icon name="chevron" size={13} />
                 <b>{current}</b>
               </>
             )}
           </nav>
-          <span>
-            <button onClick={() => setAccount((v) => !v)}>
-              {data.actor.name}
-            </button>{" "}
-            · {data.actor.role === "validator" ? "Validateur" : "Préparateur"}
-          </span>
         </header>
         {account && (
           <form

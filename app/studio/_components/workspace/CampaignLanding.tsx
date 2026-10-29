@@ -10,6 +10,7 @@ export default function CampaignLanding() {
   const { data } = useWorkspace();
   const navigation = useWorkspaceNavigation();
   const [search, setSearch] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const validator = data!.actor.role === "validator";
   const pendingAds = data!.campaigns
     .flatMap((campaign) => campaign.ads)
@@ -29,15 +30,31 @@ export default function CampaignLanding() {
       <div className={c.heading}>
         <h1 id="campaigns-title">Vos campagnes</h1>
         {data!.campaigns.length > 0 && (
-          <label className={c.search}>
-            <Icon name="search" />
-            <input
-              aria-label="Rechercher une campagne"
-              placeholder="Rechercher"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </label>
+          <div className={c.search}>
+            {searchOpen && (
+              <input
+                aria-label="Rechercher une campagne"
+                placeholder="Rechercher"
+                autoFocus
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            )}
+            <button
+              aria-label={
+                searchOpen
+                  ? "Fermer la recherche de campagne"
+                  : "Rechercher une campagne"
+              }
+              title="Rechercher"
+              onClick={() => {
+                setSearchOpen(!searchOpen);
+                if (searchOpen) setSearch("");
+              }}
+            >
+              <Icon name="search" size={22} />
+            </button>
+          </div>
         )}
       </div>
       <div className={data!.campaigns.length ? c.grid : c.empty}>
@@ -66,7 +83,7 @@ export default function CampaignLanding() {
               })}
             >
               <span className={c.tileIcon}>
-                <Icon name="review" size={22} />
+                <Icon name="document" size={24} />
               </span>
               <strong>{campaign.name}</strong>
               <span className={c.brandName}>

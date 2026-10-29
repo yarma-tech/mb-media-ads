@@ -1,5 +1,5 @@
 .landing {
-  padding: 24px 4px 48px;
+  padding: 22px 0 48px;
   min-height: 70vh;
   color: #10241e;
 }
@@ -14,7 +14,7 @@
 .createBody h1 {
   margin: 0;
   color: #10241e;
-  font-size: clamp(25px, 2.4vw, 34px);
+  font-size: 36px;
   letter-spacing: -1.2px;
   font-weight: 650;
   line-height: 1.2;
@@ -37,20 +37,20 @@
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 18px;
 }
 .empty {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 390px;
+  min-height: 480px;
 }
 .newTile,
 .campaignTile {
-  min-height: 235px;
+  min-height: 260px;
   border: 1px solid #f0f2f1;
-  border-radius: 15px;
+  border-radius: 12px;
   background: #f7f8f7;
   text-decoration: none;
   color: #10241e;
@@ -83,8 +83,8 @@
   font-weight: 600;
 }
 .empty .newTile {
-  width: min(390px, 100%);
-  min-height: 225px;
+  width: min(480px, 100%);
+  min-height: 270px;
 }
 .empty .newTile strong {
   font-size: 20px;
@@ -92,8 +92,8 @@
 .plus {
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
+  width: 74px;
+  height: 74px;
   border-radius: 50%;
   color: white;
   background: #0b3024;
@@ -105,7 +105,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  padding: 22px;
+  padding: 26px;
 }
 .tileIcon {
   width: 43px;
@@ -114,21 +114,21 @@
   place-items: center;
   border-radius: 50%;
   background: #ebeeec;
-  margin-bottom: 24px;
+  margin-bottom: 30px;
 }
 .campaignTile strong {
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 600;
   letter-spacing: -0.35px;
   overflow-wrap: anywhere;
 }
 .brandName {
   color: #59635e;
-  font-size: 13px;
-  margin-top: 6px;
+  font-size: 14px;
+  margin-top: 7px;
 }
 .badge {
-  margin-top: 28px;
+  margin-top: auto;
   border-radius: 20px;
   padding: 6px 12px;
   color: #48534d;
@@ -152,7 +152,7 @@
   color: #66736d;
 }
 .create {
-  padding: 12px 4px 48px;
+  padding: 22px 0 48px;
   color: #10241e;
 }
 .createTop {
@@ -168,7 +168,7 @@
   gap: 10px;
   color: #22342b;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 15px;
 }
 .backArrow {
   display: inline-flex;
@@ -219,12 +219,12 @@
   color: white;
 }
 .createBody {
-  width: min(710px, 100%);
+  width: min(800px, 100%);
   margin: 0 auto;
 }
 .createBody h1 {
   margin-bottom: 28px;
-  font-size: 29px;
+  font-size: 36px;
 }
 .information {
   width: 100%;
@@ -251,7 +251,7 @@
 .brandCreator input {
   width: 100%;
   box-sizing: border-box;
-  min-height: 45px;
+  min-height: 48px;
   padding: 10px 14px;
   border: 1px solid #cfd7d2;
   border-radius: 9px;
@@ -259,7 +259,7 @@
   color: #15291f;
   font: inherit;
   font-weight: 400;
-  font-size: 14px;
+  font-size: 15px;
 }
 .fields input:focus,
 .fields select:focus,
@@ -336,7 +336,7 @@
   gap: 16px;
   margin-top: 22px;
   background: #f6f8f6;
-  padding: 22px;
+  padding: 26px;
   border-radius: 12px;
 }
 .brandCreator h3 {
@@ -409,4 +409,124 @@
     justify-content: space-between;
     gap: 20px;
   }
+}
+
+.search button {
+  border: 0;
+  background: transparent;
+  padding: 10px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+}
+.search input {
+  border: 0 !important;
+  border-bottom: 1px solid #dce2de !important;
+  border-radius: 0 !important;
+}
+.create .steps {
+  position: absolute;
+  right: 36px;
+  top: 28px;
+  width: 400px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+  margin: 0;
+}
+.create .steps li {
+  font-size: 13px;
+  gap: 9px;
+}
+.create .steps b {
+  width: 34px;
+  height: 34px;
+  font-size: 14px;
+}
+.create .steps li + li::before {
+  width: calc(100% - 20px);
+  right: calc(50% + 32px);
+  top: 17px;
+}
+.create .createTop {
+  margin: 12px 0 46px;
+  min-height: 44px;
+}
+.information .actions button {
+  min-width: 180px;
+  min-height: 52px;
+  border-radius: 12px;
+}
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .create .steps {
+    width: 310px;
+  }
+}
+@media (max-width: 900px) {
+  .create .steps {
+    position: static;
+    width: 340px;
+    margin-left: auto;
+  }
+  .create .createTop {
+    align-items: flex-start;
+  }
+  .createBody h1,
+  .heading h1 {
+    font-size: 30px;
+  }
+}
+@media (max-width: 700px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .create .steps {
+    width: 100%;
+  }
+  .create .createTop {
+    margin-bottom: 28px;
+  }
+  .heading {
+    flex-direction: row;
+    align-items: center;
+  }
+  .search {
+    width: auto;
+    margin-left: auto;
+  }
+  .search input {
+    width: 120px;
+  }
+  .empty {
+    min-height: 390px;
+  }
+  .empty .newTile {
+    min-height: 240px;
+  }
+  .campaignTile,
+  .newTile {
+    min-height: 230px;
+  }
+}
+@media (max-width: 380px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .heading {
+    flex-wrap: wrap;
+  }
+}
+
+.create .createBody h1 {
+  margin-bottom: 28px;
+}
+.create .fields label {
+  font-size: 14px;
+}
+.create .optional summary small {
+  display: inline;
 }

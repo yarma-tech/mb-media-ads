@@ -295,6 +295,9 @@ async function fixture(
     get campaigns() {
       return data.campaigns;
     },
+    get brands() {
+      return data.brands;
+    },
     empty: () => {
       data.campaigns = [];
     },
@@ -330,13 +333,58 @@ async function beginCampaign(page: Page, name: string) {
     .click();
   await page.getByLabel("Nom de campagne", { exact: true }).fill(name);
 }
-async function openPreview(page: Page) {
+async function openPreview(page: Page, details = false) {
   const toggle = page.getByRole("button", { name: "Aperçu", exact: true });
   if ((await toggle.getAttribute("aria-pressed")) !== "true")
     await toggle.click();
+  if (details) {
+    const disclosure = page
+      .locator("summary")
+      .filter({ hasText: "Détails de l’annonce" });
+    if (
+      !(await disclosure.evaluate(
+        (element) => (element.parentElement as HTMLDetailsElement).open,
+      ))
+    )
+      await disclosure.click();
+  }
 }
 
-async function openLibrary(page: Page) {
+async function openReviewOptions(page: Page) {
+  const summary = page.getByLabel("Options d’affichage", { exact: true });
+  if (
+    !(await summary.evaluate(
+      (el) => (el.parentElement as HTMLDetailsElement).open,
+    ))
+  )
+    await summary.click();
+}
+async function openLibrary(page: Page, channelName = "Facebook") {
+  const nav = page.getByRole("navigation", {
+    name: "Canal de configuration",
+    exact: true,
+  });
+  await expect(nav).toBeVisible();
+  const tab = nav.getByRole("button", { name: new RegExp(channelName) });
+  if (!(await tab.count())) {
+    await page
+      .getByRole("navigation", { name: "Étapes de configuration", exact: true })
+      .getByRole("button", { name: "2 Canaux", exact: true })
+      .click();
+    const chooser = page.getByRole("group", {
+      name: "Choisir les canaux",
+      exact: true,
+    });
+    const channel = chooser.getByRole("button", {
+      name: channelName,
+      exact: true,
+    });
+    if ((await channel.getAttribute("aria-pressed")) !== "true")
+      await channel.click();
+    await page.getByRole("button", { name: "Continuer", exact: true }).click();
+  }
+  await tab.click();
+  await expect(tab).toHaveAttribute("aria-pressed", "true");
   const summary = page
     .locator("summary")
     .filter({ hasText: "Bibliothèque des médias" });
@@ -416,12 +464,14 @@ test("campagne, canal, filtres et recherche survivent aux transitions et reload"
     campaigns[1].id,
   );
   await page.getByRole("button", { name: "Validées", exact: true }).click();
+  await openReviewOptions(page);
   await page.getByRole("button", { name: "Carrousel", exact: true }).click();
   await page.getByLabel("Rechercher une annonce").fill("Beta");
   await page.reload();
   await expect(
     page.getByRole("button", { name: "Validées", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
+  await openReviewOptions(page);
   await expect(
     page.getByRole("button", { name: "Carrousel", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
@@ -442,11 +492,11 @@ test("campagne, canal, filtres et recherche survivent aux transitions et reload"
     page.getByRole("button", { name: /Google SEM/ }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("Campagne à configurer").selectOption(campaigns[0].id);
-  await openPreview(page);
+  await openPreview(page, true);
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
     "Alpha annonce",
   );
-  await openPreview(page);
+  await openPreview(page, true);
   await expect(page.getByLabel("Nom de l’annonce active")).not.toHaveValue(
     "Beta annonce",
   );
@@ -553,7 +603,7 @@ test("contexte historique et campagne B ne réutilisent aucune ligne ni sélecti
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
   await page.getByRole("button", { name: /Google SEM/ }).click();
-  await openPreview(page);
+  await openPreview(page, true);
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
     "Beta annonce",
   );
@@ -565,7 +615,7 @@ test("contexte historique et campagne B ne réutilisent aucune ligne ni sélecti
   await page
     .getByLabel("Campagne à configurer")
     .selectOption(f.campaigns[0].id);
-  await openPreview(page);
+  await openPreview(page, true);
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
     "Alpha annonce",
   );
@@ -577,12 +627,12 @@ test("contexte historique et campagne B ne réutilisent aucune ligne ni sélecti
   await expect(page.getByLabel("Campagne à configurer")).toHaveValue(
     f.campaigns[1].id,
   );
-  await openPreview(page);
+  await openPreview(page, true);
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
     "Beta annonce",
   );
   await page.goForward();
-  await openPreview(page);
+  await openPreview(page, true);
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
     "Alpha annonce",
   );
@@ -798,12 +848,7 @@ for (const kind of ["image", "video"] as const) {
   }, testInfo) => {
     const f = await fixture(page);
     await page.getByRole("link").filter({ hasText: "Beta" }).click();
-    if (kind === "video") {
-      const youtube = page.getByRole("button", { name: /YouTube/ });
-      await youtube.click();
-      await expect(youtube).toHaveAttribute("aria-pressed", "true");
-    }
-    await openLibrary(page);
+    await openLibrary(page, kind === "video" ? "YouTube" : "Facebook");
     const library = page.getByRole("region", {
       name: "Bibliothèque du canal",
       exact: true,
@@ -865,6 +910,7 @@ test("carrousel parcouru : reprendre sans modifier les statuts", async ({
   await page.getByRole("link", { name: "Validation", exact: true }).click();
   await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
   await expect(page.getByRole("article")).toHaveCount(1);
+  await openReviewOptions(page);
   await page.getByRole("button", { name: "Carrousel", exact: true }).click();
   await page.getByRole("button", { name: "Suivante →", exact: true }).click();
   await expect(
@@ -990,6 +1036,7 @@ test("reprendre au clavier ne valide jamais implicitement", async ({
   await page.getByRole("link", { name: "Validation", exact: true }).click();
   await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
   await expect(page.getByRole("article")).toHaveCount(1);
+  await openReviewOptions(page);
   await page.getByRole("button", { name: "Carrousel", exact: true }).click();
   await page.getByRole("button", { name: "Suivante →", exact: true }).click();
   await page
@@ -1407,6 +1454,7 @@ test("carrousel : hiérarchie de titres continue", async ({ page }) => {
   await page.getByRole("link", { name: "Validation", exact: true }).click();
   await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
   await expect(page.getByRole("article")).toHaveCount(1);
+  await openReviewOptions(page);
   await page.getByRole("button", { name: "Carrousel", exact: true }).click();
   expect(await axeViolations(page, ["heading-order"])).toEqual([]);
 });
@@ -1671,6 +1719,9 @@ test("lot : un canal incompatible ne bloque pas les annonces compatibles", async
   expect(
     f.campaigns.find((c) => c.name === "Lot mixte")?.ads.map((a) => a.channel),
   ).toEqual(["facebook"]);
+  await page
+    .getByRole("button", { name: "Ajouter des annonces", exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Ajouter des médias en lot", exact: true })
     .click();
@@ -2249,6 +2300,7 @@ test("direction D : validation affiche tout le groupe par défaut", async ({
     path: "/tmp/studio-d-20261029/validation-mobile.png",
     fullPage: true,
   });
+  await openReviewOptions(page);
   await expect(
     page.getByRole("button", { name: "Carrousel", exact: true }),
   ).toHaveAttribute("aria-pressed", "false");
@@ -2297,4 +2349,346 @@ test("direction D : On air inclut les canaux prévus et compte les familles", as
     path: "/tmp/studio-d-20261029/onair-mobile.png",
     fullPage: true,
   });
+});
+
+test("fidélité maquettes : captures bureau avec campagne complète", async ({
+  page,
+}) => {
+  test.setTimeout(90000);
+  const f = await fixture(page, "draft");
+  f.brands[0].name = "Collège Universel";
+  const root = process.env.STUDIO_VISUAL_DIR ?? "/tmp/studio-fidelity-after";
+  const capture = async (name: string) => {
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      await Promise.all(
+        Array.from(document.images).map((img) => img.decode().catch(() => {})),
+      );
+    });
+    await page.screenshot({
+      path: `${root}/${name}.png`,
+      fullPage: true,
+      animations: "disabled",
+    });
+  };
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const c = f.campaigns[1];
+  c.name = "Admissions automne 2027";
+  c.defaultUrl = "https://collegeuniversel.ca";
+  c.ads = [];
+  c.media = [];
+  c.channels = ["facebook", "instagram"];
+  f.campaigns[0].name = "Portes ouvertes";
+  const third = createCampaign("Formation continue", actor, now);
+  third.brandId = "brand-test";
+  f.campaigns.push(third);
+  const texts = [
+    "Votre prochaine étape commence ici.",
+    "Des idées qui changent demain.",
+    "ICI, vos ambitions grandissent.",
+    "Plus qu’un diplôme.",
+    "Des profs qui font la différence.",
+    "Un campus au cœur de la ville.",
+  ];
+  let campaign = c;
+  for (let i = 0; i < 6; i++) {
+    campaign = addAd(
+      campaign,
+      "facebook",
+      i === 1 || i === 4 ? "story" : "square",
+      actor,
+      now,
+    );
+    const ad = campaign.ads.at(-1)!;
+    Object.assign(ad, {
+      copy: texts[i],
+      headline: i === 1 ? "" : "Admissions ouvertes",
+      cta: "En savoir plus",
+      url: c.defaultUrl,
+      mediaId: `visual-${i}`,
+      theme: "Vie étudiante",
+    });
+    campaign.media.push({
+      id: `visual-${i}`,
+      name: `admissions-${i}.jpg`,
+      path: `admissions-${i}.jpg`,
+      channel: "facebook",
+      mime: "image/jpeg",
+      bytes: 10000,
+      width: 1080,
+      height: ad.format === "story" ? 1920 : 1080,
+      duration: null,
+      state: "ready",
+      errors: [],
+    });
+    f.setMediaUrl(
+      `visual-${i}`,
+      base +
+        "/deck-demo/cu-generique-" +
+        (ad.format === "story" ? "vertical" : "square") +
+        ".jpg",
+    );
+  }
+  campaign.ads[1].status = "changes_requested";
+  campaign.ads[1].comments = [
+    {
+      text: "Merci de préciser la date de rentrée et de raccourcir l’accroche.",
+      author: "Validateur",
+      at: now,
+      resolution: "open",
+    },
+  ];
+  f.campaigns[1] = campaign;
+  await page.reload();
+  await capture("01-campagnes");
+  await page
+    .getByRole("link", { name: "Créer votre campagne", exact: true })
+    .click();
+  await page
+    .getByLabel("Nom de campagne", { exact: true })
+    .fill("Admissions automne 2027");
+  await capture("02-formulaire");
+  await page.goto(
+    base +
+      `/studio/configuration?campagne=${campaign.id}&canal=facebook&etape=channels`,
+  );
+  await capture("03-canaux");
+  await page.goto(
+    base +
+      `/studio/configuration?campagne=${campaign.id}&canal=facebook&etape=media`,
+  );
+  await capture("04-medias");
+  await page.goto(
+    base +
+      `/studio/configuration?campagne=${campaign.id}&canal=facebook&etape=editor`,
+  );
+  await expect(page.getByRole("table")).toBeVisible();
+  await capture("05-tableau");
+  const tableBox = await page.getByRole("table").boundingBox();
+  const tabsBox = await page
+    .getByRole("navigation", { name: "Canal de configuration" })
+    .boundingBox();
+  const copyBox = await page
+    .getByRole("button", { name: "Copier tout", exact: true })
+    .boundingBox();
+  await openPreview(page);
+  await capture("06-apercu");
+  await page
+    .getByRole("button", { name: "Fermer l’aperçu", exact: true })
+    .click();
+  campaign.ads = campaign.ads.slice(0, 3).map((a) => ({
+    ...a,
+    format: "square",
+    mediaId: "visual-0",
+    status: "pending" as const,
+  }));
+  f.campaigns[1] = campaign;
+  await page.goto(base + `/studio/validation?campagne=${campaign.id}`);
+  await capture("07-validation-facebook");
+  await page
+    .getByRole("button", { name: "Modifier et valider", exact: true })
+    .first()
+    .click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await capture("08-modification");
+  await page.getByRole("button", { name: "Fermer", exact: true }).click();
+  for (const channel of [
+    "instagram",
+    "tiktok",
+    "youtube",
+    "google",
+    "display",
+  ] as const) {
+    const formats =
+      channel === "instagram"
+        ? ["square", "story", "reel"]
+        : channel === "youtube"
+          ? ["instream", "short"]
+          : channel === "display"
+            ? ["leaderboard", "rectangle", "halfpage"]
+            : channel === "google"
+              ? ["search", "search", "search"]
+              : ["vertical", "vertical", "vertical"];
+    campaign.ads = [];
+    for (const [i, format] of formats.entries()) {
+      campaign = addAd(campaign, channel, format, actor, now);
+      const ad = campaign.ads.at(-1)!;
+      Object.assign(ad, {
+        theme: "Vie étudiante",
+        copy: texts[i],
+        headline: "Vivez l’expérience",
+        headlines:
+          channel === "google"
+            ? [
+                "Collège Universel",
+                "Admissions automne 2027",
+                "Trouvez votre programme",
+              ]
+            : [],
+        descriptions:
+          channel === "google"
+            ? [
+                "Une communauté qui vous ressemble. Des programmes concrets pour votre avenir à Montréal.",
+              ]
+            : [],
+        cta: "Découvrir",
+        url: c.defaultUrl,
+        status: "pending",
+        mediaId: channel === "google" ? null : `channel-${channel}-${i}`,
+      });
+      if (ad.mediaId) {
+        const isWide = channel === "youtube" && format === "instream";
+        const dims =
+          channel === "display"
+            ? CATALOG.display.find((x) => x.id === format)!
+            : {
+                width: 1080,
+                height: format === "square" ? 1080 : isWide ? 608 : 1920,
+              };
+        campaign.media.push({
+          id: ad.mediaId,
+          name: `${format}.jpg`,
+          path: `${format}.jpg`,
+          channel,
+          mime: "image/jpeg",
+          bytes: 10000,
+          width: dims.width,
+          height: dims.height,
+          duration: null,
+          state: "ready",
+          errors: [],
+        });
+        f.setMediaUrl(
+          ad.mediaId,
+          base +
+            "/deck-demo/" +
+            (channel === "display"
+              ? `cu-${dims.width}x${dims.height}.gif`
+              : `cu-generique-${format === "square" || isWide ? "square" : "vertical"}.jpg`),
+        );
+      }
+    }
+    f.campaigns[1] = campaign;
+    await page.reload();
+    await capture(`09-validation-${channel}`);
+    const lastAction = await page
+      .getByRole("button", { name: "Approuver", exact: true })
+      .last()
+      .boundingBox();
+    if (lastAction)
+      expect(
+        lastAction.y + lastAction.height,
+        `${channel}: validation accessible sans défiler sur bureau`,
+      ).toBeLessThanOrEqual(900);
+  }
+  campaign.ads = [];
+  campaign.channels = [
+    "facebook",
+    "instagram",
+    "youtube",
+    "tiktok",
+    "google",
+    "display",
+  ];
+  for (const channel of campaign.channels) {
+    const count =
+      channel === "facebook"
+        ? 4
+        : ["youtube", "tiktok"].includes(channel)
+          ? 2
+          : 3;
+    const live =
+      channel === "facebook"
+        ? 3
+        : channel === "youtube"
+          ? 1
+          : ["instagram", "tiktok"].includes(channel)
+            ? 2
+            : 0;
+    for (let i = 0; i < count; i++) {
+      const format =
+        channel === "facebook"
+          ? "square"
+          : channel === "instagram"
+            ? "story"
+            : channel === "youtube"
+              ? "instream"
+              : channel === "tiktok"
+                ? "vertical"
+                : channel === "google"
+                  ? "search"
+                  : ["leaderboard", "rectangle", "halfpage"][i];
+      campaign = addAd(campaign, channel, format, actor, now);
+      Object.assign(campaign.ads.at(-1)!, {
+        status: i < live ? "on_air" : "draft",
+        mediaId:
+          channel === "facebook"
+            ? `visual-${i === 1 ? 2 : i}`
+            : `channel-${channel}-${channel === "youtube" ? 0 : i}`,
+        copy: texts[i],
+        url: c.defaultUrl,
+      });
+    }
+  }
+  f.campaigns[1] = campaign;
+  await page.goto(base + `/studio/on-air?campagne=${campaign.id}`);
+  await capture("10-on-air");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await capture("11-on-air-mobile");
+  f.campaigns[1].ads
+    .filter((a) => a.channel === "facebook")
+    .forEach((a) => {
+      a.status = "pending";
+      a.theme = "Vie étudiante";
+    });
+  await page.goto(base + `/studio/validation?campagne=${campaign.id}`);
+  await capture("12-validation-mobile");
+  f.empty();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(base + "/studio");
+  await capture("00-aucune-campagne");
+  // Structural visual contracts from the approved D4 mockup (1440 px desktop).
+  expect(
+    tableBox!.y,
+    "Le tableau doit débuter sous la barre unique, sans étage vide",
+  ).toBeLessThan(245);
+  expect(
+    Math.abs(
+      tabsBox!.y + tabsBox!.height / 2 - (copyBox!.y + copyBox!.height / 2),
+    ),
+    "Canaux et outils sur une seule ligne",
+  ).toBeLessThan(8);
+});
+
+test("Google SEM : aperçu réaliste, tous les textes conservés dans l’éditeur", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  const campaign = f.campaigns[1];
+  const ad = campaign.ads[0];
+  ad.headlines = Array.from({ length: 15 }, (_, i) => `Accroche ${i + 1}`);
+  ad.descriptions = Array.from({ length: 4 }, (_, i) => `Description ${i + 1}`);
+  await page.goto(base + `/studio/validation?campagne=${campaign.id}`);
+  const preview = page.locator(`[data-workspace-ad="${ad.id}"]`);
+  await expect(
+    preview.getByRole("heading", {
+      name: "Accroche 1 | Accroche 2 | Accroche 3",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    preview.getByText("Description 2", { exact: true }),
+  ).toBeVisible();
+  await expect(preview.getByText("Description 3", { exact: true })).toHaveCount(
+    0,
+  );
+  await page
+    .getByRole("button", { name: "Modifier et valider", exact: true })
+    .click();
+  await expect(page.getByLabel("Titres · un par ligne")).toHaveValue(
+    ad.headlines.join("\n"),
+  );
+  await expect(page.getByLabel("Descriptions · une par ligne")).toHaveValue(
+    ad.descriptions.join("\n"),
+  );
 });

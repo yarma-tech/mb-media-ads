@@ -51,7 +51,7 @@ const names: Record<string, string> = {
   copy: "Texte",
   headline: "Titre",
   cta: "CTA",
-  url: "Destination",
+  url: "Lien",
   headlines: "Titres · 30 caractères",
   descriptions: "Descriptions · 90 caractères",
   path1: "Chemin 1",
@@ -125,7 +125,10 @@ export default function TableSession(p: Props) {
       !isComplete(a, p.c).length,
   );
   return (
-    <div className={`${t.layout} ${p.previewOpen ? t.withPreview : ""}`}>
+    <div
+      className={`${t.layout} ${p.previewOpen ? t.withPreview : ""}`}
+      data-preview-open={p.previewOpen}
+    >
       <div className={t.pane}>
         <div
           className={w.tableScroll}
@@ -149,6 +152,27 @@ export default function TableSession(p: Props) {
             aria-label="Tableau des annonces"
             onKeyDown={(e) => void key(e)}
           >
+            <colgroup>
+              <col className={t.handleColumn} />
+              <col className={t.selectColumn} />
+              <col className={t.formatColumn} />
+              {columns.map((column) => (
+                <col
+                  key={column}
+                  className={
+                    column === "theme"
+                      ? t.themeColumn
+                      : column === "copy" ||
+                          column === "headlines" ||
+                          column === "descriptions"
+                        ? t.copyColumn
+                        : undefined
+                  }
+                />
+              ))}
+              <col className={t.statusColumn} />
+              <col className={t.actionsColumn} />
+            </colgroup>
             <thead>
               <tr>
                 <th aria-label="Ordre" />
@@ -228,12 +252,36 @@ export default function TableSession(p: Props) {
               <Icon name="close" />
             </button>
           </div>
+          <div className={t.previewPager}>
+            <button
+              aria-label="Annonce précédente"
+              disabled={p.rows.indexOf(p.active) === 0}
+              onClick={() =>
+                p.setActive(p.rows[p.rows.indexOf(p.active) - 1].id)
+              }
+            >
+              <Icon name="chevron" style={{ transform: "rotate(180deg)" }} />
+            </button>
+            <span>Annonce {p.rows.indexOf(p.active) + 1}</span>
+            <button
+              aria-label="Annonce suivante"
+              disabled={p.rows.indexOf(p.active) === p.rows.length - 1}
+              onClick={() =>
+                p.setActive(p.rows[p.rows.indexOf(p.active) + 1].id)
+              }
+            >
+              <Icon name="chevron" />
+            </button>
+          </div>
           <Preview
             ad={preview.id === p.active.id ? preview : p.active}
             campaign={p.c}
           />
-          <div ref={setToolsHost} />
-          <History ad={p.active} campaign={p.c} />
+          <details className={t.previewDetails}>
+            <summary>Détails de l’annonce</summary>
+            <div ref={setToolsHost} />
+            <History ad={p.active} campaign={p.c} />
+          </details>
         </aside>
       )}
     </div>
@@ -421,15 +469,18 @@ function AdRow(
           {a.status === "changes_requested" ? (
             <Icon name="comment" size={15} />
           ) : missing.length || a.status === "pending" ? (
-            <span aria-hidden="true">○</span>
+            <span className={t.statusEmpty} aria-hidden="true" />
           ) : (
-            <Icon name="check" size={15} />
+            <span className={t.statusReady} aria-hidden="true" />
           )}
           <span>
-            {["draft", "changes_requested"].includes(a.status) &&
-            !missing.length
-              ? "Prête"
-              : labels[a.status]}
+            {a.status === "changes_requested"
+              ? "À modifier"
+              : a.status === "draft" && !missing.length
+                ? "Prête"
+                : a.status === "draft"
+                  ? "À compléter"
+                  : labels[a.status]}
           </span>
         </td>
         <td>

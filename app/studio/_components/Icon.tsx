@@ -1,6 +1,13 @@
 import type { CSSProperties } from "react";
 
 const paths = {
+  home: "m3 10 9-8 9 8v11h-6v-7H9v7H3z",
+  campaign: "M3 10v6h4l9 4V5L7 10H3Zm4 6 2 6h3l-2-5M19 8l2-2M20 12h3M19 16l2 2",
+  approved: "m7 12 3 3 7-7M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0",
+  play: "m6 3 15 9-15 9V3Z",
+  bars: "M5 15v6M12 9v12M19 3v18",
+  document: "M5 2h9l5 5v15H5zM14 2v6h5M8 12h8M8 16h8",
+  upload: "M12 16V2m-6 6 6-6 6 6M3 14v8h18v-8",
   plus: "M12 5v14M5 12h14",
   copy: "M8 8h13v13H8zM16 8V3H3v13h5",
   batch: "M7 2h10l4 4v16H3V2zM8 12l3 3 5-6",
@@ -58,7 +65,22 @@ export default function Icon({
       aria-hidden="true"
       style={{ flexShrink: 0, ...style }}
     >
-      <path d={paths[name]} />
+      {name === "grip" ? (
+        [5, 12, 19].flatMap((cy) =>
+          [8, 16].map((cx) => (
+            <circle
+              key={`${cx}-${cy}`}
+              cx={cx}
+              cy={cy}
+              r="1.2"
+              fill="currentColor"
+              stroke="none"
+            />
+          )),
+        )
+      ) : (
+        <path d={paths[name]} />
+      )}
     </svg>
   );
 }

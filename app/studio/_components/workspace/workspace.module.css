@@ -1340,53 +1340,653 @@ fieldset.validationActions {
   min-height: 44px;
 }
 
-/* Approved direction D: working surfaces, forest ink and continuous rounded CTA. */
-.app {--ink:oklch(0.24 0.025 157);--accent:oklch(0.28 0.035 156);--muted:oklch(0.47 0.015 155);background:oklch(0.996 0.001 155);font-size:14px}
-.app button {border-radius:18px;min-height:44px;transition:background-color .16s,box-shadow .16s}
-@supports(corner-shape:squircle){.app button{corner-shape:squircle;border-radius:24px}}
-.app .primary {display:inline-flex;align-items:center;justify-content:center;gap:10px;padding:12px 22px;min-height:48px;background:var(--accent)}
-.app .primary:hover:not(:disabled){background:oklch(0.34 0.035 156)}
-.sidebar {background:oklch(0.996 0.001 155);color:var(--ink);border-right:1px solid #edf1ee;gap:32px}
-.sidebar .wordmark {background:transparent;color:var(--ink);letter-spacing:-1.7px;padding:0;font-size:24px}
-.sidebar nav a {width:46px;height:46px;border-radius:15px}
-.sidebar nav a[aria-current=page] {background:#eaf0ec;color:var(--ink)}
-.sidebar > button {color:var(--ink)}
-.main {padding-inline:36px;max-width:none}
-.header {height:64px;font-size:13px}
-.header > span {font-size:12px}
-.header > span button {background:transparent;padding:8px}
-.app .title {font-size:30px;letter-spacing:-1px}
-.campaignSteps {max-width:470px;margin:8px 0 24px auto}
-.campaignSteps ol {gap:16px}
-.app .campaignSteps button {display:flex;align-items:center;gap:8px;font-size:13px;padding:0;background:transparent;white-space:nowrap}
-.app .campaignSteps button[aria-current=step] {background:transparent;color:var(--ink)}
-.stepNumber {display:grid;place-items:center;border:1px solid #d7e0da;border-radius:50%;height:28px;width:28px;flex-shrink:0;font-size:12px}
-.app .campaignSteps button:not(:disabled) .stepNumber {background:var(--ink);color:#fbfcfb;border-color:var(--ink)}
-.channelStart {max-width:1040px;margin-inline:auto;padding-top:16px}
-.app .channelStart h2 {font-size:32px;letter-spacing:-1px}
-.channelChoices {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
-.app .channelChoices button {display:grid;position:relative;justify-content:start;align-content:space-between;gap:24px;min-height:175px;background:#f7f9f7;border:1px solid #e2e8e4;border-radius:18px;padding:28px;font-size:18px;min-width:0;text-align:left}
-.app .channelChoices button[aria-pressed=true] {background:#f3f6f4;color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);border-color:var(--ink)}
-.channelCheck {position:absolute;right:22px;top:24px;display:grid;place-items:center;width:27px;height:27px;border:1px solid #a6b6ab;border-radius:50%}
-button[aria-pressed=true] .channelCheck {background:var(--ink);color:#fbfcfb;border-color:var(--ink)}
-.channelStart > .inline {justify-content:flex-end;margin-top:12px}
-.channelPill {display:inline-flex;align-items:center;gap:10px;background:#edf2ef;border-radius:14px;padding:8px 14px;margin-right:8px}
-.mediaStart {max-width:none}
-.mediaStart .library {max-width:none}
-.mediaStart .drop {min-height:300px;border:1px dashed #cfd9d2;flex-direction:column;background:#f7f9f7;border-radius:18px}
-.mediaStart .drop button {background:transparent;font-size:20px;color:var(--ink)}
-.mediaStart .mediaList {grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
-.mediaStart .mediaThumb,.mediaStart .mediaThumb :is(img,video) {height:220px;background:#f7f9f7}
-.mediaStart .mediaList > article {border:1px solid #e4eae6;border-radius:18px;padding:16px}
-.importActions {justify-content:space-between;flex-direction:row-reverse}
-.channelTabs {margin:20px 0;gap:12px}
-.channelTabs button {font-size:14px;gap:10px;border-radius:14px}
-.libraryDisclosure {margin-top:28px}
-.libraryDisclosure > summary {padding:12px 0;cursor:pointer;color:var(--muted)}
-@media(max-width:900px){.main{padding-inline:20px}.channelChoices{gap:12px}.app .channelChoices button{padding:22px;min-height:148px}.campaignSteps{margin-left:0}}
-@media(max-width:600px){.main{padding-inline:16px}.header{font-size:12px}.header>span{display:none}.channelChoices{grid-template-columns:repeat(2,minmax(0,1fr))}.app .channelChoices button{padding:18px;min-height:140px;font-size:15px}.channelCheck{top:14px;right:14px}.campaignSteps{max-width:100%}.campaignSteps ol{gap:10px}.app .campaignSteps button{font-size:11px;gap:5px}.stepNumber{width:24px;height:24px}.sidebar{border-right:0}.importActions{align-items:stretch;flex-direction:column}.app .channelStart h2{font-size:27px}}
-@media(prefers-reduced-motion:reduce){.app button{transition:none}}
-
-@media(min-width:1000px){.batchLibrary {display:grid;grid-template-columns:minmax(280px,.8fr) minmax(0,1.4fr);gap:24px;align-items:start}.batchLibrary > .heading{grid-column:1/-1}.batchLibrary > .drop{grid-column:1;grid-row:2}.batchLibrary > .mediaList{grid-column:2;grid-row:2;margin:0}.batchLibrary > .importActions{grid-column:1/-1;margin:0}.batchLibrary > :is(p,div[role=alert]){grid-column:1/-1}.batchLibrary:has(.mediaList:empty)>.drop{grid-column:1/-1}}
-
-.main {position:relative}.sidebar svg{width:22px;height:22px}.app .editorTitle{font-size:30px;font-weight:600;letter-spacing:-1px;margin:0 0 20px}.formatPicker:not([open]){display:none}.setupActions{position:absolute;top:126px;right:36px;margin:0}.setupActions button{width:44px;padding:10px}.heading .primary:has(>svg:only-child){min-width:44px;padding:10px}.campaignSteps{position:absolute;right:36px;top:64px;margin:0}.channelTabs{margin:20px 0}.formatPicker[open]{margin:18px 0}.editorTitle+.setupActions+.channelTabs{margin-top:0}@media(max-width:900px){.campaignSteps{position:static;margin:0 0 24px}.setupActions{position:static;margin-bottom:12px;justify-content:flex-end}.app .editorTitle{font-size:26px}}
+/* Direction D: proportions taken from the approved desktop mockups. */
+.app {
+  --ink: #082b21;
+  --accent: #082b21;
+  --muted: #606978;
+  --surface: #f7f8f8;
+  --line: #e4e8ed;
+  background: #fff;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.app button {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-height: 46px;
+  background: #fff;
+  transition:
+    background-color 0.16s,
+    box-shadow 0.16s;
+}
+@supports (corner-shape: squircle) {
+  .app button {
+    corner-shape: squircle;
+    border-radius: 18px;
+  }
+}
+.app .primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 14px 26px;
+  min-height: 52px;
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 500;
+}
+.app .primary:hover:not(:disabled) {
+  background: #154236;
+}
+.sidebar {
+  width: 90px;
+  padding: 28px 14px;
+  background: #fff;
+  color: var(--ink);
+  border-right: 1px solid var(--line);
+  gap: 34px;
+}
+.sidebar .wordmark {
+  padding: 0;
+  font-size: 28px;
+  letter-spacing: -1.6px;
+  background: transparent;
+  color: var(--ink);
+}
+.sidebar nav {
+  gap: 12px;
+}
+.sidebar nav a {
+  width: 58px;
+  height: 58px;
+  border-radius: 13px;
+}
+.sidebar nav a[aria-current="page"] {
+  background: #eaf0ec;
+  color: var(--ink);
+}
+.sidebar nav a:hover {
+  background: #f3f6f4;
+}
+.sidebar nav svg {
+  width: 27px;
+  height: 27px;
+}
+.profile {
+  margin-top: auto;
+  position: relative;
+}
+.profile > summary {
+  list-style: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #e7eeea;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.profile > summary::-webkit-details-marker {
+  display: none;
+}
+.profileMenu {
+  position: absolute;
+  left: 64px;
+  bottom: 0;
+  width: 250px;
+  display: grid;
+  gap: 5px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 12px 45px #172b231a;
+}
+.profileMenu > strong {
+  font-size: 15px;
+}
+.profileMenu > small {
+  margin-bottom: 8px;
+}
+.app .profileMenu :is(button, a) {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  min-height: 44px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.app .profileMenu :is(button, a):hover {
+  background: #f3f6f4;
+}
+.main {
+  position: relative;
+  margin-left: 90px;
+  padding: 0 36px 32px;
+  max-width: none;
+}
+.header {
+  height: 72px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.header nav {
+  gap: 12px;
+  min-width: 0;
+}
+.header b {
+  font-weight: 500;
+}
+.app .breadcrumbCampaign {
+  padding: 4px 24px 4px 0;
+  min-height: 36px;
+  width: auto;
+  max-width: 380px;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.app .title {
+  font-size: 36px;
+  letter-spacing: -1.2px;
+}
+.campaignSteps {
+  position: absolute;
+  right: 36px;
+  top: 28px;
+  width: 400px;
+  max-width: 400px;
+  margin: 0;
+}
+.campaignSteps ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 30px;
+}
+.campaignSteps li {
+  position: relative;
+}
+.campaignSteps li + li::before {
+  content: "";
+  position: absolute;
+  width: calc(100% - 20px);
+  right: calc(50% + 32px);
+  top: 17px;
+  height: 1px;
+  background: #d8dde3;
+}
+.app .campaignSteps button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.app .campaignSteps button[aria-current="step"] {
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+}
+.app .campaignSteps button:disabled {
+  opacity: 1;
+  color: var(--muted);
+}
+.stepNumber {
+  display: grid;
+  place-items: center;
+  border: 1px solid #e2e6eb;
+  border-radius: 50%;
+  height: 34px;
+  width: 34px;
+  flex-shrink: 0;
+  font-size: 14px;
+  background: #f0f2f4;
+}
+.app .campaignSteps button:not(:disabled) .stepNumber {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+.campaignStart {
+  width: min(800px, 100%);
+  max-width: 800px;
+  margin: 68px auto 0;
+}
+.app .campaignStart h2 {
+  font-size: 36px;
+  letter-spacing: -1.2px;
+}
+.channelStart {
+  display: flex;
+  flex-direction: column;
+  max-width: none;
+  margin: 0;
+  padding: 70px 22px 0;
+  gap: 0;
+  min-height: calc(100dvh - 112px);
+}
+.app .channelStart h2 {
+  font-size: 44px;
+  line-height: 1.15;
+  letter-spacing: -1.7px;
+  font-weight: 650;
+}
+.channelStart > div:first-child > p {
+  margin-top: 12px;
+  font-size: 21px;
+  color: var(--muted);
+}
+.channelChoices {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  width: min(1080px, 100%);
+  margin: 40px auto 0;
+}
+.app .channelChoices button {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 26px;
+  min-height: 178px;
+  background: #f8f9f9;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 28px;
+  font-size: 21px;
+  min-width: 0;
+  text-align: left;
+}
+.app .channelChoices button b {
+  font-weight: 600;
+}
+.app .channelChoices button[aria-pressed="true"] {
+  background: #f7f9f8;
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+  border-color: var(--ink);
+}
+.channelCheck {
+  position: absolute;
+  right: 24px;
+  top: 24px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid #7b858e;
+  border-radius: 50%;
+}
+button[aria-pressed="true"] .channelCheck {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+.channelCount {
+  width: min(1080px, 100%);
+  margin: 32px auto 0 !important;
+  color: var(--muted);
+  font-size: 16px;
+}
+.channelFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 54px;
+  gap: 16px;
+}
+.channelFooter > button:first-child {
+  width: 60px;
+  height: 60px;
+  padding: 16px;
+  background: #f7f8f8;
+}
+.channelFooter .primary {
+  margin-left: auto;
+  min-width: 220px;
+  min-height: 60px;
+  font-size: 18px;
+}
+.channelPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #edf2ef;
+  border-radius: 20px;
+  padding: 10px 18px;
+  margin-right: 14px;
+  font-size: 17px;
+  font-weight: 500;
+}
+.mediaStart {
+  max-width: none;
+  padding-top: 60px;
+  gap: 24px;
+}
+.mediaStart > .editorTitle {
+  margin: 0 !important;
+}
+.mediaStart > .heading {
+  margin: 0;
+}
+.mediaStart > .heading > span {
+  color: var(--ink);
+}
+.mediaStart .library {
+  max-width: none;
+  margin: 0;
+}
+.mediaStart .library > .heading {
+  display: none;
+}
+.app .editorTitle {
+  font-size: 36px;
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: -1.3px;
+  margin: 24px 0 30px;
+}
+.editorToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 0 0 14px;
+  min-width: 0;
+}
+.channelTabs {
+  display: flex;
+  gap: 10px;
+  overflow: auto;
+  margin: 0;
+  min-width: 0;
+}
+.app .channelTabs button {
+  border: 0;
+  border-radius: 12px;
+  min-height: 48px;
+  padding: 10px 16px;
+  font-size: 15px;
+  gap: 10px;
+  background: transparent;
+}
+.app .channelTabs button[aria-pressed="true"] {
+  background: #eaf0ec;
+}
+.channelTabs small {
+  display: grid;
+  place-items: center;
+  min-width: 23px;
+  height: 23px;
+  border-radius: 50%;
+  background: #f7f9f8;
+  color: inherit;
+  font-size: 12px;
+}
+.channelTabs small:empty {
+  display: none;
+}
+.editorTools {
+  flex-shrink: 0;
+}
+.editorTools .inline {
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+.editorTools button {
+  width: 48px;
+  padding: 12px;
+}
+.editorTools svg {
+  width: 22px;
+  height: 22px;
+}
+.editorTools button[aria-pressed="true"] {
+  background: #eaf0ec;
+}
+.formatPicker:not([open]) {
+  display: none;
+}
+.formatPicker[open] {
+  margin: 18px 0;
+}
+.formatPicker > button {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 12px;
+}
+.libraryDisclosure {
+  margin-top: 28px;
+}
+.libraryDisclosure > summary {
+  padding: 12px 0;
+  cursor: pointer;
+  color: var(--muted);
+}
+@media (min-width: 1101px) {
+  .main:has([data-preview-open="true"]) {
+    margin-right: 340px;
+  }
+  .main:has([data-preview-open="true"]) .campaignSteps {
+    width: 290px;
+  }
+}
+@media (max-width: 1100px) {
+  .header {
+    max-width: 100%;
+  }
+  .campaignSteps {
+    width: 310px;
+  }
+  .breadcrumbCampaign {
+    max-width: 240px !important;
+  }
+  .channelStart {
+    padding-inline: 0;
+  }
+  .editorToolbar {
+    gap: 12px;
+  }
+  .editorTools .inline {
+    gap: 6px;
+  }
+}
+@media (max-width: 900px) {
+  .main {
+    padding-inline: 24px;
+  }
+  .campaignSteps {
+    position: static;
+    margin: 10px 0 28px auto;
+    width: 340px;
+  }
+  .channelStart {
+    padding-top: 20px;
+    min-height: calc(100dvh - 220px);
+  }
+  .app .channelStart h2 {
+    font-size: 34px;
+  }
+  .channelStart > div:first-child > p {
+    font-size: 17px;
+  }
+  .channelChoices {
+    gap: 14px;
+    margin-top: 30px;
+  }
+  .app .channelChoices button {
+    padding: 22px;
+    min-height: 166px;
+    font-size: 18px;
+  }
+  .mediaStart {
+    padding-top: 12px;
+  }
+  .app .editorTitle {
+    margin-top: 16px;
+    font-size: 30px;
+  }
+  .editorToolbar {
+    flex-wrap: wrap;
+  }
+  .editorTools {
+    margin-left: auto;
+  }
+}
+@media (max-width: 620px) {
+  .sidebar {
+    width: auto;
+    padding: 6px 8px;
+    gap: 4px;
+    border-right: 0;
+    border-top: 1px solid var(--line);
+  }
+  .sidebar nav {
+    gap: 0;
+  }
+  .sidebar nav a {
+    width: 42px;
+    height: 44px;
+    border-radius: 10px;
+  }
+  .sidebar nav svg {
+    width: 23px;
+    height: 23px;
+  }
+  .profile {
+    margin: 0 0 0 auto;
+  }
+  .profile > summary {
+    width: 34px;
+    height: 34px;
+    font-size: 11px;
+  }
+  .profileMenu {
+    left: auto;
+    right: 0;
+    bottom: 52px;
+  }
+  .main {
+    margin: 0;
+    padding: 0 16px 90px;
+  }
+  .header {
+    height: 60px;
+    font-size: 12px;
+  }
+  .header nav {
+    gap: 7px;
+    flex-wrap: wrap;
+  }
+  .app .breadcrumbCampaign {
+    max-width: 180px !important;
+    font-size: 12px;
+  }
+  .campaignSteps {
+    max-width: 100%;
+    margin: 10px 0 28px;
+    width: 100%;
+  }
+  .campaignSteps ol {
+    gap: 20px;
+  }
+  .app .campaignSteps button {
+    font-size: 12px;
+  }
+  .stepNumber {
+    width: 30px;
+    height: 30px;
+  }
+  .campaignSteps li + li::before {
+    top: 15px;
+  }
+  .channelStart {
+    padding: 12px 0 0;
+  }
+  .app .channelStart h2 {
+    font-size: 29px;
+  }
+  .channelChoices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .app .channelChoices button {
+    padding: 18px;
+    min-height: 155px;
+    font-size: 16px;
+  }
+  .channelChoices button > svg {
+    width: 46px;
+    height: 46px;
+  }
+  .channelCheck {
+    width: 24px;
+    height: 24px;
+    top: 14px;
+    right: 14px;
+  }
+  .channelFooter {
+    padding-top: 30px;
+  }
+  .channelFooter .primary {
+    min-width: 160px;
+    min-height: 52px;
+    font-size: 16px;
+  }
+  .channelFooter > button:first-child {
+    height: 52px;
+    width: 52px;
+  }
+  .channelPill {
+    font-size: 14px;
+    padding: 8px 12px;
+    margin-right: 8px;
+  }
+  .app .editorTitle {
+    font-size: 28px;
+    margin: 12px 0 24px;
+  }
+  .editorToolbar {
+    gap: 12px;
+  }
+  .channelTabs {
+    width: 100%;
+  }
+  .editorTools button {
+    width: 44px;
+    min-height: 44px;
+    padding: 10px;
+  }
+  .campaignStart {
+    margin-top: 24px;
+  }
+  .app .campaignStart h2 {
+    font-size: 28px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app button {
+    transition: none;
+  }
+}

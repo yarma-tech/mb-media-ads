@@ -33,7 +33,7 @@ export const STATUS = {
 };
 export default function Configuration() {
   const { data } = useWorkspace();
-  const { params, update } = useWorkspaceNavigation();
+  const { params } = useWorkspaceNavigation();
   const id = params.get("campagne");
   const campaign =
     !id || id === "all"
@@ -41,32 +41,20 @@ export default function Configuration() {
       : data!.campaigns.find((c) => c.id === id);
   if (params.get("nouvelle") === "1") return <CreateCampaign />;
   if (!campaign) return <CampaignLanding />;
-  return (
-    <>
-      <div className={w.toolbar}>
-        <select
-          aria-label="Campagne à configurer"
-          value={campaign.id}
-          onChange={(e) =>
-            update({ campagne: e.target.value, etape: "", canaux: "" })
-          }
-        >
-          {data!.campaigns.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      <CampaignEditor key={campaign.id} campaign={campaign} />
-    </>
-  );
+  return <CampaignEditor key={campaign.id} campaign={campaign} />;
 }
 type ConfigurationStage = "details" | "channels" | "media" | "editor";
 function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
   const { params, update } = useWorkspaceNavigation();
   const { run } = useWorkspace();
-  const allChannels = Object.keys(CHANNELS) as Channel[];
+  const allChannels: Channel[] = [
+    "facebook",
+    "instagram",
+    "youtube",
+    "tiktok",
+    "google",
+    "display",
+  ];
   const fromUrl = (params.get("canaux") ?? "")
     .split(",")
     .filter((id): id is Channel => allChannels.includes(id as Channel));
@@ -106,7 +94,7 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
   const channel = (
     allChannels.includes(params.get("canal") as Channel)
       ? params.get("canal")
-      : (fromUrl[0] ?? "facebook")
+      : (fromUrl[0] ?? chosen[0] ?? "facebook")
   ) as Channel;
   async function continueToMedia() {
     try {
@@ -184,7 +172,11 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
                   )
                 }
               >
-                <ChannelIcon channel={id} size={42} />
+                <ChannelIcon
+                  channel={id}
+                  size={64}
+                  variant={id === "google" ? "ads" : "default"}
+                />
                 <b>{CHANNELS[id]}</b>
                 <span className={w.channelCheck} aria-hidden="true">
                   {chosen.includes(id) ? <Icon name="check" /> : ""}
@@ -192,7 +184,18 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
               </button>
             ))}
           </div>
-          <div className={w.inline}>
+          <p className={w.channelCount}>
+            {chosen.length} {chosen.length > 1 ? "canaux" : "canal"} sélectionné
+            {chosen.length > 1 ? "s" : ""}
+          </p>
+          <div className={w.channelFooter}>
+            <button
+              aria-label="Retour aux informations de campagne"
+              title="Retour"
+              onClick={() => setStage("details")}
+            >
+              <Icon name="arrow" style={{ transform: "rotate(180deg)" }} />
+            </button>
             <button
               className={w.primary}
               disabled={!chosen.length}
@@ -200,13 +203,6 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
             >
               Continuer <Icon name="arrow" />
             </button>
-            {(c.ads.length > 0 || c.media.length > 0) && (
-              <button
-                onClick={() => setStage(c.ads.length ? "editor" : "media")}
-              >
-                Annuler
-              </button>
-            )}
           </div>
         </section>
       </>
@@ -221,6 +217,9 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
           className={w.mediaStart}
           aria-label="Préparer les annonces depuis les médias"
         >
+          <h2 tabIndex={-1} className={w.editorTitle}>
+            Ajouter vos visuels
+          </h2>
           <div className={w.heading}>
             <span>
               {chosen.map((id) => (
@@ -231,8 +230,13 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
                 </span>
               ))}
             </span>
-            <button disabled={importing} onClick={() => setStage("channels")}>
-              Modifier les canaux
+            <button
+              aria-label="Modifier les canaux"
+              title="Modifier les canaux"
+              disabled={importing}
+              onClick={() => setStage("channels")}
+            >
+              <Icon name="edit" />
             </button>
           </div>
           {mediaTargets.length > 0 && (
@@ -241,6 +245,7 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
               channel={mediaTargets[0]}
               channels={mediaTargets}
               batchMode
+              onTextStart={() => setStage("editor")}
               onBusyChange={setImporting}
               onAllCreated={() =>
                 update({ etape: "editor", canal: mediaTargets[0] })
@@ -261,45 +266,36 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
               Google SEM : les annonces texte se complètent dans le tableau.
             </p>
           )}
-          <button
-            className={w.textOnly}
-            disabled={importing}
-            onClick={() => setStage("editor")}
-          >
-            Saisir les textes sans médias
-          </button>
         </section>
       </>
     );
   }
-  const visible = fromUrl.length ? fromUrl : allChannels;
+  const visible = fromUrl.length
+    ? fromUrl
+    : allChannels.filter(
+        (id) =>
+          chosen.includes(id) ||
+          c.ads.some((ad) => ad.channel === id) ||
+          c.media.some((media) => mediaChannels(media).includes(id)),
+      );
+  if (!visible.includes(channel)) visible.unshift(channel);
   return (
     <>
       {steps}
       <h2 className={w.editorTitle}>Compléter les annonces</h2>
-      {c.status === "active" && (
-        <div className={w.setupActions}>
-          <button
-            aria-label="Ajouter des médias en lot"
-            title="Ajouter des médias en lot"
-            onClick={() => {
-              if (!chosen.length) setStage("channels");
-              else
-                setStage(
-                  chosen.some((id) => id !== "google") ? "media" : "channels",
-                );
-            }}
-          >
-            <Icon name="plus" />
-          </button>
-        </div>
-      )}
       <ChannelEditor
         key={channel}
         campaign={c}
         channel={channel}
         visibleChannels={visible}
         setChannel={(canal) => update({ canal })}
+        onAddMedia={() =>
+          setStage(
+            chosen.length && chosen.some((id) => id !== "google")
+              ? "media"
+              : "channels",
+          )
+        }
       />
     </>
   );
@@ -353,11 +349,13 @@ function ChannelEditor({
   channel,
   setChannel,
   visibleChannels,
+  onAddMedia,
 }: {
   campaign: Campaign;
   channel: Channel;
   setChannel: (channel: Channel) => void;
   visibleChannels: Channel[];
+  onAddMedia: () => void;
 }) {
   const { run, notify, pending } = useWorkspace();
   const [formats, setFormats] = useState<string[]>([]),
@@ -424,32 +422,106 @@ function ChannelEditor({
   }
   return (
     <>
-      <nav
-        ref={channelTabs}
-        className={w.channelTabs}
-        aria-label="Canal de configuration"
-      >
-        {Object.entries(CHANNELS)
-          .filter(([id]) => visibleChannels.includes(id as Channel))
-          .map(([id, label]) => (
+      <div className={w.editorToolbar}>
+        <nav
+          ref={channelTabs}
+          className={w.channelTabs}
+          aria-label="Canal de configuration"
+        >
+          {Object.entries(CHANNELS)
+            .filter(([id]) => visibleChannels.includes(id as Channel))
+            .map(([id, label]) => (
+              <button
+                key={id}
+                aria-pressed={channel === id}
+                onClick={() => {
+                  setChannel(id as Channel);
+                  setFormats([]);
+                  setSelected([]);
+                  setActiveId("");
+                }}
+              >
+                <ChannelIcon channel={id as Channel} />
+                {label}
+                <small>
+                  {c.ads.filter((a) => a.channel === id).length || ""}
+                </small>
+              </button>
+            ))}
+        </nav>
+        <div className={w.editorTools}>
+          <span className={w.srOnly}>
+            {rows.length} annonce{rows.length > 1 ? "s" : ""} ·{" "}
+            {selected.length} sélectionnée{selected.length > 1 ? "s" : ""}
+          </span>
+          <div className={w.inline}>
             <button
-              key={id}
-              aria-pressed={channel === id}
-              onClick={() => {
-                setChannel(id as Channel);
-                setFormats([]);
-                setSelected([]);
-                setActiveId("");
-              }}
+              aria-label="Copier tout"
+              title="Copier tout"
+              onClick={() =>
+                void navigator.clipboard
+                  .writeText(copyAdsText(c, readRowsRef.current?.() ?? rows))
+                  .then(() => notify("Tableau copié."))
+                  .catch(() =>
+                    notify(
+                      "Copie indisponible. Autorisez le presse-papiers de ce navigateur.",
+                    ),
+                  )
+              }
             >
-              <ChannelIcon channel={id as Channel} />
-              {label}
-              <small>
-                {c.ads.filter((a) => a.channel === id).length || ""}
-              </small>
+              <Icon name="copy" />
             </button>
-          ))}
-      </nav>
+            <button
+              aria-label="Appliquer un champ en batch"
+              title="Appliquer à la sélection"
+              disabled={
+                !selected.length ||
+                c.status === "finished" ||
+                submission === "sending"
+              }
+              onClick={() => setBatch((v) => !v)}
+            >
+              <Icon name="batch" />
+            </button>
+            <button
+              aria-label="Ajouter des annonces"
+              title="Ajouter des annonces"
+              onClick={() =>
+                document
+                  .querySelector<HTMLDetailsElement>(`.${w.formatPicker}`)
+                  ?.setAttribute("open", "")
+              }
+            >
+              <Icon name="plus" />
+            </button>
+            <button
+              aria-label="Aperçu"
+              title="Aperçu"
+              aria-pressed={previewOpen}
+              onClick={() => setPreviewOpen((v) => !v)}
+            >
+              <Icon name="eye" />
+            </button>
+            {selected.length > 0 && (
+              <button
+                aria-label={
+                  submission === "sending" ? "Envoi…" : "Envoyer la sélection"
+                }
+                title="Envoyer la sélection"
+                className={w.primary}
+                disabled={
+                  !selected.length ||
+                  c.status === "finished" ||
+                  submission === "sending"
+                }
+                onClick={() => void submit(selected).catch(() => {})}
+              >
+                <Icon name="send" />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
       {c.status === "finished" ? (
         <p className={w.error}>
           Campagne terminée. Sa réouverture est réservée au Validateur dans
@@ -458,6 +530,13 @@ function ChannelEditor({
       ) : (
         <details open={!rows.length} className={w.formatPicker}>
           <summary>Choisir des formats ou ajouter des annonces</summary>
+          <button
+            type="button"
+            aria-label="Ajouter des médias en lot"
+            onClick={onAddMedia}
+          >
+            <Icon name="upload" /> Ajouter des médias
+          </button>
           <div className={w.formats}>
             {CATALOG[channel].map((f) => (
               <label key={f.id} data-selected={formats.includes(f.id)}>
@@ -504,76 +583,7 @@ function ChannelEditor({
           </button>
         </details>
       )}
-      <div className={w.heading}>
-        <span>
-          {rows.length} annonce{rows.length > 1 ? "s" : ""} · {selected.length}{" "}
-          sélectionnée{selected.length > 1 ? "s" : ""}
-        </span>
-        <div className={w.inline}>
-          <button
-            aria-label="Copier tout"
-            title="Copier tout"
-            onClick={() =>
-              void navigator.clipboard
-                .writeText(copyAdsText(c, readRowsRef.current?.() ?? rows))
-                .then(() => notify("Tableau copié."))
-                .catch(() =>
-                  notify(
-                    "Copie indisponible. Autorisez le presse-papiers de ce navigateur.",
-                  ),
-                )
-            }
-          >
-            <Icon name="copy" />
-          </button>
-          <button
-            aria-label="Appliquer un champ en batch"
-            title="Appliquer à la sélection"
-            disabled={
-              !selected.length ||
-              c.status === "finished" ||
-              submission === "sending"
-            }
-            onClick={() => setBatch((v) => !v)}
-          >
-            <Icon name="batch" />
-          </button>
-          <button
-            aria-label="Ajouter des annonces"
-            title="Ajouter des annonces"
-            onClick={() =>
-              document
-                .querySelector<HTMLDetailsElement>(`.${w.formatPicker}`)
-                ?.setAttribute("open", "")
-            }
-          >
-            <Icon name="plus" />
-          </button>
-          <button
-            aria-label="Aperçu"
-            title="Aperçu"
-            aria-pressed={previewOpen}
-            onClick={() => setPreviewOpen((v) => !v)}
-          >
-            <Icon name="eye" />
-          </button>
-          <button
-            aria-label={
-              submission === "sending" ? "Envoi…" : "Envoyer la sélection"
-            }
-            title="Envoyer la sélection"
-            className={w.primary}
-            disabled={
-              !selected.length ||
-              c.status === "finished" ||
-              submission === "sending"
-            }
-            onClick={() => void submit(selected).catch(() => {})}
-          >
-            <Icon name="send" />
-          </button>
-        </div>
-      </div>
+
       {batch && (
         <form
           className={w.batch}

@@ -11,12 +11,16 @@ import {
   currentAds,
   intendedChannels,
 } from "@/lib/campaign-studio/workspace/presentation";
-import { CHANNELS } from "@/lib/campaign-studio/workspace/catalog";
+import { CHANNELS, CATALOG } from "@/lib/campaign-studio/workspace/catalog";
 import { useWorkspaceNavigation } from "./WorkspaceNavigation";
 import { useWorkspace } from "./WorkspaceProvider";
 import { useAdEditor } from "./useAdEditor";
-import Preview, { MediaPreview } from "./Preview";
-import ChannelIcon from "./ChannelIcon";
+import Preview, {
+  MediaPreview,
+  SearchSceneHeader,
+  PublisherScene,
+} from "./Preview";
+import ChannelIcon, { CHANNEL_ORDER } from "./ChannelIcon";
 import r from "./review.module.css";
 import History from "./History";
 import { STATUS } from "./Configuration";
@@ -100,8 +104,7 @@ export default function Review({
     .sort(
       (a, b) =>
         themes.indexOf(a.theme) - themes.indexOf(b.theme) ||
-        Object.keys(CHANNELS).indexOf(a.channel) -
-          Object.keys(CHANNELS).indexOf(b.channel),
+        CHANNEL_ORDER.indexOf(a.channel) - CHANNEL_ORDER.indexOf(b.channel),
     );
   const requestedSlide = navigation.params.get("groupe");
   const slideIndex = Math.max(
@@ -171,13 +174,23 @@ export default function Review({
       setActing((ids) => ids.filter((id) => id !== a.id));
     }
   }
-  function card({ c, a }: { c: Campaign; a: Ad }) {
+  function card({ c, a }: { c: Campaign; a: Ad }, grouped = false) {
     return (
-      <article className={r.reviewCard} key={a.id}>
+      <article
+        className={r.reviewCard}
+        key={a.id}
+        data-channel={a.channel}
+        data-format={a.format}
+      >
+        {grouped && ["instagram", "youtube", "display"].includes(a.channel) && (
+          <div className={r.formatLabel}>
+            {CATALOG[a.channel].find((f) => f.id === a.format)?.label}
+          </div>
+        )}
         <div data-workspace-ad={a.id}>
-          <Preview ad={a} campaign={c} />
+          <Preview ad={a} campaign={c} grouped={grouped} />
         </div>
-        <div className={w.cardCaption}>
+        <div className={view === "validation" ? w.srOnly : w.cardCaption}>
           <b>{c.name}</b>
           <span>
             V{a.version} · {STATUS[a.status]}
@@ -275,8 +288,13 @@ export default function Review({
               Remettre On air
             </button>
           )}
-        <details className={w.history}>
-          <summary>Détails et historique</summary>
+        <details className={r.cardHistory}>
+          <summary
+            aria-label="Détails et historique"
+            title="Détails et historique"
+          >
+            <Icon name="more" />
+          </summary>
           <Link
             href={navigation.href("/studio/configuration", {
               campagne: c.id,
@@ -301,64 +319,110 @@ export default function Review({
       </article>
     );
   }
-  return (
-    <>
-      <div className={`${w.toolbar} ${r.toolbar}`}>
+  const controls = (
+    <div className={r.toolbar}>
+      {view === "validation" && (
+        <div className={r.segment} data-second={status === "approved"}>
+          <button
+            aria-pressed={status === "pending"}
+            onClick={() => {
+              navigation.update({ statut: "pending" });
+              setVisited([]);
+            }}
+          >
+            À valider
+          </button>
+          <button
+            aria-pressed={status === "approved"}
+            onClick={() => {
+              navigation.update({ statut: "approved" });
+              setVisited([]);
+            }}
+          >
+            Validées
+          </button>
+        </div>
+      )}
+      <select
+        aria-label="Filtrer par campagne"
+        value={campaignId}
+        onChange={(e) => {
+          navigation.update({ campagne: e.target.value });
+          setVisited([]);
+        }}
+      >
+        <option value="all">Toutes les campagnes</option>
+        {data!.campaigns.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+      <div className={r.tools}>
         {view === "validation" && (
-          <>
-            <div className={w.segment} data-second={status === "approved"}>
-              <button
-                aria-pressed={status === "pending"}
-                onClick={() => {
-                  navigation.update({ statut: "pending" });
-                  setVisited([]);
-                }}
-              >
-                À valider
-              </button>
-              <button
-                aria-pressed={status === "approved"}
-                onClick={() => {
-                  navigation.update({ statut: "approved" });
-                  setVisited([]);
-                }}
-              >
-                Validées
-              </button>
+          <details className={r.viewOptions}>
+            <summary
+              aria-label="Options d’affichage"
+              title="Options d’affichage"
+            >
+              <Icon name="more" size={22} />
+            </summary>
+            <div className={r.optionsPanel}>
+              <div className={r.modeOptions}>
+                <button
+                  aria-pressed={mode === "deck"}
+                  onClick={() => navigation.update({ vue: "", groupe: "" })}
+                >
+                  <Icon name="grid" /> Diaporama
+                </button>
+                <button
+                  aria-pressed={mode === "carousel"}
+                  onClick={() => navigation.update({ vue: "carousel" })}
+                >
+                  <Icon name="heart" /> Carrousel
+                </button>
+              </div>
+              <label>
+                Canal
+                <select
+                  aria-label="Filtrer par canal"
+                  value={channel}
+                  onChange={(e) => {
+                    navigation.update({ canal: e.target.value, groupe: "" });
+                    setVisited([]);
+                  }}
+                >
+                  <option value="all">Tous les canaux</option>
+                  {Object.entries(CHANNELS).map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {themes.length > 1 && (
+                <label>
+                  Thématique
+                  <select
+                    aria-label="Filtrer par thème"
+                    value={theme}
+                    onChange={(e) => {
+                      navigation.update({ theme: e.target.value, groupe: "" });
+                      setVisited([]);
+                    }}
+                  >
+                    <option value="all">Tous les thèmes</option>
+                    {themes.map((t) => (
+                      <option key={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
-            <div className={w.segment} data-second={mode === "carousel"}>
-              <button
-                aria-pressed={mode === "deck"}
-                onClick={() => navigation.update({ vue: "", groupe: "" })}
-              >
-                Diaporama
-              </button>
-              <button
-                aria-pressed={mode === "carousel"}
-                onClick={() => navigation.update({ vue: "carousel" })}
-              >
-                Carrousel
-              </button>
-            </div>
-          </>
+          </details>
         )}
-        <select
-          aria-label="Filtrer par campagne"
-          value={campaignId}
-          onChange={(e) => {
-            navigation.update({ campagne: e.target.value });
-            setVisited([]);
-          }}
-        >
-          <option value="all">Toutes les campagnes</option>
-          {data!.campaigns.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <label className={w.search}>
-          <Icon name="search" size={16} />
+        <label className={r.search} data-expanded={!!query}>
+          <Icon name="search" size={21} />
           <input
             ref={searchRef}
             type="search"
@@ -372,40 +436,11 @@ export default function Review({
           />
         </label>
       </div>
-      {view === "validation" && (
-        <div className={r.scopes}>
-          <select
-            aria-label="Filtrer par canal"
-            value={channel}
-            onChange={(e) => {
-              navigation.update({ canal: e.target.value, groupe: "" });
-              setVisited([]);
-            }}
-          >
-            <option value="all">Tous les canaux</option>
-            {Object.entries(CHANNELS).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-          {themes.length > 1 && (
-            <select
-              aria-label="Filtrer par thème"
-              value={theme}
-              onChange={(e) => {
-                navigation.update({ theme: e.target.value, groupe: "" });
-                setVisited([]);
-              }}
-            >
-              <option value="all">Tous les thèmes</option>
-              {themes.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
+    </div>
+  );
+  return (
+    <div className={r.surface}>
+      {view !== "live" && controls}
       {view === "live" && (
         <LiveBoards
           campaigns={data!.campaigns.filter(
@@ -413,6 +448,7 @@ export default function Review({
           )}
           query={query}
           onDetail={setDetail}
+          controls={controls}
         />
       )}
       {view === "finished" &&
@@ -447,14 +483,36 @@ export default function Review({
               aria-label={CHANNELS[slide.channel]}
               title={CHANNELS[slide.channel]}
             >
-              <ChannelIcon channel={slide.channel} size={44} />
+              <ChannelIcon
+                channel={slide.channel}
+                size={48}
+                tone={
+                  ["youtube", "google"].includes(slide.channel)
+                    ? "brand"
+                    : "mono"
+                }
+              />
             </span>
-            <h2>{themes.length > 1 ? slide.theme : CHANNELS[slide.channel]}</h2>
+            <h2>
+              {slide.theme !== "Sans thème"
+                ? slide.theme
+                : CHANNELS[slide.channel]}
+            </h2>
             <span>
               {slide.items.length} annonce{slide.items.length > 1 ? "s" : ""}
             </span>
           </header>
-          <div className={r.deckGrid}>{slide.items.map(card)}</div>
+          {slide.channel === "display" && (
+            <PublisherScene items={slide.items} />
+          )}
+          <div
+            className={`${r.deckGrid} ${slide.channel === "google" ? r.googleDeck : ""} ${slide.channel === "display" ? r.displayDeck : ""} ${["tiktok", "instagram", "youtube"].includes(slide.channel) ? r.mixedDeck : ""}`}
+          >
+            {slide.channel === "google" && (
+              <SearchSceneHeader query={slide.items[0].c.name} />
+            )}
+            {slide.items.map((item) => card(item, true))}
+          </div>
           <nav className={r.pagination} aria-label="Navigation des groupes">
             <button
               aria-label="Groupe précédent"
@@ -531,7 +589,9 @@ export default function Review({
                 <h2>
                   {label} <small>{list.length}</small>
                 </h2>
-                <div className={w.reviewGrid}>{list.map(card)}</div>
+                <div className={w.reviewGrid}>
+                  {list.map((item) => card(item))}
+                </div>
               </section>
             ) : null;
           })
@@ -589,7 +649,7 @@ export default function Review({
             beforeRequest={() => animate(editor.a.id, -1)}
           />
         ))}
-    </>
+    </div>
   );
 }
 function FinishedCampaign({ c }: { c: Campaign }) {
@@ -685,8 +745,13 @@ function EditModal({
       >
         ×
       </button>
+      <header className={r.dialogHeader}>
+        <h2 id="edit-ad-title">Modifier l’annonce</h2>
+        <p>{ad.theme || c.name}</p>
+      </header>
       <div className={r.dialogSplit}>
         <form
+          id="edit-ad-form"
           onSubmit={async (e) => {
             e.preventDefault();
             try {
@@ -717,10 +782,6 @@ function EditModal({
             className={w.editFields}
             disabled={["loading", "locked", "saving"].includes(editor.status)}
           >
-            <h2 id="edit-ad-title">Modifier et valider</h2>
-            <p>
-              {c.name} · V{ad.version}
-            </p>
             {ad.channel === "google" ? (
               <>
                 <label>
@@ -788,20 +849,39 @@ function EditModal({
                 {editor.error}
               </p>
             )}
-            <button
-              className={w.primary}
-              disabled={!["ready", "error"].includes(editor.status)}
-            >
-              {editor.status === "saving"
-                ? "Enregistrement…"
-                : "Enregistrer et valider"}
-            </button>
+            <p className={r.saveState}>
+              <span aria-hidden="true">○</span>{" "}
+              {editor.dirty
+                ? "Modifications non enregistrées"
+                : "Aucune modification"}
+            </p>
           </fieldset>
         </form>
         <div className={r.editPreview}>
+          <h3>Aperçu</h3>
           <Preview campaign={c} ad={{ ...ad, ...editor.draft }} />
         </div>
       </div>
+      <footer className={r.dialogFooter}>
+        <button
+          type="button"
+          disabled={editor.status === "saving"}
+          onClick={close}
+        >
+          Annuler
+        </button>
+        <button
+          type="submit"
+          form="edit-ad-form"
+          className={w.primary}
+          disabled={!["ready", "error"].includes(editor.status)}
+        >
+          <Icon name="check" />
+          {editor.status === "saving"
+            ? "Enregistrement…"
+            : "Enregistrer et valider"}
+        </button>
+      </footer>
     </dialog>
   );
 }
@@ -923,12 +1003,14 @@ function LiveBoards({
   campaigns,
   query,
   onDetail,
+  controls,
 }: {
+  controls: React.ReactNode;
   campaigns: Campaign[];
   query: string;
   onDetail: (item: { c: Campaign; a: Ad }) => void;
 }) {
-  const channels = (Object.keys(CHANNELS) as Channel[]).filter((channel) =>
+  const channels = CHANNEL_ORDER.filter((channel) =>
     campaigns.some((c) => intendedChannels(c).includes(channel)),
   );
   const families = campaigns
@@ -954,9 +1036,10 @@ function LiveBoards({
   ).length;
   return (
     <section className={r.overview} aria-label="Vue d’ensemble On air">
-      <div className={r.totals}>
-        <h2>Vue d’ensemble</h2>
-        <p>
+      <h2 className={r.overviewTitle}>Vue d’ensemble</h2>
+      <div className={r.liveToolbar}>
+        {controls}
+        <p className={r.totals}>
           <b>
             {liveChannels} / {channels.length}
           </b>{" "}
@@ -976,11 +1059,12 @@ function LiveBoards({
           return (
             <section
               className={r.artboard}
+              data-channel={channel}
               key={channel}
               aria-label={CHANNELS[channel]}
             >
               <header>
-                <ChannelIcon channel={channel} size={38} />
+                <ChannelIcon channel={channel} size={46} tone="brand" />
                 <h3>{CHANNELS[channel]}</h3>
                 <span>
                   <b>
@@ -998,17 +1082,31 @@ function LiveBoards({
                       : "Annonces à mettre en ligne"
                   }
                 >
-                  {live && live === entries.length ? "✓" : "○"}
+                  {live && live === entries.length ? (
+                    <Icon name="check" size={17} />
+                  ) : !live && entries.length ? (
+                    <span aria-hidden="true">△</span>
+                  ) : (
+                    "○"
+                  )}
                 </i>
               </header>
               <div
-                className={`${r.thumbnails} ${["instagram", "tiktok"].includes(channel) ? r.verticalTiles : ""}`}
+                className={`${r.thumbnails} ${["instagram", "tiktok", "google"].includes(channel) ? r.verticalTiles : ""}`}
+                style={
+                  channel === "instagram" || channel === "google"
+                    ? {
+                        gridTemplateColumns: `repeat(${Math.min(3, Math.max(entries.length, 1))}, minmax(0, 1fr))`,
+                      }
+                    : undefined
+                }
               >
                 {entries.map(({ c, a, live }) =>
                   live ? (
                     <button
                       key={a.id}
                       className={r.liveTile}
+                      data-format={a.format}
                       aria-label={"Ouvrir " + live.name + " · " + c.name}
                       onClick={() => onDetail({ c, a: live })}
                     >
@@ -1018,9 +1116,23 @@ function LiveBoards({
                     <div
                       key={a.id}
                       className={r.waitingTile}
+                      data-format={a.format}
                       aria-label={a.name + " : pas en ligne"}
                     >
-                      <span aria-hidden="true">◷</span>
+                      {channel === "google" ? (
+                        <span className={r.googleGhost} aria-hidden="true">
+                          <i />
+                          <ChannelIcon channel="google" size={28} />
+                          <i />
+                          <i />
+                          <i />
+                        </span>
+                      ) : (
+                        <Icon
+                          name={channel === "display" ? "grid" : "clock"}
+                          size={32}
+                        />
+                      )}
                     </div>
                   ),
                 )}

@@ -15,6 +15,9 @@ import {
 } from "@/lib/campaign-studio/workspace/catalog";
 import { useWorkspace } from "./WorkspaceProvider";
 import w from "./workspace.module.css";
+import mstyles from "./media.module.css";
+import Icon from "../Icon";
+import ChannelIcon from "./ChannelIcon";
 import { MEDIA_LIMIT_MB } from "@/lib/campaign-studio/workspace/upload-limits";
 import { mediaAdPlan } from "@/lib/campaign-studio/workspace/media-batch";
 import { uploadFile } from "./upload";
@@ -27,6 +30,7 @@ export default function MediaLibrary({
   batchMode = false,
   onAllCreated,
   onBusyChange,
+  onTextStart,
 }: {
   campaign: Campaign;
   channel: Channel;
@@ -36,6 +40,7 @@ export default function MediaLibrary({
   batchMode?: boolean;
   onAllCreated?: () => void;
   onBusyChange?: (busy: boolean) => void;
+  onTextStart?: () => void;
 }) {
   const {
     data,
@@ -226,14 +231,14 @@ export default function MediaLibrary({
   }
   return (
     <section
-      className={`${w.library} ${batchMode ? w.batchLibrary : ""}`}
+      className={`${w.library} ${batchMode ? `${w.batchLibrary} ${mstyles.batch}` : ""}`}
       aria-label={
         batchMode
           ? "Bibliothèque des canaux sélectionnés"
           : "Bibliothèque du canal"
       }
     >
-      <div className={w.heading}>
+      <div className={batchMode ? w.srOnly : w.heading}>
         <h2 tabIndex={batchMode ? -1 : undefined}>
           {batchMode ? "Ajouter vos visuels" : "Bibliothèque du canal"}
         </h2>
@@ -256,17 +261,39 @@ export default function MediaLibrary({
         onDragOver={(e) => e.preventDefault()}
         onDrop={drop}
       >
+        {batchMode && (
+          <span className={mstyles.uploadIcon} aria-hidden="true">
+            <Icon
+              name="download"
+              size={42}
+              style={{ transform: "rotate(180deg)" }}
+            />
+          </span>
+        )}
         <button
+          aria-label="Déposer des médias"
           disabled={!!queue || creating || transfer.stage !== "idle"}
           onClick={() => input.current?.click()}
         >
-          Déposer des médias
+          {batchMode ? "Déposer vos fichiers" : "Déposer des médias"}
         </button>
-        <span>
-          {batchMode
-            ? "ou glissez tous vos fichiers ici"
-            : "ou glissez vos fichiers ici"}
-        </span>
+        {batchMode ? (
+          <>
+            <span>
+              ou{" "}
+              <button
+                className={mstyles.browse}
+                disabled={!!queue || creating || transfer.stage !== "idle"}
+                onClick={() => input.current?.click()}
+              >
+                parcourir
+              </button>
+            </span>
+            <small>Images et vidéos · {MEDIA_LIMIT_MB} Mo max.</small>
+          </>
+        ) : (
+          <span>ou glissez vos fichiers ici</span>
+        )}
       </div>
       {queue && (
         <p role="status" className={w.uploadQueue}>
@@ -329,7 +356,27 @@ export default function MediaLibrary({
             ) && <p>{error.message}</p>}
         </div>
       )}
-      <div className={w.importActions}>
+      <div className={`${w.importActions} ${batchMode ? mstyles.footer : ""}`}>
+        {batchMode && onTextStart && (
+          <button
+            className={mstyles.textStart}
+            aria-label="Saisir les textes sans médias"
+            disabled={!!queue || creating}
+            onClick={onTextStart}
+          >
+            <span aria-hidden="true">Tт</span> Commencer par les textes
+          </button>
+        )}
+        {batchMode && (
+          <span className={mstyles.count}>
+            {
+              campaign.media.filter((m) =>
+                targets.some((t) => mediaChannels(m).includes(t)),
+              ).length
+            }{" "}
+            fichiers · {placements.length} annonces
+          </span>
+        )}
         <button
           className={w.primary}
           disabled={
@@ -347,8 +394,9 @@ export default function MediaLibrary({
                 ? "Créer l’annonce"
                 : `Créer les ${placements.length} annonces`
               : "Créer toutes les annonces"}
+          {batchMode && <Icon name="arrow" size={24} />}
         </button>
-        <span>
+        <span className={batchMode ? w.srOnly : undefined}>
           {placements.length
             ? "Tous les formats compatibles, sans sélection fichier par fichier."
             : campaign.media.some(
@@ -403,8 +451,8 @@ export default function MediaLibrary({
                 )}
                 <b>{m.name}</b>
                 <small>
-                  {m.width && m.height ? `${m.width} × ${m.height}` : ""} ·{" "}
-                  {(m.bytes / 1000000).toFixed(1)} Mo
+                  {m.width && m.height ? `${m.width} × ${m.height} px` : ""}
+                  {!batchMode && ` · ${(m.bytes / 1000000).toFixed(1)} Mo`}
                 </small>
                 {m.state === "invalid" && (
                   <p className={w.error}>{m.errors.join(" ")}</p>
@@ -417,22 +465,59 @@ export default function MediaLibrary({
                 {m.state === "ready" && (
                   <>
                     {batchMode ? (
-                      <div className={w.detectedFormats}>
+                      <div className={mstyles.recognized}>
+                        <span>
+                          <Icon name="check" size={15} /> Format reconnu
+                        </span>
+                        <span className={mstyles.mediaChannels}>
+                          {targets
+                            .filter((target) =>
+                              mediaChannels(m).includes(target),
+                            )
+                            .map((target) => (
+                              <span key={target} title={CHANNELS[target]}>
+                                <ChannelIcon channel={target} size={24} />
+                              </span>
+                            ))}
+                        </span>
+                        <details className={mstyles.formats}>
+                          <summary
+                            aria-label={`Formats reconnus pour ${m.name}`}
+                            title="Formats reconnus"
+                          >
+                            <Icon name="more" />
+                          </summary>
+                          <div>
+                            {targets
+                              .filter((target) =>
+                                mediaChannels(m).includes(target),
+                              )
+                              .map((target) => {
+                                const detected = compatibleFormats(m, target);
+                                if (!detected.length) return null;
+                                return (
+                                  <p key={target}>
+                                    <b>{CHANNELS[target]}</b>
+                                    <span>
+                                      {detected.map((f) => f.label).join(" · ")}
+                                    </span>
+                                  </p>
+                                );
+                              })}
+                          </div>
+                        </details>
                         {targets
-                          .filter((target) => mediaChannels(m).includes(target))
-                          .map((target) => {
-                            const detected = compatibleFormats(m, target);
-                            return (
-                              <p key={target}>
-                                <b>{CHANNELS[target]}</b>
-                                <span>
-                                  {detected.length
-                                    ? detected.map((f) => f.label).join(" · ")
-                                    : "Non compatible avec ce canal"}
-                                </span>
-                              </p>
-                            );
-                          })}
+                          .filter(
+                            (target) =>
+                              mediaChannels(m).includes(target) &&
+                              !compatibleFormats(m, target).length,
+                          )
+                          .map((target) => (
+                            <p className={mstyles.incompatible} key={target}>
+                              {CHANNELS[target]} ·{" "}
+                              <span>Non compatible avec ce canal</span>
+                            </p>
+                          ))}
                       </div>
                     ) : (
                       <>

@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- Private signed URLs and original campaign media. */
 "use client";
-import type { Ad, Campaign } from "@/lib/campaign-studio/workspace/types";
-import { useWorkspace } from "./WorkspaceProvider";
+import type { SharedAd as Ad, PreviewCampaign as Campaign } from "@/lib/campaign-studio/workspace/share-types";
+import { usePreviewData } from "./PreviewDataContext";
 import ChannelIcon from "./ChannelIcon";
 import PreviewCopy, { previewExcerpt } from "./PreviewCopy";
 import Icon from "../Icon";
@@ -16,7 +16,7 @@ export function MediaPreview({
   campaign: Campaign;
   thumbnail?: boolean;
 }) {
-  const { data } = useWorkspace();
+  const { data } = usePreviewData();
   const media = campaign.media.find((m) => m.id === ad.mediaId);
   const src = media ? data?.mediaUrls[media.id] : undefined;
   const vertical = [
@@ -215,7 +215,7 @@ export default function Preview({
   campaign: Campaign;
   grouped?: boolean;
 }) {
-  const { data } = useWorkspace();
+  const { data } = usePreviewData();
   const brand =
     ad.brandSnapshot ?? data?.brands.find((b) => b.id === campaign.brandId);
   const url = ad.url || campaign.defaultUrl;

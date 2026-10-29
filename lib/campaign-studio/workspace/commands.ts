@@ -29,6 +29,8 @@ export const FieldsSchema = z
   .strict();
 const target = { campaignId: uuid, revision: z.number().int().nonnegative() };
 export const CommandSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("create_share_link"), ...target }).strict(),
+  z.object({ type: z.literal("revoke_share_link"), ...target }).strict(),
   z
     .object({
       type: z.literal("delete_campaign"),

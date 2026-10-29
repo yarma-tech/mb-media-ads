@@ -169,7 +169,15 @@ export async function state(actor: Actor) {
   const agents = access
     ? (await db.from("studio_agents").select("id,name,revoked_at")).data
     : [];
+  const shareLinks = access
+    ? (
+        await db
+          .from("studio_share_links")
+          .select("campaign_id,status,created_at")
+      ).data
+    : [];
   return {
+    shareLinks: shareLinks ?? [],
     actor,
     members: members ?? [],
     agents: agents ?? [],
@@ -192,6 +200,17 @@ export async function execute(raw: unknown, actor: Actor) {
   const command: Command = parsed.data,
     db = database(),
     now = new Date().toISOString();
+  if (
+    command.type === "create_share_link" ||
+    command.type === "revoke_share_link"
+  ) {
+    const { changeShare } = await import("./share");
+    return changeShare(
+      actor,
+      command.campaignId,
+      command.type === "create_share_link" ? "create" : "revoke",
+    );
+  }
   if (command.type === "delete_campaign") {
     if (actor.kind !== "human")
       throw new StudioError("Suppression réservée à un humain.", 403);

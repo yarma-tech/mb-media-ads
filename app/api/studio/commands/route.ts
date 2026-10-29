@@ -18,7 +18,9 @@ export async function POST(request: Request) {
     )
       throw new StudioError("Origine interdite.", 403);
     const actor = await authenticate(request);
-    return Response.json(await execute(await request.json(), actor));
+    return Response.json(await execute(await request.json(), actor), {
+      headers: { "Cache-Control": "private, no-store" },
+    });
   } catch (e) {
     return Response.json(
       { error: e instanceof Error ? e.message : "Erreur serveur" },

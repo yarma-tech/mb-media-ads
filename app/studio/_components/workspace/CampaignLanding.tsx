@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import ShareCampaign from "./ShareCampaign";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Campaign } from "@/lib/campaign-studio/workspace/types";
 import { workspaceErrorMessage } from "@/lib/campaign-studio/workspace/messages";
@@ -105,6 +106,9 @@ export default function CampaignLanding() {
                 </span>
                 <span className={c.badge}>{label}</span>
               </Link>
+              <div style={{ position: "absolute", top: 16, right: 60 }}>
+                <ShareCampaign campaignId={campaign.id} name={campaign.name} />
+              </div>
               {data!.actor.kind === "human" &&
                 (validator || campaign.createdBy === data!.actor.id) && (
                   <button

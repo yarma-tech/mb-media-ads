@@ -1,0 +1,335 @@
+{
+  "name": "Léyon - Notoriété",
+  "brand": "Léyon",
+  "theme": "Notoriété",
+  "website": "https://leyon.pro/",
+  "ads": [
+    {
+      "channel": "facebook",
+      "format": "square",
+      "file": "01-facebook-square.png",
+      "fields": {
+        "name": "Une conversation · facebook",
+        "headline": "Vos factures, par chat",
+        "copy": "Vos factures commencent par une conversation. Par message ou à la voix, Léyon prépare vos devis et factures. Vous validez.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "facebook",
+      "format": "portrait",
+      "file": "02-facebook-portrait.png",
+      "fields": {
+        "name": "Un message, un devis · facebook",
+        "headline": "Un message. Un devis.",
+        "copy": "Un projet à chiffrer ? Dites-le à Léyon. Votre agent prépare le devis dans Qonto, vous le vérifiez et vous validez.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "facebook",
+      "format": "story",
+      "file": "03-facebook-story.png",
+      "fields": {
+        "name": "Plus de vie · facebook",
+        "headline": "Gardez la main",
+        "copy": "Moins de saisie, plus de place pour vos projets. Découvrez Léyon : vos devis et factures dans une conversation, toujours sous votre contrôle.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "instagram",
+      "format": "square",
+      "file": "01-facebook-square.png",
+      "fields": {
+        "name": "Une conversation · instagram",
+        "headline": "Vos factures, par chat",
+        "copy": "Vos factures commencent par une conversation. Par message ou à la voix, Léyon prépare vos devis et factures. Vous validez.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "instagram",
+      "format": "portrait",
+      "file": "02-facebook-portrait.png",
+      "fields": {
+        "name": "Un message, un devis · instagram",
+        "headline": "Un message. Un devis.",
+        "copy": "Un projet à chiffrer ? Dites-le à Léyon. Votre agent prépare le devis dans Qonto, vous le vérifiez et vous validez.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "instagram",
+      "format": "story",
+      "file": "03-facebook-story.png",
+      "fields": {
+        "name": "Plus de vie · instagram",
+        "headline": "Gardez la main",
+        "copy": "Moins de saisie, plus de place pour vos projets. Découvrez Léyon : vos devis et factures dans une conversation, toujours sous votre contrôle.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "tiktok",
+      "format": "vertical",
+      "file": "tiktok-1.mp4",
+      "fields": {
+        "name": "Une conversation · tiktok",
+        "headline": "Vos factures, par chat",
+        "copy": "Vos factures commencent par une conversation. Par message ou à la voix, Léyon prépare vos devis et factures. Vous validez.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "tiktok",
+      "format": "vertical",
+      "file": "tiktok-2.mp4",
+      "fields": {
+        "name": "Un message, un devis · tiktok",
+        "headline": "Un message. Un devis.",
+        "copy": "Un projet à chiffrer ? Dites-le à Léyon. Votre agent prépare le devis dans Qonto, vous le vérifiez et vous validez.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "tiktok",
+      "format": "vertical",
+      "file": "tiktok-3.mp4",
+      "fields": {
+        "name": "Plus de vie · tiktok",
+        "headline": "Gardez la main",
+        "copy": "Moins de saisie, plus de place pour vos projets. Découvrez Léyon : vos devis et factures dans une conversation, toujours sous votre contrôle.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "youtube",
+      "format": "instream",
+      "file": "youtube-1.mp4",
+      "fields": {
+        "name": "Une conversation · youtube",
+        "headline": "Vos factures, par chat",
+        "copy": "Vos factures commencent par une conversation. Par message ou à la voix, Léyon prépare vos devis et factures. Vous validez.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "youtube",
+      "format": "instream",
+      "file": "youtube-2.mp4",
+      "fields": {
+        "name": "Un message, un devis · youtube",
+        "headline": "Un message. Un devis.",
+        "copy": "Un projet à chiffrer ? Dites-le à Léyon. Votre agent prépare le devis dans Qonto, vous le vérifiez et vous validez.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "youtube",
+      "format": "instream",
+      "file": "youtube-3.mp4",
+      "fields": {
+        "name": "Plus de vie · youtube",
+        "headline": "Gardez la main",
+        "copy": "Moins de saisie, plus de place pour vos projets. Découvrez Léyon : vos devis et factures dans une conversation, toujours sous votre contrôle.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "display",
+      "format": "rectangle",
+      "file": "07-display-rectangle.png",
+      "fields": {
+        "name": "Une conversation · display",
+        "headline": "Vos factures, par chat",
+        "copy": "Vos factures commencent par une conversation. Par message ou à la voix, Léyon prépare vos devis et factures. Vous validez.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "display",
+      "format": "halfpage",
+      "file": "08-display-halfpage.jpg",
+      "fields": {
+        "name": "Un message, un devis · display",
+        "headline": "Un message. Un devis.",
+        "copy": "Un projet à chiffrer ? Dites-le à Léyon. Votre agent prépare le devis dans Qonto, vous le vérifiez et vous validez.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "display",
+      "format": "leaderboard",
+      "file": "09-display-leaderboard.png",
+      "fields": {
+        "name": "Plus de vie · display",
+        "headline": "Gardez la main",
+        "copy": "Moins de saisie, plus de place pour vos projets. Découvrez Léyon : vos devis et factures dans une conversation, toujours sous votre contrôle.",
+        "headlines": [],
+        "descriptions": [],
+        "path1": "",
+        "path2": "",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "google",
+      "format": "search",
+      "file": null,
+      "fields": {
+        "name": "Une conversation · google",
+        "headline": "Vos factures, par chat",
+        "copy": "Vos factures commencent par une conversation. Par message ou à la voix, Léyon prépare vos devis et factures. Vous validez.",
+        "headlines": [
+          "Léyon, votre agent facturation",
+          "Vos factures par conversation",
+          "Parlez. Léyon prépare."
+        ],
+        "descriptions": [
+          "Un message ou une note vocale. Léyon prépare vos devis et factures, vous validez.",
+          "Découvrez un agent de facturation pensé pour les indépendants. Gardez le contrôle."
+        ],
+        "path1": "facturation",
+        "path2": "conversation",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "google",
+      "format": "search",
+      "file": null,
+      "fields": {
+        "name": "Un message, un devis · google",
+        "headline": "Un message. Un devis.",
+        "copy": "Un projet à chiffrer ? Dites-le à Léyon. Votre agent prépare le devis dans Qonto, vous le vérifiez et vous validez.",
+        "headlines": [
+          "Un message. Un devis.",
+          "Découvrez Léyon",
+          "Votre voix, votre facturation"
+        ],
+        "descriptions": [
+          "Dictez votre demande à Léyon. Votre agent prépare le devis, vous gardez la main.",
+          "Devis et factures dans Qonto, depuis une conversation. Découvrez Léyon."
+        ],
+        "path1": "devis",
+        "path2": "agent",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    },
+    {
+      "channel": "google",
+      "format": "search",
+      "file": null,
+      "fields": {
+        "name": "Plus de vie · google",
+        "headline": "Gardez la main",
+        "copy": "Moins de saisie, plus de place pour vos projets. Découvrez Léyon : vos devis et factures dans une conversation, toujours sous votre contrôle.",
+        "headlines": [
+          "Léyon prépare. Vous validez.",
+          "Moins de saisie, plus de vie",
+          "Votre agent pour les factures"
+        ],
+        "descriptions": [
+          "Gardez la main sur votre facturation. Léyon prépare, vous vérifiez et vous validez.",
+          "Par chat ou à la voix, découvrez une autre façon de préparer vos devis et factures."
+        ],
+        "path1": "assistant",
+        "path2": "factures",
+        "theme": "Notoriété",
+        "cta": "En savoir plus",
+        "url": "https://leyon.pro/"
+      }
+    }
+  ]
+}

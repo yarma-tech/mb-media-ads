@@ -8,6 +8,8 @@ import { CommandSchema } from "@/lib/campaign-studio/workspace/commands";
 import { z } from "zod";
 export const maxDuration = 60;
 const hidden = new Set([
+  "create_share_link",
+  "revoke_share_link",
   "delete_campaign",
   "decide",
   "publish",

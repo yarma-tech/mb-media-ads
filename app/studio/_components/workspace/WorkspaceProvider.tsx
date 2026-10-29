@@ -1,4 +1,5 @@
 "use client";
+import { PreviewDataProvider } from "./PreviewDataContext";
 import { createBrowserClient } from "@supabase/ssr";
 import { workspaceErrorMessage } from "@/lib/campaign-studio/workspace/messages";
 import {
@@ -20,6 +21,11 @@ import type {
   CHANNELS,
 } from "@/lib/campaign-studio/workspace/catalog";
 interface Snapshot {
+  shareLinks?: {
+    campaign_id: string;
+    status: "active" | "revoked";
+    created_at: string;
+  }[];
   members: {
     id: string;
     name: string;
@@ -181,6 +187,31 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
             current.current = { ...old, campaigns };
             setData(current.current);
           }
+          if (
+            ["create_share_link", "revoke_share_link"].includes(
+              String(command.type),
+            ) &&
+            current.current
+          ) {
+            const link = {
+              campaign_id: String(command.campaignId),
+              status:
+                command.type === "create_share_link"
+                  ? ("active" as const)
+                  : ("revoked" as const),
+              created_at: new Date().toISOString(),
+            };
+            current.current = {
+              ...current.current,
+              shareLinks: [
+                ...(current.current.shareLinks ?? []).filter(
+                  (item) => item.campaign_id !== command.campaignId,
+                ),
+                link,
+              ],
+            };
+            setData(current.current);
+          }
           if (result.brand && current.current) {
             current.current = {
               ...current.current,
@@ -250,7 +281,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         },
       }}
     >
-      {children}
+      <PreviewDataProvider data={data}>{children}</PreviewDataProvider>
     </ctx.Provider>
   );
 }

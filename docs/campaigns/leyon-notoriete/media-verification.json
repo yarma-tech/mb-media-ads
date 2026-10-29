@@ -1,45 +1,50 @@
 [
   {
-    "file": "tiktok-1.mp4",
+    "file": "01-facebook-square.png",
+    "bytes": 921724,
     "width": 1080,
-    "height": 1920,
-    "r_frame_rate": "30/1",
-    "duration": "8.000000",
-    "nb_frames": "240",
-    "side_data_list": [
-      {}
-    ],
-    "containerDuration": "8.042667",
-    "bytes": 2657957
+    "height": 1080,
+    "r_frame_rate": "25/1"
   },
   {
-    "file": "tiktok-2.mp4",
+    "file": "02-facebook-portrait.png",
+    "bytes": 1339462,
     "width": 1080,
-    "height": 1920,
-    "r_frame_rate": "30/1",
-    "duration": "8.000000",
-    "nb_frames": "240",
-    "side_data_list": [
-      {}
-    ],
-    "containerDuration": "8.042667",
-    "bytes": 2832224
+    "height": 1350,
+    "r_frame_rate": "25/1"
   },
   {
-    "file": "tiktok-3.mp4",
+    "file": "03-facebook-story.png",
+    "bytes": 2047322,
     "width": 1080,
     "height": 1920,
-    "r_frame_rate": "30/1",
-    "duration": "8.000000",
-    "nb_frames": "240",
-    "side_data_list": [
-      {}
-    ],
-    "containerDuration": "8.042667",
-    "bytes": 2635667
+    "r_frame_rate": "25/1"
+  },
+  {
+    "file": "07-display-rectangle.png",
+    "bytes": 78917,
+    "width": 300,
+    "height": 250,
+    "r_frame_rate": "25/1"
+  },
+  {
+    "file": "08-display-halfpage.jpg",
+    "bytes": 63716,
+    "width": 300,
+    "height": 600,
+    "r_frame_rate": "25/1",
+    "duration": "0.040000"
+  },
+  {
+    "file": "09-display-leaderboard.png",
+    "bytes": 34069,
+    "width": 728,
+    "height": 90,
+    "r_frame_rate": "25/1"
   },
   {
     "file": "youtube-1.mp4",
+    "bytes": 3193569,
     "width": 1920,
     "height": 1080,
     "r_frame_rate": "30/1",
@@ -47,12 +52,11 @@
     "nb_frames": "240",
     "side_data_list": [
       {}
-    ],
-    "containerDuration": "8.042667",
-    "bytes": 3197953
+    ]
   },
   {
     "file": "youtube-2.mp4",
+    "bytes": 3234616,
     "width": 1920,
     "height": 1080,
     "r_frame_rate": "30/1",
@@ -60,12 +64,11 @@
     "nb_frames": "240",
     "side_data_list": [
       {}
-    ],
-    "containerDuration": "8.042667",
-    "bytes": 3253042
+    ]
   },
   {
     "file": "youtube-3.mp4",
+    "bytes": 3060663,
     "width": 1920,
     "height": 1080,
     "r_frame_rate": "30/1",
@@ -73,8 +76,42 @@
     "nb_frames": "240",
     "side_data_list": [
       {}
-    ],
-    "containerDuration": "8.042667",
-    "bytes": 3107434
+    ]
+  },
+  {
+    "file": "tiktok-1.mp4",
+    "bytes": 2664681,
+    "width": 1080,
+    "height": 1920,
+    "r_frame_rate": "30/1",
+    "duration": "8.000000",
+    "nb_frames": "240",
+    "side_data_list": [
+      {}
+    ]
+  },
+  {
+    "file": "tiktok-2.mp4",
+    "bytes": 2832879,
+    "width": 1080,
+    "height": 1920,
+    "r_frame_rate": "30/1",
+    "duration": "8.000000",
+    "nb_frames": "240",
+    "side_data_list": [
+      {}
+    ]
+  },
+  {
+    "file": "tiktok-3.mp4",
+    "bytes": 2635599,
+    "width": 1080,
+    "height": 1920,
+    "r_frame_rate": "30/1",
+    "duration": "8.000000",
+    "nb_frames": "240",
+    "side_data_list": [
+      {}
+    ]
   }
 ]

@@ -30,6 +30,8 @@ function editorLockToken(key: string) {
   return value;
 }
 const fields = (a: Ad): AdFields => ({
+  theme: a.theme ?? "",
+  format: a.format,
   name: a.name,
   copy: a.copy,
   headline: a.headline,
@@ -60,7 +62,7 @@ export function useAdEditor(
   const [draft, setDraft] = useState(() => fields(ad)),
     [saved, setSaved] = useState(() => JSON.stringify(fields(ad))),
     [status, setStatus] = useState<
-      "loading" | "ready" | "saving" | "error" | "locked"
+      "inactive" | "loading" | "ready" | "saving" | "error" | "locked"
     >("loading"),
     [error, setError] = useState("");
   const token = useRef(""),
@@ -145,10 +147,16 @@ export function useAdEditor(
   useEffect(() => {
     alive.current = true;
     if (!enabled) {
-      queueMicrotask(() => setStatus("locked"));
+      queueMicrotask(() => setStatus("inactive"));
       return;
     }
     let active = true;
+    queueMicrotask(() => {
+      if (active) {
+        setStatus("loading");
+        setError("");
+      }
+    });
     modified.current = Date.now();
     const lockToken = editorLockToken(lockKey);
     const release = async () => {

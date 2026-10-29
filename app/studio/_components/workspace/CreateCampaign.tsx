@@ -1,48 +1,63 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useWorkspace } from "./WorkspaceProvider";
 import { useWorkspaceNavigation } from "./WorkspaceNavigation";
-import w from "./workspace.module.css";
+import CampaignInfoForm from "./CampaignInfoForm";
+import Icon from "../Icon";
+import c from "./creation.module.css";
 
 export default function CreateCampaign() {
-  const { run, pending } = useWorkspace();
   const navigation = useWorkspaceNavigation();
   const router = useRouter();
-  const [name, setName] = useState("");
-  async function create(e: FormEvent) {
-    e.preventDefault();
-    try {
-      const result = await run({ type: "create_campaign", name });
-      router.push(
-        navigation.href("/studio/configuration", {
-          campagne: (result.campaign as { id: string }).id,
-          canal: "",
-          canaux: "",
-          etape: "details",
-        }),
-      );
-    } catch {
-      /* WorkspaceProvider displays the error and permits retry. */
-    }
-  }
   return (
-    <form onSubmit={create} className={w.inline}>
-      <input
-        aria-label="Nom de la nouvelle campagne"
-        placeholder="Nom de campagne"
-        required
-        maxLength={200}
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <button
-        className={w.primary}
-        disabled={pending("create_campaign")}
-        aria-busy={pending("create_campaign")}
-      >
-        {pending("create_campaign") ? "Création…" : "Créer une campagne"}
-      </button>
-    </form>
+    <section className={c.create} aria-labelledby="new-campaign-title">
+      <div className={c.createTop}>
+        <Link
+          className={c.back}
+          href={navigation.href("/studio", {
+            nouvelle: "",
+            campagne: "",
+            etape: "",
+            canaux: "",
+            canal: "",
+          })}
+        >
+          <span className={c.backArrow}>
+            <Icon name="arrow" />
+          </span>
+          Campagnes
+        </Link>
+        <ol className={c.steps} aria-label="Étapes de création">
+          <li aria-current="step">
+            <b>1</b>
+            <span>Campagne</span>
+          </li>
+          <li>
+            <b>2</b>
+            <span>Canaux</span>
+          </li>
+          <li>
+            <b>3</b>
+            <span>Annonces</span>
+          </li>
+        </ol>
+      </div>
+      <div className={c.createBody}>
+        <h1 id="new-campaign-title">Nouvelle campagne</h1>
+        <CampaignInfoForm
+          onContinue={(campaignId) =>
+            router.push(
+              navigation.href("/studio/configuration", {
+                campagne: campaignId!,
+                nouvelle: "",
+                canal: "",
+                canaux: "",
+                etape: "channels",
+              }),
+            )
+          }
+        />
+      </div>
+    </section>
   );
 }

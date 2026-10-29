@@ -153,6 +153,8 @@ export function editAd(
     throw new Error("Version figée : créez une nouvelle version.");
   if (source === "validation") humanValidator(actor);
   const allowed = [
+    "theme",
+    "format",
     "name",
     "copy",
     "headline",
@@ -180,6 +182,19 @@ export function editAd(
       "Déverrouillez cette annonce : modifier annulera son approbation.",
     );
   const next = { ...ad, ...after } as Ad;
+  if (!CATALOG[next.channel].some((f) => f.id === next.format))
+    throw new Error("Format inconnu pour ce canal.");
+  if (next.format !== ad.format && next.mediaId) {
+    const media = c.media.find((m) => m.id === next.mediaId);
+    if (
+      !media ||
+      !compatibleFormats(media, next.channel).some((f) => f.id === next.format)
+    ) {
+      before.mediaId = ad.mediaId;
+      next.mediaId = null;
+      after.mediaId = null;
+    }
+  }
   const complete = isComplete(next, c).length === 0;
   if (source === "validation" && !complete)
     throw new Error("Complétez les champs requis avant de valider.");
@@ -263,7 +278,15 @@ export function decideAd(
     status,
     revision: ad.revision + 1,
     comments: comment.trim()
-      ? [...ad.comments, { text: comment.trim(), author: actor.name, at: now }]
+      ? [
+          ...ad.comments,
+          {
+            text: comment.trim(),
+            author: actor.name,
+            at: now,
+            resolution: "open",
+          },
+        ]
       : ad.comments,
     history: [
       ...ad.history,
@@ -463,4 +486,100 @@ export function reopenCampaign(
       ),
     ],
   };
+}
+
+export function duplicateAd(
+  c: Campaign,
+  adId: string,
+  actor: Actor,
+  now: string,
+): Campaign {
+  active(c);
+  const old = find(c, adId);
+  const next = addAd(c, old.channel, old.format, actor, now);
+  const fresh = next.ads.at(-1)!;
+  Object.assign(fresh, {
+    name: old.name + " (copie)",
+    theme: old.theme ?? "",
+    copy: old.copy,
+    headline: old.headline,
+    headlines: [...old.headlines],
+    descriptions: [...old.descriptions],
+    cta: old.cta,
+    url: old.url,
+    mediaId: old.mediaId,
+    path1: old.path1,
+    path2: old.path2,
+  });
+  const ads = [...c.ads];
+  ads.splice(ads.findIndex((a) => a.id === adId) + 1, 0, fresh);
+  return { ...next, ads };
+}
+
+export function moveAd(
+  c: Campaign,
+  adId: string,
+  beforeId: string | null,
+  actor: Actor,
+  now: string,
+): Campaign {
+  active(c);
+  const ad = find(c, adId);
+  if (beforeId === adId) return c;
+  const target = beforeId ? find(c, beforeId) : null;
+  if (target && target.channel !== ad.channel)
+    throw new Error("Déplacez une annonce dans son canal.");
+  const ads = c.ads.filter((a) => a.id !== adId);
+  const index = target
+    ? ads.findIndex((a) => a.id === target.id)
+    : ads.findLastIndex((a) => a.channel === ad.channel) + 1;
+  ads.splice(index, 0, ad);
+  if (ads.every((a, i) => a.id === c.ads[i].id)) return c;
+  return {
+    ...c,
+    ads,
+    revision: c.revision + 1,
+    history: [
+      ...c.history,
+      event(actor, "ad_reordered", { adId }, { adId, beforeId }, now),
+    ],
+  };
+}
+
+export function handleComment(
+  c: Campaign,
+  adId: string,
+  commentIndex: number,
+  actor: Actor,
+  now: string,
+): Campaign {
+  active(c);
+  const ad = find(c, adId);
+  const comment = ad.comments[commentIndex];
+  if (!comment) throw new Error("Commentaire introuvable.");
+  if (comment.resolution === "handled") return c;
+  return replace(c, {
+    ...ad,
+    revision: ad.revision + 1,
+    comments: ad.comments.map((item, i) =>
+      i === commentIndex
+        ? {
+            ...item,
+            resolution: "handled",
+            handledBy: actor.name,
+            handledAt: now,
+          }
+        : item,
+    ),
+    history: [
+      ...ad.history,
+      event(
+        actor,
+        "comment_handled",
+        { commentIndex },
+        { commentIndex, resolution: "handled" },
+        now,
+      ),
+    ],
+  });
 }

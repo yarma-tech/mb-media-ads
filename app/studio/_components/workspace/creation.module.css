@@ -1,0 +1,412 @@
+.landing {
+  padding: 24px 4px 48px;
+  min-height: 70vh;
+  color: #10241e;
+}
+.heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 32px;
+}
+.heading h1,
+.createBody h1 {
+  margin: 0;
+  color: #10241e;
+  font-size: clamp(25px, 2.4vw, 34px);
+  letter-spacing: -1.2px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #67716e;
+}
+.search input {
+  width: 150px;
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  color: #162c24;
+  font: inherit;
+  font-size: 13px;
+  outline-offset: 4px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 18px;
+}
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 390px;
+}
+.newTile,
+.campaignTile {
+  min-height: 235px;
+  border: 1px solid #f0f2f1;
+  border-radius: 15px;
+  background: #f7f8f7;
+  text-decoration: none;
+  color: #10241e;
+  transition:
+    background 0.15s,
+    transform 0.15s;
+}
+.newTile:hover,
+.campaignTile:hover {
+  background: #eef2ef;
+  transform: translateY(-2px);
+}
+.newTile:focus-visible,
+.campaignTile:focus-visible {
+  outline: 2px solid #205846;
+  outline-offset: 4px;
+}
+.newTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 23px;
+  padding: 26px;
+  text-align: center;
+}
+.newTile strong {
+  font-size: 16px;
+  letter-spacing: -0.35px;
+  font-weight: 600;
+}
+.empty .newTile {
+  width: min(390px, 100%);
+  min-height: 225px;
+}
+.empty .newTile strong {
+  font-size: 20px;
+}
+.plus {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  color: white;
+  background: #0b3024;
+  font-size: 43px;
+  line-height: 1;
+  font-weight: 250;
+}
+.campaignTile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 22px;
+}
+.tileIcon {
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ebeeec;
+  margin-bottom: 24px;
+}
+.campaignTile strong {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.35px;
+  overflow-wrap: anywhere;
+}
+.brandName {
+  color: #59635e;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.badge {
+  margin-top: 28px;
+  border-radius: 20px;
+  padding: 6px 12px;
+  color: #48534d;
+  background: #e9edeb;
+  font-size: 11px;
+}
+.pending {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  color: #596c61;
+  font-size: 13px;
+  margin-top: 32px;
+  text-decoration: none;
+}
+.pending:hover {
+  text-decoration: underline;
+}
+.noResults {
+  font-size: 14px;
+  color: #66736d;
+}
+.create {
+  padding: 12px 4px 48px;
+  color: #10241e;
+}
+.createTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 44px;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #22342b;
+  text-decoration: none;
+  font-size: 14px;
+}
+.backArrow {
+  display: inline-flex;
+  transform: rotate(180deg);
+}
+.steps {
+  display: flex;
+  align-items: flex-start;
+  gap: 70px;
+  list-style: none;
+  padding: 0;
+  margin: 0 4px 0 0;
+}
+.steps li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  font-size: 11px;
+  color: #68716d;
+}
+.steps li + li::before {
+  content: "";
+  height: 1px;
+  width: 58px;
+  background: #dce1de;
+  position: absolute;
+  top: 15px;
+  right: calc(100% + 7px);
+}
+.steps b {
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #edf0ee;
+  color: #44534a;
+  font-size: 12px;
+  font-weight: 500;
+}
+.steps li[aria-current] {
+  color: #10241e;
+}
+.steps li[aria-current] b {
+  background: #0b3024;
+  color: white;
+}
+.createBody {
+  width: min(710px, 100%);
+  margin: 0 auto;
+}
+.createBody h1 {
+  margin-bottom: 28px;
+  font-size: 29px;
+}
+.information {
+  width: 100%;
+}
+.fields {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 24px;
+  min-width: 0;
+}
+.fields label,
+.brandCreator label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #26372d;
+}
+.fields input,
+.fields select,
+.brandCreator input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 45px;
+  padding: 10px 14px;
+  border: 1px solid #cfd7d2;
+  border-radius: 9px;
+  background: white;
+  color: #15291f;
+  font: inherit;
+  font-weight: 400;
+  font-size: 14px;
+}
+.fields input:focus,
+.fields select:focus,
+.brandCreator input:focus {
+  outline: 2px solid #a9c3b6;
+  outline-offset: 2px;
+}
+.fields input::placeholder {
+  color: #929b95;
+}
+.brandChoice {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+.brandChoice label {
+  flex: 1;
+  min-width: 0;
+}
+.addBrand {
+  display: grid;
+  place-items: center;
+  width: 45px;
+  height: 45px;
+  min-width: 45px;
+  padding: 0;
+  border: 1px solid #dce2de;
+  border-radius: 10px;
+  background: #f4f6f4;
+  color: #183c2c;
+  font-size: 27px;
+  font-weight: 300;
+  cursor: pointer;
+}
+.optional {
+  border-radius: 11px;
+  background: #f6f8f6;
+}
+.optional summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+.optional summary::-webkit-details-marker {
+  display: none;
+}
+.optional summary span {
+  flex: 1;
+}
+.optional summary small {
+  color: #526259;
+  font-weight: 400;
+  font-size: 12px;
+}
+.optional[open] summary > svg:last-child {
+  transform: rotate(180deg);
+}
+.optionalFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 0 18px 20px;
+}
+.url {
+  grid-column: 1 / -1;
+}
+.brandCreator {
+  display: grid;
+  gap: 16px;
+  margin-top: 22px;
+  background: #f6f8f6;
+  padding: 22px;
+  border-radius: 12px;
+}
+.brandCreator h3 {
+  margin: 0;
+  font-size: 17px;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 28px;
+}
+.actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 13px 22px;
+  min-width: 155px;
+}
+@media (max-width: 700px) {
+  .heading {
+    align-items: flex-start;
+    gap: 14px;
+    flex-direction: column;
+    margin-bottom: 24px;
+  }
+  .search {
+    width: 100%;
+  }
+  .search input {
+    width: 100%;
+  }
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .campaignTile,
+  .newTile {
+    min-height: 215px;
+    padding: 17px;
+  }
+  .campaignTile strong,
+  .newTile strong {
+    font-size: 15px;
+  }
+  .createTop {
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+  .steps {
+    margin-left: auto;
+    gap: 35px;
+  }
+  .steps li + li::before {
+    width: 24px;
+  }
+  .createBody h1 {
+    font-size: 26px;
+  }
+  .optionalFields {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 380px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .steps {
+    width: 100%;
+    justify-content: space-between;
+    gap: 20px;
+  }
+}

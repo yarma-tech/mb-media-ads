@@ -12,14 +12,14 @@ import {
   useWorkspace,
 } from "./WorkspaceProvider";
 import { useWorkspaceNavigation } from "./WorkspaceNavigation";
-import CreateCampaign from "./CreateCampaign";
+import CampaignLanding from "./CampaignLanding";
 import Configuration from "./Configuration";
 import Review from "./Review";
 import Icon from "../Icon";
 import type { IconName } from "../Icon";
 import w from "./workspace.module.css";
 const pages: { url: string; label: string; icon: IconName }[] = [
-  { url: "/studio", label: "Home", icon: "grid" },
+  { url: "/studio", label: "Accueil", icon: "grid" },
   { url: "/studio/configuration", label: "Configuration", icon: "edit" },
   { url: "/studio/validation", label: "Validation", icon: "review" },
   { url: "/studio/on-air", label: "On air", icon: "live" },
@@ -44,10 +44,12 @@ function App() {
   const context: Record<string, string> =
     pathname === "/studio/configuration" &&
     !navigation.params.get("campagne") &&
+    navigation.params.get("nouvelle") !== "1" &&
     data?.campaigns[0]
       ? { campagne: data.campaigns[0].id }
       : {};
-  const studioHref = (path: string) => navigation.href(path, context);
+  const studioHref = (path: string) =>
+    navigation.href(path, { ...context, nouvelle: "" });
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [busy, setBusy] = useState(false);
@@ -76,7 +78,7 @@ function App() {
     return (
       <section className={w.login} aria-label="Connexion au studio">
         <form onSubmit={signIn}>
-          <span className={w.wordmark}>m.</span>
+          <span className={w.wordmark}>MB</span>
           <h1>Campaign studio</h1>
           <p>Connectez-vous à votre espace de travail.</p>
           {loginErrorMessage(error) && (
@@ -120,10 +122,10 @@ function App() {
       <aside className={w.sidebar} aria-label="Menu principal du studio">
         <Link
           href={studioHref("/studio")}
-          aria-label="m. - Home"
+          aria-label="MB - Accueil"
           className={w.wordmark}
         >
-          m.
+          MB
         </Link>
         <nav aria-label="Navigation du studio">
           {pages
@@ -159,7 +161,7 @@ function App() {
       >
         <header className={w.header}>
           <nav aria-label="Fil d’Ariane">
-            <Link href={studioHref("/studio")}>Home</Link>
+            <Link href={studioHref("/studio")}>Accueil</Link>
             {pathname !== "/studio" && (
               <>
                 <Icon name="chevron" size={13} />
@@ -251,69 +253,7 @@ function App() {
   );
 }
 function Home() {
-  const { data } = useWorkspace();
-  const navigation = useWorkspaceNavigation();
-  const validator = data!.actor.role === "validator";
-  const pendingAds = data!.campaigns
-    .flatMap((c) => c.ads)
-    .filter((a) =>
-      validator
-        ? a.status === "pending"
-        : a.createdBy === data!.actor.id &&
-          ["draft", "changes_requested"].includes(a.status),
-    );
-  return (
-    <>
-      <h1 className={w.title}>Votre espace de travail</h1>
-      <Link
-        className={w.homeCounter}
-        href={navigation.href(
-          validator ? "/studio/validation" : "/studio/configuration",
-        )}
-      >
-        <strong>{pendingAds.length}</strong>
-        <span>
-          {validator
-            ? "annonces à valider"
-            : "annonces à compléter ou corriger"}
-          <small>Ouvrir →</small>
-        </span>
-      </Link>
-      <div className={w.heading}>
-        <h2>Campagnes</h2>
-        <CreateCampaign />
-      </div>
-      <div className={w.campaignList}>
-        {data!.campaigns.map((c) => (
-          <Link
-            href={navigation.href("/studio/configuration", {
-              campagne: c.id,
-              ...(navigation.params.get("campagne") !== c.id
-                ? { etape: "", canaux: "" }
-                : {}),
-            })}
-            key={c.id}
-          >
-            <span>
-              <b>{c.name}</b>
-              <small>
-                {data!.brands.find((b) => b.id === c.brandId)?.name ??
-                  "Marque à compléter"}
-              </small>
-            </span>
-            <span>
-              {c.ads.length} annonce{c.ads.length > 1 ? "s" : ""} ·{" "}
-              {c.status === "finished" ? "Terminée" : "En préparation / suivi"}
-            </span>
-            <Icon name="arrow" size={16} />
-          </Link>
-        ))}
-        {!data!.campaigns.length && (
-          <p>Créez une campagne avec son nom pour commencer.</p>
-        )}
-      </div>
-    </>
-  );
+  return <CampaignLanding />;
 }
 function Access() {
   const { run, notify, data } = useWorkspace();

@@ -1,6 +1,12 @@
 import type { CSSProperties } from "react";
 
 const paths = {
+  plus: "M12 5v14M5 12h14",
+  copy: "M8 8h13v13H8zM16 8V3H3v13h5",
+  batch: "M7 2h10l4 4v16H3V2zM8 12l3 3 5-6",
+  eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0",
+  grip: "M8 4h.01M16 4h.01M8 12h.01M16 12h.01M8 20h.01M16 20h.01",
+  lock: "M5 10h14v12H5zM8 10V6a4 4 0 0 1 8 0v4",
   edit: "m16 3 5 5L8 21H3v-5L16 3Zm-2 2 5 5",
   check: "m5 12 4 4L19 6",
   review: "M8 3H5v18h14V3h-3M8 2h8v4H8zM8 11l2 2 5-5M8 17h7",

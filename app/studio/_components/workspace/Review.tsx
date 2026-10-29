@@ -7,11 +7,17 @@ import type {
   Campaign,
   Channel,
 } from "@/lib/campaign-studio/workspace/types";
+import {
+  currentAds,
+  intendedChannels,
+} from "@/lib/campaign-studio/workspace/presentation";
 import { CHANNELS } from "@/lib/campaign-studio/workspace/catalog";
 import { useWorkspaceNavigation } from "./WorkspaceNavigation";
 import { useWorkspace } from "./WorkspaceProvider";
 import { useAdEditor } from "./useAdEditor";
-import Preview from "./Preview";
+import Preview, { MediaPreview } from "./Preview";
+import ChannelIcon from "./ChannelIcon";
+import r from "./review.module.css";
 import History from "./History";
 import { STATUS } from "./Configuration";
 import Icon from "../Icon";
@@ -26,7 +32,10 @@ export default function Review({
   const status =
     navigation.params.get("statut") === "approved" ? "approved" : "pending";
   const mode =
-    navigation.params.get("vue") === "carousel" ? "carousel" : "grid";
+    navigation.params.get("vue") === "carousel" ? "carousel" : "deck";
+  const channel = navigation.params.get("canal") || "all";
+  const theme = navigation.params.get("theme") || "all";
+  const [detail, setDetail] = useState<{ c: Campaign; a: Ad } | null>(null);
   const campaignId = navigation.params.get("campagne") || "all";
   const query = navigation.params.get("q") || "";
   const searchRef = useRef<HTMLInputElement>(null);
@@ -56,16 +65,60 @@ export default function Review({
         .map((a) => ({ c, a })),
     )
     .filter(({ c, a }) =>
-      (c.name + " " + a.name + " " + a.copy)
+      (c.name + " " + (a.theme || "") + " " + a.name + " " + a.copy)
         .toLowerCase()
         .includes(query.toLowerCase()),
     );
+  const scopedItems = items.filter(
+    ({ a }) =>
+      (channel === "all" || a.channel === channel) &&
+      (theme === "all" || (a.theme?.trim() || "Sans thème") === theme),
+  );
+  const themes = [
+    ...new Set(items.map(({ a }) => a.theme?.trim() || "Sans thème")),
+  ];
+  const groups = [
+    ...new Set(
+      scopedItems.map(({ a }) =>
+        JSON.stringify([a.theme?.trim() || "Sans thème", a.channel]),
+      ),
+    ),
+  ]
+    .map((key) => {
+      const [groupTheme, groupChannel] = JSON.parse(key) as [string, Channel];
+      return {
+        key,
+        theme: groupTheme,
+        channel: groupChannel,
+        items: scopedItems.filter(
+          ({ a }) =>
+            (a.theme?.trim() || "Sans thème") === groupTheme &&
+            a.channel === groupChannel,
+        ),
+      };
+    })
+    .sort(
+      (a, b) =>
+        themes.indexOf(a.theme) - themes.indexOf(b.theme) ||
+        Object.keys(CHANNELS).indexOf(a.channel) -
+          Object.keys(CHANNELS).indexOf(b.channel),
+    );
+  const requestedSlide = navigation.params.get("groupe");
+  const slideIndex = Math.max(
+    0,
+    groups.findIndex((g) => g.key === requestedSlide),
+  );
+  const slide = groups[slideIndex];
+  function moveSlide(delta: number) {
+    const next = groups[slideIndex + delta];
+    if (next) navigation.update({ groupe: next.key });
+  }
   const editor = editing
     ? data!.campaigns
         .flatMap((c) => c.ads.map((a) => ({ c, a })))
         .find(({ c, a }) => c.id === editing.campaign && a.id === editing.ad)
     : null;
-  const remaining = items.filter((i) => !visited.includes(i.a.id));
+  const remaining = scopedItems.filter((i) => !visited.includes(i.a.id));
   useEffect(() => {
     if (resumeFocus.current && remaining.length) {
       carouselRef.current?.focus();
@@ -104,6 +157,7 @@ export default function Review({
         adId: a.id,
         ...(type === "approve" ? { status: "approved" } : {}),
       });
+      if (type === "stop") setDetail(null);
       notify(
         type === "approve"
           ? "Annonce validée."
@@ -119,7 +173,7 @@ export default function Review({
   }
   function card({ c, a }: { c: Campaign; a: Ad }) {
     return (
-      <article className={w.reviewCard} key={a.id}>
+      <article className={r.reviewCard} key={a.id}>
         <div data-workspace-ad={a.id}>
           <Preview ad={a} campaign={c} />
         </div>
@@ -131,7 +185,7 @@ export default function Review({
         </div>
         {view === "validation" && validator && (
           <fieldset
-            className={w.validationActions}
+            className={`${w.validationActions} ${r.actions}`}
             disabled={acting.includes(a.id) || pending("undo", c.id, a.id)}
             aria-label="Actions de validation"
             aria-busy={acting.includes(a.id)}
@@ -200,8 +254,10 @@ export default function Review({
             <button
               disabled={pending("version", c.id, a.id)}
               onClick={async () => {
-                await run({ type: "version", campaignId: c.id, adId: a.id });
-                notify("Nouvelle version créée dans Configuration.");
+                try {
+                  await run({ type: "version", campaignId: c.id, adId: a.id });
+                  notify("Nouvelle version créée dans Configuration.");
+                } catch {}
               }}
             >
               Créer une nouvelle version
@@ -247,7 +303,7 @@ export default function Review({
   }
   return (
     <>
-      <div className={w.toolbar}>
+      <div className={`${w.toolbar} ${r.toolbar}`}>
         {view === "validation" && (
           <>
             <div className={w.segment} data-second={status === "approved"}>
@@ -272,10 +328,10 @@ export default function Review({
             </div>
             <div className={w.segment} data-second={mode === "carousel"}>
               <button
-                aria-pressed={mode === "grid"}
-                onClick={() => navigation.update({ vue: "grid" })}
+                aria-pressed={mode === "deck"}
+                onClick={() => navigation.update({ vue: "", groupe: "" })}
               >
-                Par canal
+                Diaporama
               </button>
               <button
                 aria-pressed={mode === "carousel"}
@@ -316,6 +372,49 @@ export default function Review({
           />
         </label>
       </div>
+      {view === "validation" && (
+        <div className={r.scopes}>
+          <select
+            aria-label="Filtrer par canal"
+            value={channel}
+            onChange={(e) => {
+              navigation.update({ canal: e.target.value, groupe: "" });
+              setVisited([]);
+            }}
+          >
+            <option value="all">Tous les canaux</option>
+            {Object.entries(CHANNELS).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+          {themes.length > 1 && (
+            <select
+              aria-label="Filtrer par thème"
+              value={theme}
+              onChange={(e) => {
+                navigation.update({ theme: e.target.value, groupe: "" });
+                setVisited([]);
+              }}
+            >
+              <option value="all">Tous les thèmes</option>
+              {themes.map((t) => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+      {view === "live" && (
+        <LiveBoards
+          campaigns={data!.campaigns.filter(
+            (c) => campaignId === "all" || c.id === campaignId,
+          )}
+          query={query}
+          onDetail={setDetail}
+        />
+      )}
       {view === "finished" &&
         data!.campaigns
           .filter(
@@ -324,7 +423,69 @@ export default function Review({
               (campaignId === "all" || c.id === campaignId),
           )
           .map((c) => <FinishedCampaign key={c.id} c={c} />)}
-      {items.length > 0 &&
+      {view === "validation" && mode === "deck" && slide && (
+        <section
+          className={r.deck}
+          aria-label="Groupe de validation"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.target !== e.currentTarget) return;
+            if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+              e.preventDefault();
+              moveSlide(e.key === "ArrowRight" ? 1 : -1);
+            }
+          }}
+        >
+          <header
+            className={r.slideHeading}
+            role="group"
+            aria-label={`${themes.length > 1 ? slide.theme + " · " : ""}${CHANNELS[slide.channel]}`}
+          >
+            <span
+              className={r.channelLogo}
+              role="img"
+              aria-label={CHANNELS[slide.channel]}
+              title={CHANNELS[slide.channel]}
+            >
+              <ChannelIcon channel={slide.channel} size={44} />
+            </span>
+            <h2>{themes.length > 1 ? slide.theme : CHANNELS[slide.channel]}</h2>
+            <span>
+              {slide.items.length} annonce{slide.items.length > 1 ? "s" : ""}
+            </span>
+          </header>
+          <div className={r.deckGrid}>{slide.items.map(card)}</div>
+          <nav className={r.pagination} aria-label="Navigation des groupes">
+            <button
+              aria-label="Groupe précédent"
+              disabled={slideIndex === 0}
+              onClick={() => moveSlide(-1)}
+            >
+              ‹
+            </button>
+            <span aria-live="polite">
+              {slideIndex + 1} / {groups.length}
+            </span>
+            <button
+              aria-label="Groupe suivant"
+              disabled={slideIndex === groups.length - 1}
+              onClick={() => moveSlide(1)}
+            >
+              ›
+            </button>
+            {groups[slideIndex + 1] && (
+              <small>
+                Suivant :{" "}
+                {themes.length > 1 ? groups[slideIndex + 1].theme + " · " : ""}
+                {CHANNELS[groups[slideIndex + 1].channel]}
+              </small>
+            )}
+          </nav>
+        </section>
+      )}
+      {view !== "live" &&
+        (view !== "validation" || mode === "carousel") &&
+        scopedItems.length > 0 &&
         (view === "validation" && mode === "carousel" ? (
           remaining[0] ? (
             <div
@@ -362,7 +523,7 @@ export default function Review({
           )
         ) : (
           Object.entries(CHANNELS).map(([channel, label]) => {
-            const list = items.filter(
+            const list = scopedItems.filter(
               (i) => i.a.channel === (channel as Channel),
             );
             return list.length ? (
@@ -375,7 +536,7 @@ export default function Review({
             ) : null;
           })
         ))}
-      {!items.length && (
+      {view !== "live" && !scopedItems.length && (
         <div className={w.empty}>
           <p>
             {query
@@ -384,9 +545,7 @@ export default function Review({
                 ? status === "pending"
                   ? "Aucune annonce à valider."
                   : "Aucune annonce validée."
-                : view === "live"
-                  ? "Aucune annonce On air."
-                  : "Aucune annonce arrêtée."}
+                : "Aucune annonce arrêtée."}
           </p>
           {query ? (
             <button
@@ -403,6 +562,15 @@ export default function Review({
             </button>
           ) : null}
         </div>
+      )}
+      {detail && (
+        <DetailModal onClose={() => setDetail(null)}>
+          {card(
+            data!.campaigns
+              .flatMap((c) => c.ads.map((a) => ({ c, a })))
+              .find(({ a }) => a.id === detail.a.id) || detail,
+          )}
+        </DetailModal>
       )}
       {editor &&
         editing &&
@@ -504,7 +672,11 @@ function EditModal({
   };
   const dialog = useDialog(close);
   return (
-    <dialog {...dialog} className={w.dialog} aria-labelledby="edit-ad-title">
+    <dialog
+      {...dialog}
+      className={`${w.dialog} ${r.editDialog}`}
+      aria-labelledby="edit-ad-title"
+    >
       <button
         className={w.close}
         aria-label="Fermer"
@@ -513,8 +685,7 @@ function EditModal({
       >
         ×
       </button>
-      <div className={w.dialogSplit}>
-        <Preview campaign={c} ad={{ ...ad, ...editor.draft }} />
+      <div className={r.dialogSplit}>
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -627,6 +798,9 @@ function EditModal({
             </button>
           </fieldset>
         </form>
+        <div className={r.editPreview}>
+          <Preview campaign={c} ad={{ ...ad, ...editor.draft }} />
+        </div>
       </div>
     </dialog>
   );
@@ -658,7 +832,7 @@ function CommentModal({
   return (
     <dialog
       {...dialog}
-      className={w.commentDialog}
+      className={`${w.commentDialog} ${r.editDialog}`}
       aria-labelledby="comment-title"
     >
       <button
@@ -721,5 +895,150 @@ function CommentModal({
         </button>
       </form>
     </dialog>
+  );
+}
+
+function DetailModal({
+  children,
+  onClose,
+}: {
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  const dialog = useDialog(onClose);
+  return (
+    <dialog
+      {...dialog}
+      className={`${r.detailDialog} ${r.editDialog}`}
+      aria-label="Détail de l’annonce"
+    >
+      <button className={w.close} aria-label="Fermer" onClick={onClose}>
+        ×
+      </button>
+      {children}
+    </dialog>
+  );
+}
+function LiveBoards({
+  campaigns,
+  query,
+  onDetail,
+}: {
+  campaigns: Campaign[];
+  query: string;
+  onDetail: (item: { c: Campaign; a: Ad }) => void;
+}) {
+  const channels = (Object.keys(CHANNELS) as Channel[]).filter((channel) =>
+    campaigns.some((c) => intendedChannels(c).includes(channel)),
+  );
+  const families = campaigns
+    .flatMap((c) =>
+      currentAds(c).map((a) => {
+        const live = c.ads.find(
+          (candidate) =>
+            candidate.familyId === a.familyId && candidate.status === "on_air",
+        );
+        return { c, a, live };
+      }),
+    )
+    .filter(({ c, a, live }) =>
+      [c.name, a.name, a.theme, a.copy, live?.copy]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query.toLowerCase()),
+    );
+  const liveCount = families.filter((f) => f.live).length;
+  const liveChannels = channels.filter((channel) =>
+    families.some((f) => f.live?.channel === channel),
+  ).length;
+  return (
+    <section className={r.overview} aria-label="Vue d’ensemble On air">
+      <div className={r.totals}>
+        <h2>Vue d’ensemble</h2>
+        <p>
+          <b>
+            {liveChannels} / {channels.length}
+          </b>{" "}
+          canaux en ligne{" "}
+          <span>
+            <b>
+              {liveCount} / {families.length}
+            </b>{" "}
+            annonces en ligne
+          </span>
+        </p>
+      </div>
+      <div className={r.artboards}>
+        {channels.map((channel) => {
+          const entries = families.filter((f) => f.a.channel === channel);
+          const live = entries.filter((f) => f.live).length;
+          return (
+            <section
+              className={r.artboard}
+              key={channel}
+              aria-label={CHANNELS[channel]}
+            >
+              <header>
+                <ChannelIcon channel={channel} size={38} />
+                <h3>{CHANNELS[channel]}</h3>
+                <span>
+                  <b>
+                    {live} / {entries.length}
+                  </b>{" "}
+                  en ligne
+                </span>
+                <i
+                  className={
+                    live && live === entries.length ? r.complete : r.incomplete
+                  }
+                  aria-label={
+                    live === entries.length && live > 0
+                      ? "Toutes les annonces en ligne"
+                      : "Annonces à mettre en ligne"
+                  }
+                >
+                  {live && live === entries.length ? "✓" : "○"}
+                </i>
+              </header>
+              <div
+                className={`${r.thumbnails} ${["instagram", "tiktok"].includes(channel) ? r.verticalTiles : ""}`}
+              >
+                {entries.map(({ c, a, live }) =>
+                  live ? (
+                    <button
+                      key={a.id}
+                      className={r.liveTile}
+                      aria-label={"Ouvrir " + live.name + " · " + c.name}
+                      onClick={() => onDetail({ c, a: live })}
+                    >
+                      <MediaPreview campaign={c} ad={live} thumbnail />
+                    </button>
+                  ) : (
+                    <div
+                      key={a.id}
+                      className={r.waitingTile}
+                      aria-label={a.name + " : pas en ligne"}
+                    >
+                      <span aria-hidden="true">◷</span>
+                    </div>
+                  ),
+                )}
+                {!entries.length && (
+                  <div className={r.noAds}>Aucune annonce créée</div>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+      {!channels.length && (
+        <div className={w.empty}>
+          <p>
+            Aucun canal prévu. Créez une campagne pour préparer vos annonces.
+          </p>
+        </div>
+      )}
+    </section>
   );
 }

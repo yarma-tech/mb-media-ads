@@ -5,11 +5,18 @@ import { CATALOG, CHANNELS } from "../../lib/campaign-studio/workspace/catalog";
 import {
   createCampaign,
   addAd,
+  duplicateAd,
+  moveAd,
+  handleComment,
+  editAd,
+  newVersion,
 } from "../../lib/campaign-studio/workspace/workflow";
 import type {
   Actor,
   AdStatus,
 } from "../../lib/campaign-studio/workspace/types";
+
+test.use({ screenshot: "only-on-failure" });
 
 const base = process.env.STUDIO_UX_BASE_URL ?? "http://127.0.0.1:3018";
 const actor: Actor = {
@@ -192,6 +199,7 @@ async function fixture(
       }
       if (cmd.type === "create_campaign") {
         c = createCampaign(cmd.name, actor, now);
+        Object.assign(c, cmd.fields ?? {});
         data = { ...data, campaigns: [c, ...data.campaigns] };
       }
       if (c) {
@@ -227,14 +235,20 @@ async function fixture(
             base +
             (video ? "/__ux-video.mp4" : "/deck-demo/cu-generique-square.jpg");
         }
-        if (cmd.type === "edit") {
-          Object.assign(
-            c.ads.find((a) => a.id === cmd.adId)!,
+        if (cmd.type === "edit")
+          c = editAd(
+            c,
+            cmd.adId,
             cmd.fields,
+            actor,
+            cmd.source ?? "configuration",
+            now,
+            cmd.unlocked,
           );
-          c.ads.find((a) => a.id === cmd.adId)!.revision++;
-          c.revision++;
-        }
+        if (cmd.type === "move_ad")
+          c = moveAd(c, cmd.adId, cmd.beforeId, actor, now);
+        if (cmd.type === "handle_comment")
+          c = handleComment(c, cmd.adId, cmd.commentIndex, actor, now);
         if (cmd.type === "add_media_batch") {
           const batch = createMediaAds(
             c,
@@ -249,8 +263,8 @@ async function fixture(
         if (cmd.type === "add")
           for (const format of cmd.formats)
             c = addAd(c, cmd.channel, format, actor, now);
-        if (cmd.type === "version" || cmd.type === "duplicate")
-          c = addAd(c, "google", "search", actor, now);
+        if (cmd.type === "version") c = newVersion(c, cmd.adId, actor, now);
+        if (cmd.type === "duplicate") c = duplicateAd(c, cmd.adId, actor, now);
         if (cmd.type === "submit") {
           c.ads
             .filter((a) => cmd.adIds.includes(a.id))
@@ -275,7 +289,7 @@ async function fixture(
     .fill("test-only-password");
   await page.getByRole("button", { name: "Se connecter", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Votre espace de travail" }),
+    page.getByRole("heading", { name: "Vos campagnes" }),
   ).toBeVisible();
   return {
     get campaigns() {
@@ -285,6 +299,9 @@ async function fixture(
       data.campaigns = [];
     },
     commands,
+    setMediaUrl: (id: string, url: string) => {
+      data.mediaUrls[id] = url;
+    },
     hold: (type: string) => {
       let release!: () => void;
       heldCommands.set(
@@ -307,6 +324,30 @@ async function fixture(
     },
   };
 }
+async function beginCampaign(page: Page, name: string) {
+  await page
+    .getByRole("link", { name: "Créer votre campagne", exact: true })
+    .click();
+  await page.getByLabel("Nom de campagne", { exact: true }).fill(name);
+}
+async function openPreview(page: Page) {
+  const toggle = page.getByRole("button", { name: "Aperçu", exact: true });
+  if ((await toggle.getAttribute("aria-pressed")) !== "true")
+    await toggle.click();
+}
+
+async function openLibrary(page: Page) {
+  const summary = page
+    .locator("summary")
+    .filter({ hasText: "Bibliothèque des médias" });
+  if (
+    !(await summary.evaluate(
+      (element) => (element.parentElement as HTMLDetailsElement).open,
+    ))
+  )
+    await summary.click();
+}
+
 async function openEditor(page: Page, id: string) {
   await page.getByRole("link", { name: "Validation", exact: true }).click();
   await page.getByLabel("Filtrer par campagne").selectOption(id);
@@ -315,6 +356,10 @@ async function openEditor(page: Page, id: string) {
     .getByRole("button", { name: "Modifier et valider", exact: true })
     .click();
   await expect(page.getByLabel("Titres · un par ligne")).toBeEditable();
+  await page.screenshot({
+    path: `/tmp/studio-d-20261029/modal-${page.viewportSize()?.width ?? 1440}.png`,
+    fullPage: true,
+  });
 }
 
 test("une correction survit à Échap, fermeture, clic extérieur et rechargement", async ({
@@ -397,9 +442,11 @@ test("campagne, canal, filtres et recherche survivent aux transitions et reload"
     page.getByRole("button", { name: /Google SEM/ }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.getByLabel("Campagne à configurer").selectOption(campaigns[0].id);
+  await openPreview(page);
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
     "Alpha annonce",
   );
+  await openPreview(page);
   await expect(page.getByLabel("Nom de l’annonce active")).not.toHaveValue(
     "Beta annonce",
   );
@@ -410,13 +457,13 @@ test("double clic et Entrée répétés créent une seule campagne sous 800 ms",
 }) => {
   const f = await fixture(page);
   f.latency(800);
-  await page.getByLabel("Nom de la nouvelle campagne").fill("Campagne unique");
+  await beginCampaign(page, "Campagne unique");
   const create = page.getByRole("button", {
-    name: "Créer une campagne",
+    name: "Continuer",
     exact: true,
   });
   await create.dblclick();
-  await page.getByLabel("Nom de la nouvelle campagne").press("Enter");
+  await page.keyboard.press("Enter");
   await expect(page.getByLabel("Campagne à configurer")).toBeVisible();
   expect(f.commands.filter((c) => c.type === "create_campaign")).toHaveLength(
     1,
@@ -506,6 +553,7 @@ test("contexte historique et campagne B ne réutilisent aucune ligne ni sélecti
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
   await page.getByRole("button", { name: /Google SEM/ }).click();
+  await openPreview(page);
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
     "Beta annonce",
   );
@@ -517,6 +565,7 @@ test("contexte historique et campagne B ne réutilisent aucune ligne ni sélecti
   await page
     .getByLabel("Campagne à configurer")
     .selectOption(f.campaigns[0].id);
+  await openPreview(page);
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
     "Alpha annonce",
   );
@@ -528,10 +577,12 @@ test("contexte historique et campagne B ne réutilisent aucune ligne ni sélecti
   await expect(page.getByLabel("Campagne à configurer")).toHaveValue(
     f.campaigns[1].id,
   );
+  await openPreview(page);
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
     "Beta annonce",
   );
   await page.goForward();
+  await openPreview(page);
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
     "Alpha annonce",
   );
@@ -544,7 +595,7 @@ test("contexte historique et campagne B ne réutilisent aucune ligne ni sélecti
     base + "/studio/configuration?campagne=ancienne-campagne-inconnue",
   );
   await expect(
-    page.getByText("Sélectionnez une campagne disponible depuis la Home."),
+    page.getByRole("heading", { name: "Vos campagnes", exact: true }),
   ).toBeVisible();
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveCount(0);
 });
@@ -601,7 +652,7 @@ test("formats et duplication ne se créent qu’une fois, nouvelle intention per
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
   await page.getByRole("button", { name: /Google SEM/ }).click();
   await page
-    .getByText("Choisir des formats ou ajouter des annonces", { exact: true })
+    .getByRole("button", { name: "Ajouter des annonces", exact: true })
     .click();
   await page.getByLabel(/Annonce responsive Search/).check();
   f.latency(800);
@@ -614,13 +665,13 @@ test("formats et duplication ne se créent qu’une fois, nouvelle intention per
   await expect(page.getByRole("row")).toHaveCount(3);
   expect(f.commands.filter((c) => c.type === "add")).toHaveLength(1);
   await page
-    .getByRole("button", { name: "Dupliquer", exact: true })
+    .getByRole("button", { name: /^Dupliquer / })
     .first()
     .dblclick();
   await expect(page.getByRole("row")).toHaveCount(4);
   expect(f.commands.filter((c) => c.type === "duplicate")).toHaveLength(1);
   await page
-    .getByRole("button", { name: "Dupliquer", exact: true })
+    .getByRole("button", { name: /^Dupliquer / })
     .first()
     .click();
   await expect(page.getByRole("row")).toHaveCount(5);
@@ -633,15 +684,18 @@ test("double Entrée sous 2 s et échec de création permettent une reprise expl
   const f = await fixture(page);
   f.latency(2000);
   f.fail("create_campaign");
-  const name = page.getByLabel("Nom de la nouvelle campagne");
+  await page
+    .getByRole("link", { name: "Créer votre campagne", exact: true })
+    .click();
+  const name = page.getByLabel("Nom de campagne");
   await name.fill("Création clavier");
   await name.press("Enter");
-  await name.press("Enter");
+  await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("button", { name: "Création…", exact: true }),
+    page.getByRole("button", { name: "Enregistrement…", exact: true }),
   ).toBeDisabled();
   await expect(
-    page.getByRole("button", { name: "Créer une campagne", exact: true }),
+    page.getByRole("button", { name: "Continuer", exact: true }),
   ).toBeEnabled();
   expect(f.commands.filter((c) => c.type === "create_campaign")).toHaveLength(
     1,
@@ -664,7 +718,9 @@ test("soumission avec sauvegarde préalable et demande de modification restent u
   await expect(field).toBeEditable();
   f.latency(800);
   await field.fill("Titre corrigé\nTitre deux\nTitre trois");
-  await page.getByRole("button", { name: "Envoyer", exact: true }).dblclick();
+  await page
+    .getByRole("button", { name: "Envoyer Beta annonce", exact: true })
+    .dblclick();
   await expect(
     page.getByRole("cell", { name: "À valider", exact: true }),
   ).toBeVisible();
@@ -686,7 +742,9 @@ test("nouvelle version protégée sous latence", async ({ page }) => {
   const f = await fixture(page, "on_air");
   await page.getByRole("link", { name: "On air", exact: true }).click();
   await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
-  await expect(page.getByRole("article")).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "Ouvrir Beta annonce · Beta", exact: true })
+    .click();
   f.latency(800);
   await page
     .getByRole("button", { name: "Créer une nouvelle version", exact: true })
@@ -705,6 +763,7 @@ test("média prêt sans URL reste conforme pendant préparation de l’aperçu",
 }) => {
   await fixture(page, "pending", true);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
+  await openLibrary(page);
   const library = page.getByRole("region", {
     name: "Bibliothèque du canal",
     exact: true,
@@ -721,6 +780,7 @@ test("média prêt sans URL reste conforme pendant préparation de l’aperçu",
   await expect(
     library.getByRole("checkbox", { name: "Fil carré", exact: true }),
   ).toBeEnabled();
+  await openPreview(page);
   const preview = page.locator("aside").filter({
     has: page.getByRole("heading", { name: "Aperçu", exact: true }),
   });
@@ -743,6 +803,7 @@ for (const kind of ["image", "video"] as const) {
       await youtube.click();
       await expect(youtube).toHaveAttribute("aria-pressed", "true");
     }
+    await openLibrary(page);
     const library = page.getByRole("region", {
       name: "Bibliothèque du canal",
       exact: true,
@@ -855,11 +916,15 @@ test("configuration sans campagne : création directe au clavier", async ({
   const f = await fixture(page);
   f.empty();
   await page.goto(base + "/studio/configuration");
-  await expect(page.getByLabel("Nom de la nouvelle campagne")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Créer votre campagne", exact: true }),
+  ).toBeVisible();
   await page
-    .getByLabel("Nom de la nouvelle campagne")
-    .fill("Première campagne");
-  await page.getByLabel("Nom de la nouvelle campagne").press("Enter");
+    .getByRole("link", { name: "Créer votre campagne", exact: true })
+    .click();
+  await expect(page.getByLabel("Nom de campagne")).toBeVisible();
+  await page.getByLabel("Nom de campagne").fill("Première campagne");
+  await page.getByLabel("Nom de campagne").press("Enter");
   await expect(page.getByLabel("Campagne à configurer")).toBeVisible();
   expect(f.commands.filter((c) => c.type === "create_campaign")).toHaveLength(
     1,
@@ -959,11 +1024,14 @@ test("marque neuve affectée directement à sa campagne", async ({ page }) => {
   await page
     .getByLabel("Nom", { exact: true })
     .fill("Marque créée dans la campagne");
-  await page.getByRole("button", { name: "Créer", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Créer la marque", exact: true })
+    .click();
   await expect(
     page.getByRole("combobox", { name: "Marque", exact: true }),
   ).toHaveValue("created-brand");
   expect(f.commands.filter((c) => c.type === "create_brand")).toHaveLength(1);
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await expect
     .poll(() => f.campaigns.find((c) => c.name === "Beta")?.brandId)
     .toBe("created-brand");
@@ -974,6 +1042,7 @@ test("vérification média sans invitation à terminer ou revérifier le transfe
 }) => {
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
+  await openLibrary(page);
   const library = page.getByRole("region", {
     name: "Bibliothèque du canal",
     exact: true,
@@ -1197,7 +1266,7 @@ for (const width of [390, 320]) {
     });
     await expect(field).toBeEditable();
     await page
-      .getByRole("button", { name: "Beta annonce", exact: true })
+      .getByLabel("Thématique de Beta annonce", { exact: true })
       .focus();
     await page.keyboard.press("Tab");
     await expect(field).toBeFocused();
@@ -1245,6 +1314,7 @@ test("préparation du transfert sans bouton Pause trompeur", async ({
 }) => {
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
+  await openLibrary(page);
   const library = page.getByRole("region", {
     name: "Bibliothèque du canal",
     exact: true,
@@ -1274,6 +1344,7 @@ test("vérification manuelle retire seulement l’erreur de ce transfert", async
 }) => {
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
+  await openLibrary(page);
   const library = page.getByRole("region", {
     name: "Bibliothèque du canal",
     exact: true,
@@ -1296,6 +1367,7 @@ test("vérification manuelle retire seulement l’erreur de ce transfert", async
 test("vérifier A ne masque pas l’erreur du transfert B", async ({ page }) => {
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
+  await openLibrary(page);
   const library = page.getByRole("region", {
     name: "Bibliothèque du canal",
     exact: true,
@@ -1414,10 +1486,7 @@ test("configuration neuve : campagne puis canaux, dépôt multiple et création 
   page,
 }) => {
   const f = await fixture(page);
-  await page.getByLabel("Nom de la nouvelle campagne").fill("Lot multicanal");
-  await page
-    .getByRole("button", { name: "Créer une campagne", exact: true })
-    .click();
+  await beginCampaign(page, "Lot multicanal");
   await expect(
     page.getByRole("form", { name: "Informations de campagne", exact: true }),
   ).toBeVisible();
@@ -1475,6 +1544,12 @@ test("configuration neuve : campagne puis canaux, dépôt multiple et création 
   await chooser.getByRole("button", { name: "Instagram", exact: true }).click();
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(
+    page.getByRole("region", {
+      name: "Bibliothèque des canaux sélectionnés",
+      exact: true,
+    }),
+  ).toBeVisible();
   await page.reload();
   const library = page.getByRole("region", {
     name: "Bibliothèque des canaux sélectionnés",
@@ -1561,10 +1636,7 @@ test("configuration neuve : campagne puis canaux, dépôt multiple et création 
 });
 
 async function startMediaBatch(page: Page, name: string, channels: string[]) {
-  await page.getByLabel("Nom de la nouvelle campagne").fill(name);
-  await page
-    .getByRole("button", { name: "Créer une campagne", exact: true })
-    .click();
+  await beginCampaign(page, name);
   await expect(
     page.getByRole("form", { name: "Informations de campagne", exact: true }),
   ).toBeVisible();
@@ -1716,12 +1788,7 @@ test("configuration en trois étapes : campagne, canaux, annonces", async ({
   page,
 }) => {
   const f = await fixture(page);
-  await page
-    .getByLabel("Nom de la nouvelle campagne")
-    .fill("Parcours trois étapes");
-  await page
-    .getByRole("button", { name: "Créer une campagne", exact: true })
-    .click();
+  await beginCampaign(page, "Parcours trois étapes");
   const form = page.getByRole("form", {
     name: "Informations de campagne",
     exact: true,
@@ -1779,6 +1846,7 @@ test("configuration en trois étapes : campagne, canaux, annonces", async ({
   await form
     .getByRole("combobox", { name: "Marque", exact: true })
     .selectOption("brand-test");
+  await form.locator("summary").click();
   await form
     .getByLabel("URL commune", { exact: true })
     .fill("https://example.test/admissions");
@@ -1833,12 +1901,7 @@ test("première étape : un échec conserve les champs et ne passe pas aux canau
   page,
 }) => {
   const f = await fixture(page);
-  await page
-    .getByLabel("Nom de la nouvelle campagne")
-    .fill("Campagne à compléter");
-  await page
-    .getByRole("button", { name: "Créer une campagne", exact: true })
-    .click();
+  await beginCampaign(page, "Campagne à compléter");
   const form = page.getByRole("form", {
     name: "Informations de campagne",
     exact: true,
@@ -1846,11 +1909,11 @@ test("première étape : un échec conserve les champs et ne passe pas aux canau
   await form
     .getByLabel("Nom de campagne", { exact: true })
     .fill("Nom conservé après erreur");
-  f.fail("campaign", "Enregistrement indisponible.");
+  f.fail("create_campaign", "Enregistrement indisponible.");
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await expect(
     page
-      .getByRole("region", { name: "Informations de la campagne", exact: true })
+      .getByRole("region", { name: "Nouvelle campagne", exact: true })
       .getByRole("alert"),
   ).toContainText("Enregistrement indisponible.");
   await expect(form.getByLabel("Nom de campagne", { exact: true })).toHaveValue(
@@ -1888,4 +1951,350 @@ test("une autre campagne vierge reprend à ses informations, pas à l’étape p
     empty.name,
   );
   await expect(page.locator("input[type=file]")).toHaveCount(0);
+});
+
+test("direction D : accueil vide puis création atomique avec métadonnées", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/landing-campaigns-desktop.png",
+    fullPage: true,
+  });
+  f.empty();
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Vos campagnes", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("textbox")).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Créer votre campagne", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/landing-empty-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/landing-empty-mobile.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await beginCampaign(page, "Admissions atomiques");
+  await expect(
+    page.getByRole("group", { name: "Choisir les canaux" }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("combobox", { name: "Marque", exact: true })
+    .selectOption("brand-test");
+  await page.locator("summary").filter({ hasText: "Dates et lien" }).click();
+  await page
+    .getByLabel("URL commune", { exact: true })
+    .fill("https://example.test/admissions");
+  await page.getByLabel("Début", { exact: true }).fill("2027-01-01");
+  await page
+    .getByLabel("Fin · 23 h 59 Montréal", { exact: true })
+    .fill("2027-02-01");
+  await page.getByRole("button", { name: "Continuer", exact: true }).click();
+  await expect(
+    page.getByRole("group", { name: "Choisir les canaux" }),
+  ).toBeVisible();
+  expect(
+    f.commands.filter((command) => command.type === "create_campaign"),
+  ).toEqual([
+    expect.objectContaining({
+      name: "Admissions atomiques",
+      fields: {
+        brandId: "brand-test",
+        defaultUrl: "https://example.test/admissions",
+        startDate: "2027-01-01",
+        endDate: "2027-02-01",
+      },
+    }),
+  ]);
+  expect(
+    f.commands.filter((command) => command.type === "campaign"),
+  ).toHaveLength(0);
+  await page.reload();
+  await expect(
+    page.getByRole("group", { name: "Choisir les canaux" }),
+  ).toBeVisible();
+});
+
+test("direction D : Tab traverse les lignes et conserve le texte saisi", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft");
+  const campaign = addAd(f.campaigns[1], "google", "search", actor, now);
+  campaign.ads[1].name = "Deuxième ligne";
+  f.campaigns[1] = campaign;
+  await page.goto(
+    base + "/studio/configuration?campagne=" + campaign.id + "&canal=google",
+  );
+  await expect(page.getByLabel("Nom de l’annonce active")).toHaveCount(0);
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/table-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/table-mobile.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const last = page.getByLabel("Chemin 2 de Beta annonce", { exact: true });
+  await last.fill("admissions");
+  await last.press("Tab");
+  await expect(
+    page.getByLabel("Format de Deuxième ligne", { exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(last).toBeFocused();
+  await expect(last).toHaveValue("admissions");
+  await expect
+    .poll(
+      () => f.campaigns.find((item) => item.id === campaign.id)?.ads[0].path2,
+    )
+    .toBe("admissions");
+  await page.reload();
+  await expect(last).toHaveValue("admissions");
+});
+
+test("direction D : Copier tout produit des blocs texte complets", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft");
+  const campaign = addAd(f.campaigns[1], "google", "search", actor, now);
+  campaign.ads[0].theme = "Admissions";
+  campaign.ads[0].path1 = "formation";
+  campaign.ads[0].comments = [
+    {
+      text: "Garder ce détail",
+      author: "Validation",
+      at: now,
+      resolution: "handled",
+    },
+  ];
+  campaign.ads[1].name = "Deuxième annonce";
+  f.campaigns[1] = campaign;
+  await page.goto(
+    base + "/studio/configuration?campagne=" + campaign.id + "&canal=google",
+  );
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          (window as unknown as { copiedText: string }).copiedText = value;
+        },
+      },
+    });
+  });
+  await page.getByRole("button", { name: "Copier tout", exact: true }).click();
+  const copied = await page.evaluate(
+    () => (window as unknown as { copiedText: string }).copiedText,
+  );
+  expect(copied).toContain("Annonce 1\nNom : Beta annonce\nCanal : Google SEM");
+  expect(copied).toContain("Thématique : Admissions");
+  expect(copied).toContain("Titres : Titre un\nTitre deux\nTitre trois");
+  expect(copied).toContain("Descriptions : Description un\nDescription deux");
+  expect(copied).toContain("Chemin 1 : formation");
+  expect(copied).toContain("Lien : https://example.test");
+  expect(copied).toContain("Commentaire traité : Garder ce détail");
+  expect(copied).toContain("\n\nAnnonce 2\nNom : Deuxième annonce");
+  expect(copied).not.toContain("<table");
+});
+
+test("direction D : duplication sous la source et déplacement clavier persistants", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft");
+  const campaign = addAd(f.campaigns[1], "google", "search", actor, now);
+  campaign.ads[1].name = "Dernière annonce";
+  f.campaigns[1] = campaign;
+  await page.goto(
+    base + "/studio/configuration?campagne=" + campaign.id + "&canal=google",
+  );
+  await page
+    .getByRole("button", { name: "Dupliquer Beta annonce", exact: true })
+    .click();
+  await expect(page.locator("tbody tr[data-ad-row]")).toHaveCount(3);
+  await expect
+    .poll(() =>
+      f.campaigns
+        .find((item) => item.id === campaign.id)
+        ?.ads.map((ad) => ad.name),
+    )
+    .toEqual(["Beta annonce", "Beta annonce (copie)", "Dernière annonce"]);
+  expect(
+    f.campaigns.find((item) => item.id === campaign.id)?.ads[1].status,
+  ).toBe("draft");
+  await page
+    .getByRole("button", { name: "Déplacer Beta annonce (copie)", exact: true })
+    .press("Alt+ArrowDown");
+  await expect
+    .poll(() =>
+      f.campaigns
+        .find((item) => item.id === campaign.id)
+        ?.ads.map((ad) => ad.name),
+    )
+    .toEqual(["Beta annonce", "Dernière annonce", "Beta annonce (copie)"]);
+  await page.reload();
+  const rows = page.locator("tbody tr[data-ad-row]");
+  await expect(
+    rows
+      .nth(2)
+      .getByLabel("Thématique de Beta annonce (copie)", { exact: true }),
+  ).toBeVisible();
+  expect(
+    f.commands.filter((command) => command.type === "duplicate"),
+  ).toHaveLength(1);
+  expect(
+    f.commands.filter((command) => command.type === "move_ad"),
+  ).toHaveLength(1);
+});
+
+test("direction D : commentaire traité conservé en gris sans validation", async ({
+  page,
+}) => {
+  const f = await fixture(page, "changes_requested", true);
+  f.setMediaUrl("ready-media", base + "/deck-demo/cu-generique-square.jpg");
+  f.campaigns[1].ads[0].comments = [
+    {
+      text: "Préciser les admissions",
+      author: "Validation",
+      at: now,
+      resolution: "open",
+    },
+  ];
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=facebook",
+  );
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/table-social-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/table-social-mobile.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await openPreview(page);
+  await expect(
+    page
+      .getByRole("complementary", { name: "Aperçu de l’annonce", exact: true })
+      .locator("img"),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/table-social-preview-desktop.png",
+    fullPage: true,
+  });
+  await page
+    .getByRole("button", {
+      name: "Marquer le commentaire comme pris en compte",
+      exact: true,
+    })
+    .click();
+  await expect(
+    page.getByRole("button", {
+      name: "Commentaire pris en compte",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText("Préciser les admissions", { exact: false }),
+  ).toBeVisible();
+  const row = page
+    .getByRole("row")
+    .filter({ hasText: "Préciser les admissions" });
+  await expect(row).toHaveClass(/handled/);
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/table-comment-handled-desktop.png",
+    fullPage: true,
+  });
+  expect(f.campaigns[1].ads[0].status).toBe("changes_requested");
+  expect(
+    f.commands.filter((command) =>
+      ["decide", "submit"].includes(String(command.type)),
+    ),
+  ).toHaveLength(0);
+  await page.reload();
+  await expect(row).toHaveClass(/handled/);
+});
+
+test("direction D : validation affiche tout le groupe par défaut", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  const campaign = addAd(f.campaigns[1], "google", "search", actor, now);
+  Object.assign(campaign.ads[1], {
+    name: "Second texte du groupe",
+    status: "pending",
+  });
+  f.campaigns[1] = campaign;
+  await page.reload();
+  await page.getByRole("link", { name: "Validation", exact: true }).click();
+  await page.getByLabel("Filtrer par campagne").selectOption(campaign.id);
+  await expect(page.getByRole("article")).toHaveCount(2);
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/validation-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/validation-mobile.png",
+    fullPage: true,
+  });
+  await expect(
+    page.getByRole("button", { name: "Carrousel", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+  await expect(
+    page.getByRole("button", { name: "Modifier et valider", exact: true }),
+  ).toHaveCount(2);
+});
+
+test("direction D : On air inclut les canaux prévus et compte les familles", async ({
+  page,
+}) => {
+  const f = await fixture(page, "on_air");
+  let campaign = newVersion(
+    f.campaigns[1],
+    f.campaigns[1].ads[0].id,
+    actor,
+    now,
+  );
+  campaign = addAd(campaign, "facebook", "square", actor, now);
+  campaign.channels = ["google", "facebook", "instagram"];
+  f.campaigns[1] = campaign;
+  await page.reload();
+  await page.getByRole("link", { name: "On air", exact: true }).click();
+  await page.getByLabel("Filtrer par campagne").selectOption(campaign.id);
+  const overview = page.getByRole("region", {
+    name: "Vue d’ensemble On air",
+    exact: true,
+  });
+  await expect(overview).toContainText("1 / 3 canaux en ligne");
+  await expect(overview).toContainText("1 / 2 annonces en ligne");
+  await expect(
+    overview.getByRole("region", { name: "Google SEM", exact: true }),
+  ).toContainText("1 / 1");
+  await expect(
+    overview.getByRole("region", { name: "Facebook", exact: true }),
+  ).toContainText("0 / 1");
+  await expect(
+    overview.getByRole("region", { name: "Instagram", exact: true }),
+  ).toContainText("Aucune annonce créée");
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/onair-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: "/tmp/studio-d-20261029/onair-mobile.png",
+    fullPage: true,
+  });
 });

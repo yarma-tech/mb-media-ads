@@ -12,6 +12,8 @@ const text = z.string().max(10000);
 const uuid = z.uuid();
 export const FieldsSchema = z
   .object({
+    theme: z.string().trim().max(200),
+    format: z.string().min(1).max(50),
     name: z.string().max(200),
     copy: text,
     headline: z.string().max(500),
@@ -30,6 +32,16 @@ export const CommandSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("create_campaign"),
     name: z.string().trim().min(1).max(200),
+    fields: z
+      .object({
+        brandId: uuid.nullable(),
+        defaultUrl: z.string().max(2048),
+        startDate: z.iso.date().nullable(),
+        endDate: z.iso.date().nullable(),
+      })
+      .partial()
+      .strict()
+      .optional(),
   }),
   z.object({
     type: z.literal("campaign"),
@@ -41,6 +53,7 @@ export const CommandSchema = z.discriminatedUnion("type", [
         defaultUrl: z.string().max(2048),
         startDate: z.iso.date().nullable(),
         endDate: z.iso.date().nullable(),
+        channels: z.array(ChannelSchema).max(6),
       })
       .partial()
       .strict(),
@@ -99,6 +112,18 @@ export const CommandSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("publish"), ...target, adId: uuid }),
   z.object({ type: z.literal("version"), ...target, adId: uuid }),
   z.object({ type: z.literal("duplicate"), ...target, adId: uuid }),
+  z.object({
+    type: z.literal("move_ad"),
+    ...target,
+    adId: uuid,
+    beforeId: uuid.nullable(),
+  }),
+  z.object({
+    type: z.literal("handle_comment"),
+    ...target,
+    adId: uuid,
+    commentIndex: z.number().int().nonnegative(),
+  }),
   z.object({ type: z.literal("stop"), ...target, adId: uuid }),
   z.object({ type: z.literal("reopen"), ...target, endDate: z.iso.date() }),
   z.object({

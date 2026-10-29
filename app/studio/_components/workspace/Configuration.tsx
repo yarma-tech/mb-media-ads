@@ -1,8 +1,12 @@
 "use client";
-import { useState, useRef, useEffect, type MutableRefObject } from "react";
-import Link from "next/link";
+import { useState, useRef, useEffect } from "react";
 import CreateCampaign from "./CreateCampaign";
 import CampaignInfoForm from "./CampaignInfoForm";
+import CampaignLanding from "./CampaignLanding";
+import TableSession, { type CellTarget } from "./AdTable";
+import ChannelIcon from "./ChannelIcon";
+import Icon from "../Icon";
+import { copyAdsText } from "@/lib/campaign-studio/workspace/presentation";
 import { useWorkspaceNavigation } from "./WorkspaceNavigation";
 import type {
   Ad,
@@ -14,16 +18,10 @@ import type {
 import {
   CATALOG,
   CHANNELS,
-  compatibleFormats,
   mediaChannels,
 } from "@/lib/campaign-studio/workspace/catalog";
-import { isComplete } from "@/lib/campaign-studio/workspace/workflow";
 import { useWorkspace } from "./WorkspaceProvider";
-import { useAdEditor } from "./useAdEditor";
-import Preview from "./Preview";
-import History from "./History";
 import MediaLibrary from "./MediaLibrary";
-import { uploadFile } from "./upload";
 import w from "./workspace.module.css";
 export const STATUS = {
   draft: "Brouillon",
@@ -35,29 +33,14 @@ export const STATUS = {
 };
 export default function Configuration() {
   const { data } = useWorkspace();
-  const { params, update, href } = useWorkspaceNavigation();
+  const { params, update } = useWorkspaceNavigation();
   const id = params.get("campagne");
   const campaign =
     !id || id === "all"
       ? data!.campaigns[0]
       : data!.campaigns.find((c) => c.id === id);
-  if (!campaign)
-    return (
-      <div className={w.empty}>
-        <p>
-          {data!.campaigns.length
-            ? "Sélectionnez une campagne disponible depuis la Home."
-            : "Créez votre première campagne pour commencer."}
-        </p>
-        {data!.campaigns.length ? (
-          <Link href={href("/studio", { campagne: "" })}>
-            Voir les campagnes
-          </Link>
-        ) : (
-          <CreateCampaign />
-        )}
-      </div>
-    );
+  if (params.get("nouvelle") === "1") return <CreateCampaign />;
+  if (!campaign) return <CampaignLanding />;
   return (
     <>
       <div className={w.toolbar}>
@@ -74,7 +57,6 @@ export default function Configuration() {
             </option>
           ))}
         </select>
-        <span>Configuration</span>
       </div>
       <CampaignEditor key={campaign.id} campaign={campaign} />
     </>
@@ -93,6 +75,7 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
       ? [...new Set(fromUrl)]
       : [
           ...new Set([
+            ...(c.channels ?? []),
             ...c.ads.map((a) => a.channel),
             ...c.media.flatMap(mediaChannels),
           ]),
@@ -125,15 +108,25 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
       ? params.get("canal")
       : (fromUrl[0] ?? "facebook")
   ) as Channel;
-  function continueToMedia() {
-    update({
-      canaux: chosen.join(","),
-      canal: chosen[0],
-      etape:
-        !c.ads.length && chosen.some((id) => id !== "google")
-          ? "media"
-          : "editor",
-    });
+  async function continueToMedia() {
+    try {
+      if (JSON.stringify(c.channels ?? []) !== JSON.stringify(chosen))
+        await run({
+          type: "campaign",
+          campaignId: c.id,
+          fields: { channels: chosen },
+        });
+      update({
+        canaux: chosen.join(","),
+        canal: chosen[0],
+        etape:
+          !c.ads.length && chosen.some((id) => id !== "google")
+            ? "media"
+            : "editor",
+      });
+    } catch {
+      /* Keep the chosen channels on a failed save. */
+    }
   }
   const steps = (
     <CampaignSteps
@@ -169,7 +162,7 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
           aria-label="Choisir les canaux de la campagne"
         >
           <div>
-            <h2 tabIndex={-1}>Sur quels canaux ?</h2>
+            <h2 tabIndex={-1}>Choisir les canaux</h2>
             <p>Choisissez un ou plusieurs canaux.</p>
           </div>
           <div
@@ -191,9 +184,10 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
                   )
                 }
               >
-                {CHANNELS[id]}
-                <span aria-hidden="true">
-                  {chosen.includes(id) ? "✓" : "+"}
+                <ChannelIcon channel={id} size={42} />
+                <b>{CHANNELS[id]}</b>
+                <span className={w.channelCheck} aria-hidden="true">
+                  {chosen.includes(id) ? <Icon name="check" /> : ""}
                 </span>
               </button>
             ))}
@@ -202,9 +196,9 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
             <button
               className={w.primary}
               disabled={!chosen.length}
-              onClick={continueToMedia}
+              onClick={() => void continueToMedia()}
             >
-              Continuer
+              Continuer <Icon name="arrow" />
             </button>
             {(c.ads.length > 0 || c.media.length > 0) && (
               <button
@@ -228,7 +222,15 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
           aria-label="Préparer les annonces depuis les médias"
         >
           <div className={w.heading}>
-            <span>{chosen.map((id) => CHANNELS[id]).join(" · ")}</span>
+            <span>
+              {chosen.map((id) => (
+                <span className={w.channelPill} key={id}>
+                  <ChannelIcon channel={id} />
+                  {CHANNELS[id]}
+                  <Icon name="check" size={14} />
+                </span>
+              ))}
+            </span>
             <button disabled={importing} onClick={() => setStage("channels")}>
               Modifier les canaux
             </button>
@@ -274,9 +276,12 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
   return (
     <>
       {steps}
+      <h2 className={w.editorTitle}>Compléter les annonces</h2>
       {c.status === "active" && (
         <div className={w.setupActions}>
           <button
+            aria-label="Ajouter des médias en lot"
+            title="Ajouter des médias en lot"
             onClick={() => {
               if (!chosen.length) setStage("channels");
               else
@@ -285,7 +290,7 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
                 );
             }}
           >
-            Ajouter des médias en lot
+            <Icon name="plus" />
           </button>
         </div>
       )}
@@ -320,13 +325,21 @@ function CampaignSteps({
         {steps.map((item, index) => (
           <li key={item.stage}>
             <button
+              aria-label={`${index + 1} ${item.label}`}
               disabled={disabled || index + 1 > current}
               aria-current={index + 1 === current ? "step" : undefined}
               onClick={() => {
                 if (index + 1 !== current) onChange(item.stage);
               }}
             >
-              {index + 1} {item.label}
+              <span className={w.stepNumber}>
+                {index + 1 < current ? (
+                  <Icon name="check" size={14} />
+                ) : (
+                  index + 1
+                )}
+              </span>{" "}
+              <span>{item.label}</span>
             </button>
           </li>
         ))}
@@ -352,6 +365,9 @@ function ChannelEditor({
     [activeId, setActiveId] = useState(""),
     [unlocked, setUnlocked] = useState<string[]>([]),
     [batch, setBatch] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const focusTarget = useRef<CellTarget | null>(null);
+  const readRowsRef = useRef<null | (() => Ad[])>(null);
   const channelTabs = useRef<HTMLElement>(null);
   useEffect(() => {
     const nav = channelTabs.current;
@@ -426,6 +442,7 @@ function ChannelEditor({
                 setActiveId("");
               }}
             >
+              <ChannelIcon channel={id as Channel} />
               {label}
               <small>
                 {c.ads.filter((a) => a.channel === id).length || ""}
@@ -489,10 +506,29 @@ function ChannelEditor({
       )}
       <div className={w.heading}>
         <span>
-          {rows.length} annonce(s) · {selected.length} sélectionnée(s)
+          {rows.length} annonce{rows.length > 1 ? "s" : ""} · {selected.length}{" "}
+          sélectionnée{selected.length > 1 ? "s" : ""}
         </span>
         <div className={w.inline}>
           <button
+            aria-label="Copier tout"
+            title="Copier tout"
+            onClick={() =>
+              void navigator.clipboard
+                .writeText(copyAdsText(c, readRowsRef.current?.() ?? rows))
+                .then(() => notify("Tableau copié."))
+                .catch(() =>
+                  notify(
+                    "Copie indisponible. Autorisez le presse-papiers de ce navigateur.",
+                  ),
+                )
+            }
+          >
+            <Icon name="copy" />
+          </button>
+          <button
+            aria-label="Appliquer un champ en batch"
+            title="Appliquer à la sélection"
             disabled={
               !selected.length ||
               c.status === "finished" ||
@@ -500,9 +536,32 @@ function ChannelEditor({
             }
             onClick={() => setBatch((v) => !v)}
           >
-            Appliquer un champ en batch
+            <Icon name="batch" />
           </button>
           <button
+            aria-label="Ajouter des annonces"
+            title="Ajouter des annonces"
+            onClick={() =>
+              document
+                .querySelector<HTMLDetailsElement>(`.${w.formatPicker}`)
+                ?.setAttribute("open", "")
+            }
+          >
+            <Icon name="plus" />
+          </button>
+          <button
+            aria-label="Aperçu"
+            title="Aperçu"
+            aria-pressed={previewOpen}
+            onClick={() => setPreviewOpen((v) => !v)}
+          >
+            <Icon name="eye" />
+          </button>
+          <button
+            aria-label={
+              submission === "sending" ? "Envoi…" : "Envoyer la sélection"
+            }
+            title="Envoyer la sélection"
             className={w.primary}
             disabled={
               !selected.length ||
@@ -511,7 +570,7 @@ function ChannelEditor({
             }
             onClick={() => void submit(selected).catch(() => {})}
           >
-            {submission === "sending" ? "Envoi…" : "Envoyer la sélection"}
+            <Icon name="send" />
           </button>
         </div>
       </div>
@@ -590,7 +649,6 @@ function ChannelEditor({
       )}
       {active ? (
         <TableSession
-          key={active.id + ":" + activeReady}
           c={c}
           active={active}
           rows={rows}
@@ -610,6 +668,10 @@ function ChannelEditor({
           onSubmit={submit}
           submitting={submission === "sending"}
           flushRef={flushRef}
+          previewOpen={previewOpen}
+          onPreview={setPreviewOpen}
+          focusTarget={focusTarget}
+          readRowsRef={readRowsRef}
         />
       ) : (
         <p className={w.empty}>
@@ -618,426 +680,22 @@ function ChannelEditor({
         </p>
       )}
       {channel !== "google" && c.status === "active" && (
-        <MediaLibrary
-          campaign={c}
-          channel={channel}
-          onCreate={async (media: Media, formats: string[]) => {
-            await command({ type: "add", channel, formats, mediaId: media.id });
-          }}
-        />
+        <details className={w.libraryDisclosure}>
+          <summary>Bibliothèque des médias</summary>
+          <MediaLibrary
+            campaign={c}
+            channel={channel}
+            onCreate={async (media: Media, formats: string[]) => {
+              await command({
+                type: "add",
+                channel,
+                formats,
+                mediaId: media.id,
+              });
+            }}
+          />
+        </details>
       )}
     </>
-  );
-}
-function TableSession({
-  c,
-  active,
-  rows,
-  enabled,
-  unlocked,
-  selected,
-  setSelected,
-  setActive,
-  onUnlock,
-  onSubmit,
-  submitting,
-  flushRef,
-}: {
-  c: Campaign;
-  active: Ad;
-  rows: Ad[];
-  enabled: boolean;
-  unlocked: boolean;
-  selected: string[];
-  setSelected: (ids: string[]) => void;
-  setActive: (id: string) => void;
-  onUnlock: () => void;
-  onSubmit: (ids: string[]) => Promise<void>;
-  submitting: boolean;
-  flushRef: MutableRefObject<null | (() => Promise<unknown>)>;
-}) {
-  const { data, run, notify, pending } = useWorkspace();
-  const editor = useAdEditor(c, active, enabled, "configuration", unlocked);
-  const [upload, setUpload] = useState<
-    | { stage: "idle" }
-    | { stage: "uploading"; progress: number }
-    | { stage: "verifying" }
-  >({ stage: "idle" });
-  async function attach(file: File) {
-    setUpload({ stage: "uploading", progress: 0 });
-    try {
-      const m = await uploadFile(
-        file,
-        c,
-        active.channel,
-        run,
-        (progress) => setUpload({ stage: "uploading", progress }),
-        undefined,
-        () => setUpload({ stage: "verifying" }),
-      );
-      if (
-        m.state !== "ready" ||
-        !compatibleFormats(m, active.channel).some(
-          (f) => f.id === active.format,
-        )
-      )
-        throw new Error(
-          m.errors.join(" ") ||
-            "Ce média ne correspond pas au format de cette annonce.",
-        );
-      editor.change({ mediaId: m.id });
-      await editor.save();
-    } catch (e) {
-      notify((e as Error).message);
-    } finally {
-      setUpload({ stage: "idle" });
-    }
-  }
-  const editable =
-    enabled && ["ready", "saving", "error"].includes(editor.status);
-  const saveActive = editor.save;
-  useEffect(() => {
-    flushRef.current = enabled ? () => saveActive() : null;
-    return () => {
-      flushRef.current = null;
-    };
-  }, [flushRef, enabled, saveActive]);
-  const columns =
-    active.channel === "google"
-      ? (["headlines", "descriptions", "url", "path1", "path2"] as const)
-      : (["copy", "headline", "cta", "url", "mediaId"] as const);
-  const labels: Record<string, string> = {
-    headlines: "Titres · 30 caractères",
-    descriptions: "Descriptions · 90 caractères",
-    url: "Destination",
-    path1: "Chemin 1",
-    path2: "Chemin 2",
-    copy: "Texte",
-    headline: "Titre",
-    cta: "CTA",
-    mediaId: "Média",
-  };
-  const changeActive = async (id: string) => {
-    try {
-      if (editor.dirty && editable) await editor.save();
-      setActive(id);
-    } catch {
-      notify(
-        "Corrigez ou enregistrez la ligne active avant de changer d’annonce.",
-      );
-    }
-  };
-  return (
-    <div className={w.configSplit}>
-      <div className={w.tablePane}>
-        {editor.status === "locked" && enabled && (
-          <button onClick={() => void editor.retry().catch(() => {})}>
-            Reprendre l’édition
-          </button>
-        )}
-        {upload.stage !== "idle" && (
-          <p role="status">
-            {upload.stage === "verifying"
-              ? "Vérification du fichier…"
-              : `Transfert vers la ligne active : ${upload.progress} %`}
-          </p>
-        )}
-        <div role="status" className={w.saveState}>
-          {enabled
-            ? editor.status === "saving"
-              ? "Enregistrement…"
-              : editor.status === "error"
-                ? "Erreur de sauvegarde"
-                : editor.status === "locked"
-                  ? "Verrou expiré ou annonce en cours de modification"
-                  : editor.status === "loading"
-                    ? "Ouverture de la ligne…"
-                    : "Enregistré"
-            : active.status === "approved"
-              ? "Annonce approuvée · verrouillée"
-              : "Version figée"}
-          {editor.error && (
-            <span>
-              {editor.error}{" "}
-              <button onClick={() => void editor.retry().catch(() => {})}>
-                Réessayer
-              </button>
-            </span>
-          )}
-        </div>
-        <div
-          className={w.tableScroll}
-          onFocusCapture={(e) => {
-            const container = e.currentTarget;
-            const target = e.target as HTMLElement;
-            requestAnimationFrame(() => {
-              if (!container.isConnected || !target.isConnected) return;
-              const bounds = container.getBoundingClientRect();
-              const field = target.getBoundingClientRect();
-              if (field.left < bounds.left + 6)
-                container.scrollLeft += field.left - bounds.left - 6;
-              else if (field.right > bounds.right - 6)
-                container.scrollLeft += field.right - bounds.right + 6;
-            });
-          }}
-        >
-          <table className={w.editTable}>
-            <thead>
-              <tr>
-                <th>
-                  <input
-                    type="checkbox"
-                    aria-label="Sélectionner toutes les annonces du canal"
-                    checked={
-                      rows.length > 0 &&
-                      rows.every((a) => selected.includes(a.id))
-                    }
-                    onChange={(e) =>
-                      setSelected(e.target.checked ? rows.map((a) => a.id) : [])
-                    }
-                  />
-                </th>
-                <th>Annonce / Format</th>
-                {columns.map((k) => (
-                  <th key={k}>{labels[k]}</th>
-                ))}
-                <th>Statut</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((a) => {
-                const isActive = a.id === active.id;
-                const value = isActive ? editor.draft : a;
-                return (
-                  <tr
-                    key={a.id}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (!isActive || !editable) {
-                        notify(
-                          "Sélectionnez une ligne modifiable avant de déposer un média.",
-                        );
-                        return;
-                      }
-                      const file = e.dataTransfer.files[0];
-                      if (file) void attach(file);
-                    }}
-                    data-active={isActive}
-                    onClick={() => {
-                      if (!isActive) void changeActive(a.id);
-                    }}
-                  >
-                    <td>
-                      <input
-                        type="checkbox"
-                        aria-label={"Sélectionner " + a.name}
-                        checked={selected.includes(a.id)}
-                        onChange={(e) =>
-                          setSelected(
-                            e.target.checked
-                              ? [...selected, a.id]
-                              : selected.filter((id) => id !== a.id),
-                          )
-                        }
-                      />
-                    </td>
-                    <td>
-                      <button
-                        className={w.rowTitle}
-                        onClick={() => void changeActive(a.id)}
-                      >
-                        {a.name}
-                      </button>
-                      <small>
-                        {
-                          CATALOG[a.channel].find((f) => f.id === a.format)
-                            ?.label
-                        }{" "}
-                        · V{a.version}
-                      </small>
-                    </td>
-                    {columns.map((k) => (
-                      <td key={k}>
-                        {k === "mediaId" ? (
-                          <>
-                            {" "}
-                            <select
-                              aria-label={"Média de " + a.name}
-                              disabled={!isActive || !editable}
-                              value={value.mediaId ?? ""}
-                              onChange={(e) =>
-                                editor.change({
-                                  mediaId: e.target.value || null,
-                                })
-                              }
-                            >
-                              <option value="">À associer</option>
-                              {c.media
-                                .filter(
-                                  (m) =>
-                                    m.state === "ready" &&
-                                    mediaChannels(m).includes(a.channel) &&
-                                    compatibleFormats(m, a.channel).some(
-                                      (f) => f.id === a.format,
-                                    ),
-                                )
-                                .map((m) => (
-                                  <option key={m.id} value={m.id}>
-                                    {m.name}
-                                  </option>
-                                ))}
-                            </select>
-                            <label className={w.rowUpload}>
-                              Déposer sur cette annonce
-                              <input
-                                type="file"
-                                disabled={
-                                  !isActive ||
-                                  !editable ||
-                                  upload.stage !== "idle"
-                                }
-                                accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime"
-                                onChange={(e) => {
-                                  if (e.target.files?.[0])
-                                    void attach(e.target.files[0]);
-                                }}
-                              />
-                            </label>
-                          </>
-                        ) : (
-                          <textarea
-                            aria-label={labels[k] + " de " + a.name}
-                            readOnly={!isActive || !editable}
-                            value={
-                              Array.isArray(value[k])
-                                ? (value[k] as string[]).join("\n")
-                                : String(value[k])
-                            }
-                            rows={
-                              k === "headlines"
-                                ? 4
-                                : k === "descriptions"
-                                  ? 4
-                                  : 3
-                            }
-                            onFocus={() => {
-                              if (!isActive) void changeActive(a.id);
-                            }}
-                            onChange={(e) =>
-                              editor.change({
-                                [k]:
-                                  k === "headlines" || k === "descriptions"
-                                    ? e.target.value.split("\n")
-                                    : e.target.value,
-                              })
-                            }
-                          />
-                        )}
-                      </td>
-                    ))}
-                    <td>
-                      <span className={w.status}>{STATUS[a.status]}</span>
-                      {["draft", "changes_requested"].includes(a.status) &&
-                        (() => {
-                          const errors = isComplete(
-                            isActive ? { ...a, ...editor.draft } : a,
-                            c,
-                          );
-                          return errors.length ? (
-                            <details className={w.missing}>
-                              <summary>
-                                {errors.length} champ(s) à compléter
-                              </summary>
-                              <ul>
-                                {errors.map((error) => (
-                                  <li key={error}>{error}</li>
-                                ))}
-                              </ul>
-                            </details>
-                          ) : (
-                            <small>Prête à envoyer</small>
-                          );
-                        })()}
-                      {a.comments.at(-1) && (
-                        <small>{a.comments.at(-1)?.text}</small>
-                      )}
-                    </td>
-                    <td>
-                      <div className={w.rowActions}>
-                        {a.status === "approved" ? (
-                          <button disabled={!isActive} onClick={onUnlock}>
-                            Déverrouiller
-                          </button>
-                        ) : ["on_air", "stopped"].includes(a.status) ? (
-                          <button
-                            disabled={pending("version", c.id, a.id)}
-                            onClick={() =>
-                              void run({
-                                type: "version",
-                                campaignId: c.id,
-                                adId: a.id,
-                              }).catch(() => {})
-                            }
-                          >
-                            Créer V
-                            {Math.max(
-                              ...c.ads
-                                .filter((x) => x.familyId === a.familyId)
-                                .map((x) => x.version),
-                            ) + 1}
-                          </button>
-                        ) : (
-                          <button
-                            disabled={!isActive || !editable || submitting}
-                            onClick={async () => {
-                              try {
-                                await onSubmit([a.id]);
-                              } catch {}
-                            }}
-                          >
-                            {submitting ? "Envoi…" : "Envoyer"}
-                          </button>
-                        )}
-                        <button
-                          disabled={pending("duplicate", c.id, a.id)}
-                          onClick={() =>
-                            void run({
-                              type: "duplicate",
-                              campaignId: c.id,
-                              adId: a.id,
-                            }).catch(() => {})
-                          }
-                        >
-                          Dupliquer
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <aside className={w.previewPane} aria-label="Aperçu de l’annonce">
-        <label className={w.adName}>
-          Nom de l’annonce
-          <input
-            aria-label="Nom de l’annonce active"
-            disabled={!editable}
-            value={editor.draft.name}
-            onChange={(e) => editor.change({ name: e.target.value })}
-          />
-        </label>
-        <div className={w.heading}>
-          <h2>Aperçu</h2>
-          <span>{data?.channels[active.channel]}</span>
-        </div>
-        <Preview campaign={c} ad={{ ...active, ...editor.draft }} />
-        <History ad={active} campaign={c} />
-      </aside>
-    </div>
   );
 }

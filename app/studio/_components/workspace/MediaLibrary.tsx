@@ -226,7 +226,7 @@ export default function MediaLibrary({
   }
   return (
     <section
-      className={w.library}
+      className={`${w.library} ${batchMode ? w.batchLibrary : ""}`}
       aria-label={
         batchMode
           ? "Bibliothèque des canaux sélectionnés"
@@ -235,7 +235,7 @@ export default function MediaLibrary({
     >
       <div className={w.heading}>
         <h2 tabIndex={batchMode ? -1 : undefined}>
-          {batchMode ? "Déposez vos médias" : "Bibliothèque du canal"}
+          {batchMode ? "Ajouter vos visuels" : "Bibliothèque du canal"}
         </h2>
         <span>Images et vidéos finales · {MEDIA_LIMIT_MB} Mo max.</span>
       </div>

@@ -10,14 +10,13 @@ test("configuration SEM et validation connectées", async ({ page }) => {
     .fill(users[0].password);
   await page.getByRole("button", { name: "Se connecter", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Votre espace de travail" }),
+    page.getByRole("heading", { name: "Vos campagnes" }),
   ).toBeVisible();
-  const campaignName = "Admissions - recette " + Date.now();
-  await page.getByLabel("Nom de la nouvelle campagne").fill(campaignName);
   await page
-    .getByRole("button", { name: "Créer une campagne", exact: true })
+    .getByRole("link", { name: "Créer votre campagne", exact: true })
     .click();
-  await expect(page.getByLabel("Campagne à configurer")).toBeVisible();
+  const campaignName = "Admissions - recette " + Date.now();
+  await page.getByLabel("Nom de campagne").fill(campaignName);
   await expect(
     page.getByRole("form", { name: "Informations de campagne", exact: true }),
   ).toBeVisible();
@@ -28,10 +27,13 @@ test("configuration SEM et validation connectées", async ({ page }) => {
   await page
     .getByLabel("Site web", { exact: true })
     .fill("https://example.com");
-  await page.getByRole("button", { name: "Créer", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Créer la marque", exact: true })
+    .click();
   await page
     .getByRole("combobox", { name: "Marque", exact: true })
     .selectOption({ label: "Marque recette" });
+  await page.locator("summary").filter({ hasText: "Dates et lien" }).click();
   await page.getByLabel("URL commune").fill("https://example.com/admissions");
   await page.getByLabel("URL commune").blur();
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
@@ -53,10 +55,10 @@ test("configuration SEM et validation connectées", async ({ page }) => {
   await page
     .getByLabel("Descriptions · 90 caractères de Nouvelle annonce")
     .fill("Description un\nDescription deux");
-  await expect(
-    page.getByText("Prête à envoyer", { exact: true }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Envoyer", exact: true }).click();
+  await expect(page.getByText("Prête", { exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Envoyer Nouvelle annonce", exact: true })
+    .click();
   await expect(
     page.getByRole("cell", { name: "À valider", exact: true }),
   ).toBeVisible();
@@ -106,6 +108,9 @@ test("configuration SEM et validation connectées", async ({ page }) => {
   await page
     .getByLabel("Filtrer par campagne")
     .selectOption({ label: campaignName });
+  await page
+    .getByRole("button", { name: new RegExp("Ouvrir Nouvelle annonce") })
+    .click();
   await expect(
     page.getByRole("button", {
       name: "Créer une nouvelle version",
@@ -129,15 +134,14 @@ test("dépôt média, reconnaissance et création de la ligne", async ({
     .fill(users[1].password);
   await page.getByRole("button", { name: "Se connecter", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Votre espace de travail" }),
+    page.getByRole("heading", { name: "Vos campagnes" }),
   ).toBeVisible();
   await page
-    .getByLabel("Nom de la nouvelle campagne")
-    .fill("Médias - recette " + Date.now());
-  await page
-    .getByRole("button", { name: "Créer une campagne", exact: true })
+    .getByRole("link", { name: "Créer votre campagne", exact: true })
     .click();
-  await expect(page.getByLabel("Campagne à configurer")).toBeVisible();
+  await page
+    .getByLabel("Nom de campagne")
+    .fill("Médias - recette " + Date.now());
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await page
     .getByRole("group", { name: "Choisir les canaux" })
@@ -153,9 +157,8 @@ test("dépôt média, reconnaissance et création de la ligne", async ({
   await page
     .getByRole("button", { name: "Créer l’annonce", exact: true })
     .click();
-  await expect(
-    page.getByRole("button", { name: "Nouvelle annonce", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("table")).toBeVisible();
+  await page.getByRole("button", { name: "Aperçu", exact: true }).click();
   await expect(page.getByLabel("Média de Nouvelle annonce")).not.toHaveValue(
     "",
   );
@@ -185,11 +188,11 @@ test("vidéo finale transférée directement et reconnue", async ({ page }) => {
     .fill(users[1].password);
   await page.getByRole("button", { name: "Se connecter", exact: true }).click();
   await page
-    .getByLabel("Nom de la nouvelle campagne")
-    .fill("Vidéo - recette " + Date.now());
-  await page
-    .getByRole("button", { name: "Créer une campagne", exact: true })
+    .getByRole("link", { name: "Créer votre campagne", exact: true })
     .click();
+  await page
+    .getByLabel("Nom de campagne")
+    .fill("Vidéo - recette " + Date.now());
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await page
     .getByRole("group", { name: "Choisir les canaux" })
@@ -221,7 +224,7 @@ test("contraste des pages connectées sur ordinateur et mobile", async ({
     .fill(users[0].password);
   await page.getByRole("button", { name: "Se connecter", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Votre espace de travail" }),
+    page.getByRole("heading", { name: "Vos campagnes" }),
   ).toBeVisible();
   for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -242,9 +245,7 @@ test("contraste des pages connectées sur ordinateur et mobile", async ({
         const axe = (
           window as unknown as {
             axe: {
-              run: (
-                options: unknown,
-              ) => Promise<{
+              run: (options: unknown) => Promise<{
                 violations: {
                   id: string;
                   nodes: { html: string; failureSummary: string }[];
@@ -279,7 +280,7 @@ test("connexion commune entre Studio et Social Ads", async ({ page }) => {
     .fill(users[0].password);
   await page.getByRole("button", { name: "Se connecter", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Votre espace de travail" }),
+    page.getByRole("heading", { name: "Vos campagnes" }),
   ).toBeVisible();
   await page.goto(base + "/social");
   await expect(

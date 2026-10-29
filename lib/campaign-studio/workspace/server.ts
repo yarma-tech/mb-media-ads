@@ -4,6 +4,9 @@ import { createHash, randomBytes } from "node:crypto";
 import { CommandSchema, type Command } from "./commands";
 import {
   addAd,
+  duplicateAd,
+  moveAd,
+  handleComment,
   createCampaign,
   decideAd,
   editAd,
@@ -205,7 +208,22 @@ export async function execute(raw: unknown, actor: Actor) {
   )
     validator(actor);
   if (command.type === "create_campaign") {
-    const c = createCampaign(command.name, actor, now);
+    const c = {
+      ...createCampaign(command.name, actor, now),
+      ...command.fields,
+    };
+    if (c.defaultUrl && !safeUrl(c.defaultUrl))
+      throw new StudioError("URL HTTP(S) requise.");
+    if (c.startDate && c.endDate && c.startDate > c.endDate)
+      throw new StudioError("La fin doit suivre le début.");
+    if (c.brandId) {
+      const { data } = await db
+        .from("studio_brands")
+        .select("id")
+        .eq("id", c.brandId)
+        .maybeSingle();
+      if (!data) throw new StudioError("Marque introuvable.");
+    }
     const { error } = await db
       .from("studio_campaigns")
       .insert({ id: c.id, revision: c.revision, document: c });
@@ -491,37 +509,15 @@ export async function execute(raw: unknown, actor: Actor) {
     case "version":
       next = newVersion(c, command.adId, actor, now);
       break;
-    case "duplicate": {
-      const old = c.ads.find((a) => a.id === command.adId);
-      if (!old) throw new StudioError("Annonce introuvable.");
-      next = addAd(c, old.channel, old.format, actor, now);
-      const fresh = next.ads.at(-1)!;
-      const {
-        name,
-        copy,
-        headline,
-        headlines,
-        descriptions,
-        cta,
-        url,
-        mediaId,
-        path1,
-        path2,
-      } = old;
-      Object.assign(fresh, {
-        name: name + " (copie)",
-        copy,
-        headline,
-        headlines: [...headlines],
-        descriptions: [...descriptions],
-        cta,
-        url,
-        mediaId,
-        path1,
-        path2,
-      });
+    case "duplicate":
+      next = duplicateAd(c, command.adId, actor, now);
       break;
-    }
+    case "move_ad":
+      next = moveAd(c, command.adId, command.beforeId, actor, now);
+      break;
+    case "handle_comment":
+      next = handleComment(c, command.adId, command.commentIndex, actor, now);
+      break;
     case "stop": {
       validator(actor);
       const a = c.ads.find((a) => a.id === command.adId);

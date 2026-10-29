@@ -7,6 +7,8 @@ export type AdStatus =
   "draft" | "pending" | "approved" | "changes_requested" | "on_air" | "stopped";
 export type StopReason = "replaced" | "manual" | "campaign_finished";
 export type AdFields = {
+  theme?: string;
+  format?: string;
   name: string;
   copy: string;
   headline: string;
@@ -39,7 +41,14 @@ export interface Ad extends AdFields {
   createdBy: string;
   revision: number;
   history: Event[];
-  comments: { text: string; author: string; at: string }[];
+  comments: {
+    text: string;
+    author: string;
+    at: string;
+    resolution?: "open" | "handled";
+    handledBy?: string;
+    handledAt?: string;
+  }[];
 }
 export interface Media {
   id: string;
@@ -64,6 +73,7 @@ export interface Brand {
   website: string;
 }
 export interface Campaign {
+  channels?: Channel[];
   id: string;
   name: string;
   brandId: string | null;

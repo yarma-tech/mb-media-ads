@@ -32,6 +32,7 @@ async function fixture(
   status: AdStatus = "pending",
   withMedia = false,
   strictLocks = false,
+  beforeSignIn?: (page: Page) => Promise<void>,
 ) {
   const make = (name: string) => {
     let c = createCampaign(name, actor, now);
@@ -338,6 +339,7 @@ async function fixture(
     return route.abort();
   });
   await page.goto(base + "/studio");
+  await beforeSignIn?.(page);
   await page.getByLabel("E-mail", { exact: true }).fill("audit@example.test");
   await page
     .getByLabel("Mot de passe", { exact: true })
@@ -1042,7 +1044,7 @@ for (const width of [390, 320]) {
   test(`canal actif visible après reload mobile ${width}px`, async ({
     page,
   }) => {
-    await page.setViewportSize({ width, height: 844 });
+    await page.setViewportSize({ width, height: width === 844 ? 390 : 844 });
     const f = await fixture(page);
     await page.goto(
       base +
@@ -3430,4 +3432,122 @@ test("compteurs tableau Google : budget par variante, pas par somme de la cellul
     path.locator("..").locator("[data-character-countdown]"),
   ).toHaveAttribute("data-remaining", "-1");
   await expect(path).toHaveValue("abcdefghijklmnop");
+});
+
+test.describe("Contrôles tactiles", () => {
+  test.use({ hasTouch: true, isMobile: true });
+  for (const width of [320, 390, 844]) {
+    test(`champs mobiles sans petite police à ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      async function minimumTextSize(fields: ReturnType<Page["locator"]>) {
+        const sizes = await fields.evaluateAll((elements) =>
+          elements.map((element) => ({
+            label:
+              element.getAttribute("aria-label") ||
+              element.getAttribute("name") ||
+              element.tagName,
+            size: parseFloat(getComputedStyle(element).fontSize),
+          })),
+        );
+        expect(sizes.length).toBeGreaterThan(0);
+        for (const field of sizes)
+          expect.soft(field.size, field.label).toBeGreaterThanOrEqual(16);
+      }
+      const f = await fixture(page, "draft", true, false, async (login) => {
+        await expect(login.getByLabel("E-mail", { exact: true })).toBeVisible();
+        await minimumTextSize(
+          login.locator('input[type="email"], input[type="password"]'),
+        );
+      });
+      await page
+        .getByRole("link", { name: "Créer votre campagne", exact: true })
+        .click();
+      const name = page.getByLabel("Nom de campagne", { exact: true });
+      await expect(name).toBeVisible();
+      await expect(name).not.toBeFocused();
+      await name.locator("..").evaluate((label) => {
+        label.style.fontSize = "20px";
+      });
+      await expect(name).toHaveCSS("font-size", "20px");
+      await name.locator("..").evaluate((label) => {
+        label.style.removeProperty("font-size");
+      });
+      await page.screenshot({
+        path: `/tmp/studio-mobile-fonts-${width}-creation.png`,
+        fullPage: true,
+      });
+      await page
+        .locator("summary")
+        .filter({ hasText: "Dates et lien" })
+        .click();
+      await minimumTextSize(
+        page
+          .getByRole("form", { name: "Informations de campagne", exact: true })
+          .locator("input,select"),
+      );
+      await page
+        .getByRole("button", { name: "Créer une marque", exact: true })
+        .click();
+      await minimumTextSize(
+        page
+          .getByRole("form", { name: "Nouvelle marque", exact: true })
+          .locator("input"),
+      );
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        )
+        .toBe(true);
+      await page.goto(
+        base +
+          "/studio/configuration?campagne=" +
+          f.campaigns[1].id +
+          "&canal=facebook",
+      );
+      await expect(
+        page.getByLabel("Texte de Beta annonce", { exact: true }),
+      ).toBeVisible();
+      await minimumTextSize(page.locator("table textarea,table select"));
+      await page.screenshot({
+        path: `/tmp/studio-mobile-fonts-${width}-table.png`,
+      });
+      const checkbox = page.locator('table input[type="checkbox"]').first();
+      await expect(checkbox).toHaveCSS("width", "17px");
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth <= innerWidth,
+          ),
+        )
+        .toBe(true);
+      const viewport = await page
+        .locator('meta[name="viewport"]')
+        .getAttribute("content");
+      expect(viewport).toContain("initial-scale=1");
+      expect(viewport).not.toMatch(/user-scalable=no|maximum-scale=1/);
+    });
+  }
+});
+
+test("champs desktop conservent leurs proportions", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const f = await fixture(page, "draft", true);
+  await page
+    .getByRole("link", { name: "Créer votre campagne", exact: true })
+    .click();
+  await expect(page.getByLabel("Nom de campagne", { exact: true })).toHaveCSS(
+    "font-size",
+    "14px",
+  );
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=facebook",
+  );
+  await expect(
+    page.getByLabel("Texte de Beta annonce", { exact: true }),
+  ).toHaveCSS("font-size", "14px");
 });

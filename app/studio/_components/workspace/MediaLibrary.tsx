@@ -21,6 +21,7 @@ import ChannelIcon from "./ChannelIcon";
 import { MEDIA_LIMIT_MB } from "@/lib/campaign-studio/workspace/upload-limits";
 import { mediaAdPlan } from "@/lib/campaign-studio/workspace/media-batch";
 import { uploadFile } from "./upload";
+import { VideoPreview } from "./Preview";
 export default function MediaLibrary({
   campaign,
   channel,
@@ -424,10 +425,11 @@ export default function MediaLibrary({
                 <div className={w.mediaThumb}>
                   {data?.mediaUrls[m.id] ? (
                     m.mime.startsWith("video/") ? (
-                      <video
+                      <VideoPreview
+                        key={data.mediaUrls[m.id]}
                         src={data.mediaUrls[m.id]}
-                        controls
-                        preload="metadata"
+                        poster={data.thumbnailUrls?.[m.id]}
+                        name={m.name}
                       />
                     ) : (
                       <img src={data.mediaUrls[m.id]} alt={m.name} />

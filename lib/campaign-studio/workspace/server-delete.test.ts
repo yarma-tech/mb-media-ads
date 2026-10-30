@@ -113,7 +113,11 @@ describe("suppression des campagnes côté serveur", () => {
     "autorise $role et nettoie seulement les médias après suppression DB",
     async (actor) => {
       const cmd = command();
-      const paths = campaign!.media.map((m) => m.path);
+      campaign!.media[0].thumbnailPath = `${campaign!.id}/poster.jpg`;
+      const paths = campaign!.media.flatMap((m) => [
+        m.path,
+        ...(m.thumbnailPath ? [m.thumbnailPath] : []),
+      ]);
       mocks.remove.mockImplementation(async () => {
         expect(deleted).toBe(true);
         return { error: null };

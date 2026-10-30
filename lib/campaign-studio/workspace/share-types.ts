@@ -31,4 +31,5 @@ export interface PublicPresentation {
   campaign: SharedCampaign;
   brands: Brand[];
   mediaUrls: Record<string, string>;
+  thumbnailUrls?: Record<string, string>;
 }

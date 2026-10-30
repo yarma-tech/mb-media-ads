@@ -11,6 +11,7 @@ import { promisify } from "node:util";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Media } from "./types";
 import ffprobe from "ffprobe-static";
+import { generateVideoThumbnail, videoThumbnailPath } from "./video-thumbnail";
 export async function verifyMedia(
   db: SupabaseClient,
   media: Media,
@@ -82,8 +83,25 @@ export async function verifyMedia(
       .split("/")
       .map(Number);
     const frameRate = rateDenominator ? rateNumerator / rateDenominator : null;
+    let thumbnailPath = media.thumbnailPath;
+    if (!isImage && !errors.length && !thumbnailPath) {
+      const thumbnail = await generateVideoThumbnail(file, duration!);
+      thumbnailPath = videoThumbnailPath(media.path);
+      const { error: thumbnailError } = await db.storage
+        .from("studio-media")
+        .upload(thumbnailPath, thumbnail, {
+          contentType: "image/jpeg",
+          cacheControl: "3600",
+          upsert: true,
+        });
+      if (thumbnailError)
+        throw new Error(
+          "La miniature vidéo n’a pas pu être enregistrée. Réessayez l’import.",
+        );
+    }
     return {
       ...media,
+      ...(thumbnailPath ? { thumbnailPath } : {}),
       mime,
       width: stream.width,
       height: stream.height,

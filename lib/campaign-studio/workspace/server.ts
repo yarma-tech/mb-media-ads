@@ -148,17 +148,24 @@ export async function state(actor: Actor) {
   if (error) throw error;
   const docs: Campaign[] = (campaigns ?? []).map((r) => r.document);
   const mediaUrls: Record<string, string> = {};
+  const thumbnailUrls: Record<string, string> = {};
   const media = docs.flatMap((c) => c.media.filter((m) => m.state === "ready"));
   if (media.length) {
     const { data: signed } = await db.storage
       .from("studio-media")
       .createSignedUrls(
-        media.map((m) => m.path),
+        media.flatMap((m) => [
+          m.path,
+          ...(m.thumbnailPath ? [m.thumbnailPath] : []),
+        ]),
         3600,
       );
     for (const entry of signed ?? []) {
       const m = media.find((m) => m.path === entry.path);
       if (m && entry.signedUrl) mediaUrls[m.id] = entry.signedUrl;
+      const thumbnail = media.find((m) => m.thumbnailPath === entry.path);
+      if (thumbnail && entry.signedUrl)
+        thumbnailUrls[thumbnail.id] = entry.signedUrl;
     }
   }
 
@@ -187,6 +194,7 @@ export async function state(actor: Actor) {
     catalog: CATALOG,
     channels: CHANNELS,
     mediaUrls,
+    thumbnailUrls,
   };
 }
 export async function execute(raw: unknown, actor: Actor) {
@@ -255,7 +263,12 @@ export async function execute(raw: unknown, actor: Actor) {
     // check could destroy media still referenced by a concurrently edited campaign.
     const paths = [
       ...new Set(
-        (removed.document as Campaign).media.map((m) => m.path).filter(Boolean),
+        (removed.document as Campaign).media
+          .flatMap((m) => [
+            m.path,
+            ...(m.thumbnailPath ? [m.thumbnailPath] : []),
+          ])
+          .filter(Boolean),
       ),
     ];
     const ownPaths = paths.filter(

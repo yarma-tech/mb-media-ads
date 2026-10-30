@@ -45,6 +45,7 @@ interface Snapshot {
   catalog: typeof CATALOG;
   channels: typeof CHANNELS;
   mediaUrls: Record<string, string>;
+  thumbnailUrls?: Record<string, string>;
 }
 interface Context {
   data: Snapshot | null;
@@ -171,6 +172,11 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
               ),
               mediaUrls: Object.fromEntries(
                 Object.entries(old.mediaUrls).filter(
+                  ([id]) => !mediaIds.has(id),
+                ),
+              ),
+              thumbnailUrls: Object.fromEntries(
+                Object.entries(old.thumbnailUrls ?? {}).filter(
                   ([id]) => !mediaIds.has(id),
                 ),
               ),

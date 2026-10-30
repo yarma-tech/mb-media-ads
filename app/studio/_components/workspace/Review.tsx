@@ -174,7 +174,11 @@ export default function Review({
       setActing((ids) => ids.filter((id) => id !== a.id));
     }
   }
-  function card({ c, a }: { c: Campaign; a: Ad }, grouped = false) {
+  function card(
+    { c, a }: { c: Campaign; a: Ad },
+    grouped = false,
+    playback = false,
+  ) {
     return (
       <article
         className={r.reviewCard}
@@ -188,7 +192,7 @@ export default function Review({
           </div>
         )}
         <div data-workspace-ad={a.id}>
-          <Preview ad={a} campaign={c} grouped={grouped} />
+          <Preview ad={a} campaign={c} grouped={grouped} playback={playback} />
         </div>
         <div className={view === "validation" ? w.srOnly : w.cardCaption}>
           <b>{c.name}</b>
@@ -629,6 +633,8 @@ export default function Review({
             data!.campaigns
               .flatMap((c) => c.ads.map((a) => ({ c, a })))
               .find(({ a }) => a.id === detail.a.id) || detail,
+            false,
+            true,
           )}
         </DetailModal>
       )}
@@ -859,7 +865,7 @@ function EditModal({
         </form>
         <div className={r.editPreview}>
           <h3>Aperçu</h3>
-          <Preview campaign={c} ad={{ ...ad, ...editor.draft }} />
+          <Preview campaign={c} ad={{ ...ad, ...editor.draft }} playback />
         </div>
       </div>
       <footer className={r.dialogFooter}>

@@ -4,7 +4,7 @@ const nextConfig = {
   distDir: process.env.STUDIO_CONNECTED === "true" && !process.env.VERCEL
     ? ".next-studio"
     : ".next",
-  serverExternalPackages: ["ffprobe-static"],
+  serverExternalPackages: ["ffprobe-static", "ffmpeg-static"],
   turbopack: { root: process.cwd() },
 };
 

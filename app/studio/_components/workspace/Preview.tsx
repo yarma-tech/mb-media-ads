@@ -15,10 +15,12 @@ export function MediaPreview({
   ad,
   campaign,
   thumbnail = false,
+  playback = false,
 }: {
   ad: Ad;
   campaign: Campaign;
   thumbnail?: boolean;
+  playback?: boolean;
 }) {
   const { data } = usePreviewData();
   const media = campaign.media.find((m) => m.id === ad.mediaId);
@@ -47,6 +49,8 @@ export function MediaPreview({
             src={src}
             name={media.name}
             thumbnail={thumbnail}
+            poster={data.thumbnailUrls?.[media.id]}
+            playback={playback}
           />
         ) : (
           <img src={src} alt={thumbnail ? "" : media.name} />
@@ -70,65 +74,69 @@ export function MediaPreview({
   );
 }
 
-function VideoPreview({
+export function VideoPreview({
   src,
+  poster,
   name,
-  thumbnail,
+  thumbnail = false,
+  playback = false,
 }: {
   src: string;
+  poster?: string;
   name: string;
-  thumbnail: boolean;
+  thumbnail?: boolean;
+  playback?: boolean;
 }) {
-  const [frame, setFrame] = useState<"loading" | "ready" | "error">("loading");
-  const frameReady = (video: HTMLVideoElement) => {
-    if (
-      video.readyState >= 2 &&
-      (!thumbnail || (video.currentTime > 0 && !video.seeking))
-    )
-      setFrame("ready");
-  };
-  return (
-    <>
+  const [view, setView] = useState<"poster" | "player" | "error">(
+    playback ? "player" : "poster",
+  );
+  if (view === "player")
+    return (
       <video
         src={src}
-        controls={!thumbnail}
-        muted={thumbnail}
+        poster={poster}
+        controls
         playsInline
-        preload={thumbnail ? "auto" : "metadata"}
+        preload="none"
+        autoPlay={!playback}
         aria-label={name}
-        data-frame={frame}
-        onLoadedMetadata={(event) => {
-          if (!thumbnail) return;
-          const video = event.currentTarget;
-          // Metadata alone does not decode a visible frame on iOS. Seek past
-          // the opening fade without playing audio or starting playback.
-          video.currentTime =
-            Number.isFinite(video.duration) && video.duration > 0
-              ? Math.min(1, video.duration / 2)
-              : 1;
-        }}
-        onLoadedData={(event) => frameReady(event.currentTarget)}
-        onSeeked={(event) => {
-          if (thumbnail) event.currentTarget.pause();
-          frameReady(event.currentTarget);
-        }}
-        onError={() => setFrame("error")}
+        onError={() => setView("error")}
       />
-      {thumbnail && frame === "ready" && (
+    );
+  const picture =
+    poster && view !== "error" ? (
+      <img
+        src={poster}
+        alt={thumbnail ? "" : name}
+        loading="lazy"
+        onError={() => setView("error")}
+      />
+    ) : (
+      <span className={`${s.mediaEmpty} ${s.videoMessage}`}>
+        Aperçu vidéo indisponible
+      </span>
+    );
+  if (thumbnail)
+    return (
+      <>
+        {picture}
         <span className={s.play} aria-hidden="true">
           ▶
         </span>
-      )}
-      {frame === "error" ? (
-        <span className={`${s.mediaEmpty} ${s.videoMessage}`}>
-          Aperçu vidéo indisponible{thumbnail ? " · Ouvrir le détail" : ""}
-        </span>
-      ) : thumbnail && frame === "loading" ? (
-        <span className={`${s.mediaEmpty} ${s.videoMessage}`}>
-          Chargement de l’aperçu vidéo…
-        </span>
-      ) : null}
-    </>
+      </>
+    );
+  return (
+    <button
+      type="button"
+      className={s.videoPoster}
+      onClick={() => setView("player")}
+      aria-label={`Lire ${name}`}
+    >
+      {picture}
+      <span className={s.play} aria-hidden="true">
+        ▶
+      </span>
+    </button>
   );
 }
 
@@ -270,10 +278,12 @@ export default function Preview({
   ad,
   campaign,
   grouped = false,
+  playback = false,
 }: {
   ad: Ad;
   campaign: Campaign;
   grouped?: boolean;
+  playback?: boolean;
 }) {
   const { data } = usePreviewData();
   const brand =
@@ -395,7 +405,7 @@ export default function Preview({
   if (ad.channel === "display")
     return grouped ? (
       <div className={`${s.preview} ${s.bannerPreview}`}>
-        <MediaPreview ad={ad} campaign={campaign} />
+        <MediaPreview ad={ad} campaign={campaign} playback={playback} />
       </div>
     ) : (
       <PublisherScene items={[{ a: ad, c: campaign }]} />
@@ -414,7 +424,7 @@ export default function Preview({
           </header>
         )}
         <div className={s.immersiveFrame}>
-          <MediaPreview ad={ad} campaign={campaign} />
+          <MediaPreview ad={ad} campaign={campaign} playback={playback} />
           <div className={s.overlayTop}>
             {ad.channel === "tiktok" ? (
               <div className={s.forYou}>
@@ -484,7 +494,7 @@ export default function Preview({
             <Icon name="search" />
           </span>
         </header>
-        <MediaPreview ad={ad} campaign={campaign} />
+        <MediaPreview ad={ad} campaign={campaign} playback={playback} />
         <div className={s.youtubeBody}>
           {identity}
           {copy}
@@ -499,7 +509,7 @@ export default function Preview({
     >
       {identity}
       {ad.channel === "facebook" && copy}
-      <MediaPreview ad={ad} campaign={campaign} />
+      <MediaPreview ad={ad} campaign={campaign} playback={playback} />
       {ad.channel === "instagram" && (
         <>
           <div className={s.socialActions} aria-hidden="true">

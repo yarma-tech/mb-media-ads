@@ -54,6 +54,8 @@ export interface Media {
   id: string;
   name: string;
   path: string;
+  /** Private JPEG generated once after video verification. Absent on legacy media. */
+  thumbnailPath?: string;
   mime: string;
   bytes: number;
   width: number;

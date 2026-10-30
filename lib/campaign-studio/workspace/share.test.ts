@@ -140,20 +140,59 @@ describe("public campaign sharing", () => {
       `/api/studio/public/${token}/media/media-1`,
     );
   });
+  it("exposes only a revocable thumbnail proxy and validates its private path", async () => {
+    campaign.media[0].thumbnailPath = `${campaign.id}/secret-poster.jpg`;
+    const view = presentationView(campaign, [], token);
+    expect(view.thumbnailUrls?.["media-1"]).toBe(
+      `/api/studio/public/${token}/media/media-1?thumbnail=1`,
+    );
+    expect(JSON.stringify(view)).not.toContain("secret-poster");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response("jpeg", { headers: { "content-type": "image/jpeg" } }),
+      ),
+    );
+    const request = new Request("https://studio.test/media?thumbnail=1");
+    const response = await publicMedia(token, "media-1", request);
+    expect(mocks.signed).toHaveBeenCalledWith(
+      campaign.media[0].thumbnailPath,
+      60,
+    );
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(await response.text()).toBe("jpeg");
+    campaign.media[0].thumbnailPath = "another-campaign/poster.jpg";
+    await expect(publicMedia(token, "media-1", request)).rejects.toMatchObject({
+      status: 404,
+    });
+    row = null;
+    await expect(publicMedia(token, "media-1", request)).rejects.toMatchObject({
+      status: 404,
+    });
+  });
+  it("never falls back to the original when a thumbnail is absent", async () => {
+    await expect(
+      publicMedia(
+        token,
+        "media-1",
+        new Request("https://studio.test/media?thumbnail=1"),
+      ),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(mocks.signed).not.toHaveBeenCalled();
+  });
   it("streams byte ranges without revealing the storage URL", async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(
-        new Response("abc", {
-          status: 206,
-          headers: {
-            "content-type": "video/mp4",
-            "content-range": "bytes 0-2/10",
-            "accept-ranges": "bytes",
-            location: "https://storage.test/SECRET",
-          },
-        }),
-      );
+    const fetch = vi.fn().mockResolvedValue(
+      new Response("abc", {
+        status: 206,
+        headers: {
+          "content-type": "video/mp4",
+          "content-range": "bytes 0-2/10",
+          "accept-ranges": "bytes",
+          location: "https://storage.test/SECRET",
+        },
+      }),
+    );
     vi.stubGlobal("fetch", fetch);
     const response = await publicMedia(
       token,
@@ -183,26 +222,22 @@ describe("public campaign sharing", () => {
   it("refuses active content even if storage metadata is wrong", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          new Response("<script/>", {
-            headers: { "content-type": "text/html" },
-          }),
-        ),
+      vi.fn().mockResolvedValue(
+        new Response("<script/>", {
+          headers: { "content-type": "text/html" },
+        }),
+      ),
     );
     await expect(
       publicMedia(token, "media-1", new Request("https://studio.test")),
     ).rejects.toMatchObject({ status: 415 });
   });
   it("supports HEAD without forwarding a body", async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(
-        new Response(null, {
-          headers: { "content-type": "image/png", "content-length": "100" },
-        }),
-      );
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(null, {
+        headers: { "content-type": "image/png", "content-length": "100" },
+      }),
+    );
     vi.stubGlobal("fetch", fetch);
     const response = await publicMedia(
       token,

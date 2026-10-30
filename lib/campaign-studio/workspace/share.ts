@@ -32,20 +32,18 @@ export async function changeShare(
     return { revoked: true };
   }
   const token = randomBytes(32).toString("base64url");
-  const { error } = await db
-    .from("studio_share_links")
-    .upsert(
-      {
-        campaign_id: campaignId,
-        token_hash: shareHash(token),
-        status: "active",
-        created_by: actor.id,
-        created_at: now,
-        revoked_at: null,
-        revoked_by: null,
-      },
-      { onConflict: "campaign_id" },
-    );
+  const { error } = await db.from("studio_share_links").upsert(
+    {
+      campaign_id: campaignId,
+      token_hash: shareHash(token),
+      status: "active",
+      created_by: actor.id,
+      created_at: now,
+      revoked_at: null,
+      revoked_by: null,
+    },
+    { onConflict: "campaign_id" },
+  );
   if (error) throw error;
   return { sharePath: `/partage/${token}` };
 }
@@ -111,6 +109,17 @@ export function presentationView(
       media,
     },
     brands: brands.filter((b) => b.id === campaign.brandId).map(brandView),
+    thumbnailUrls: Object.fromEntries(
+      campaign.media
+        .filter(
+          (m) =>
+            m.thumbnailPath && media.some((visible) => visible.id === m.id),
+        )
+        .map((m) => [
+          m.id,
+          `/api/studio/public/${token}/media/${m.id}?thumbnail=1`,
+        ]),
+    ),
     mediaUrls: Object.fromEntries(
       media.map((m) => [m.id, `/api/studio/public/${token}/media/${m.id}`]),
     ),
@@ -143,12 +152,21 @@ export async function publicMedia(
     media.path.split("/").some((p) => p === ".." || p === ".")
   )
     throw new StudioError("Média indisponible.", 404);
+  const thumbnail = new URL(request.url).searchParams.get("thumbnail") === "1";
+  const path = thumbnail ? media.thumbnailPath : media.path;
+  if (
+    !path ||
+    !path.startsWith(`${campaign.id}/`) ||
+    path.includes("\\") ||
+    path.split("/").some((p) => !p || p === ".." || p === ".")
+  )
+    throw new StudioError("Média indisponible.", 404);
   const range = request.headers.get("range");
   if (range && !/^bytes=(?:\d+-\d*|-\d+)$/.test(range))
     return new Response(null, { status: 416, headers: PUBLIC_HEADERS });
   const { data, error } = await database()
     .storage.from("studio-media")
-    .createSignedUrl(media.path, 60);
+    .createSignedUrl(path, 60);
   if (error || !data?.signedUrl)
     throw new StudioError("Média indisponible.", 503);
   const upstream = await fetch(data.signedUrl, {
@@ -171,6 +189,14 @@ export async function publicMedia(
   ]) {
     const value = upstream.headers.get(name);
     if (value) headers.set(name, value);
+  }
+  if (
+    thumbnail &&
+    upstream.status !== 416 &&
+    !/^image\/jpeg(;|$)/i.test(headers.get("content-type") ?? "")
+  ) {
+    await upstream.body?.cancel();
+    throw new StudioError("Miniature indisponible.", 415);
   }
   // Never render an uploaded active document under the app origin.
   if (

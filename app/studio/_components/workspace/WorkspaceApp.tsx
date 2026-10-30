@@ -16,6 +16,7 @@ import CampaignLanding from "./CampaignLanding";
 import Configuration from "./Configuration";
 import Review from "./Review";
 import Icon from "../Icon";
+import StatsPage from "../StatsPage";
 import type { IconName } from "../Icon";
 import w from "./workspace.module.css";
 const pages: { url: string; label: string; icon: IconName }[] = [
@@ -288,6 +289,7 @@ function App() {
           </form>
         )}
         {pathname !== "/studio" &&
+          pathname !== "/studio/statistiques" &&
           (pathname !== "/studio/acces" || data.actor.role !== "validator") && (
             <h1 className={w.srOnly}>{current}</h1>
           )}
@@ -303,9 +305,7 @@ function App() {
         ) : pathname === "/studio/acces" ? (
           <Access />
         ) : pathname === "/studio/statistiques" ? (
-          <p>
-            Les statistiques des régies ne sont pas connectées à cet espace.
-          </p>
+          <StatsPage />
         ) : (
           <Review
             key={pathname + ":" + (navigation.params.get("campagne") ?? "all")}

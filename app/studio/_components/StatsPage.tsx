@@ -1,485 +1,496 @@
 "use client";
-import { useMemo, useState } from "react";
-import { BRANDS } from "@/lib/campaign-decks/config";
+
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
-  campaignStatus,
-  DEMO_DATE,
-  money,
-  number,
-  percent,
-  periodMetrics,
-  PLATFORM_LABELS,
-  summarizeMetrics,
-} from "@/lib/campaign-studio/model";
-import type {
-  MetricDay,
-  Period,
-  PlatformFilter,
-} from "@/lib/campaign-studio/types";
-import { useStudio } from "./StudioProvider";
+  STATISTICS_CAMPAIGNS,
+  costPerLead,
+  prospectConversion,
+  statisticsRanking,
+  statisticsRows,
+  statisticsTotals,
+  type StatisticsPeriod,
+} from "@/lib/campaign-studio/statistics-demo";
+import ChannelIcon from "./workspace/ChannelIcon";
 import Icon from "./Icon";
-import StudioSearch from "./StudioSearch";
-import s from "../studio.module.css";
+import s from "./statistics.module.css";
 
-type ChartMetric = "impressions" | "clicks" | "conversions";
-const chartLabels = {
-  impressions: "Impressions",
-  clicks: "Clics",
-  conversions: "Conversions",
-} as const;
+const number = (value: number) => new Intl.NumberFormat("fr-CA").format(value);
+const money = (value: number | null, decimals = 0) =>
+  value === null
+    ? "Non disponible"
+    : new Intl.NumberFormat("fr-CA", {
+        style: "currency",
+        currency: "CAD",
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      }).format(value);
+const percent = (value: number | null) =>
+  value === null
+    ? "Non disponible"
+    : new Intl.NumberFormat("fr-CA", {
+        style: "percent",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(value);
+type DialogContent = { title: string; items: [string, string][]; note: string };
+type Metric = "admissions" | "leads" | "budget" | "cpl" | "conversion";
+type Detail =
+  { kind: "metric"; id: Metric } | { kind: "channel"; id: string } | null;
 
-function PerformanceChart({
-  days,
-  period,
-  metric,
+function DetailDialog({
+  title,
+  items,
+  children,
+  close,
 }: {
-  days: MetricDay[];
-  period: Period;
-  metric: ChartMetric;
+  title: string;
+  items: [string, string][];
+  children: ReactNode;
+  close: () => void;
 }) {
-  const [hover, setHover] = useState<number | null>(null);
-  const series = useMemo(
-    () =>
-      Array.from({ length: period === "7d" ? 7 : 30 }, (_, i) => {
-        const date = new Date(`${DEMO_DATE}T12:00:00Z`);
-        date.setUTCDate(date.getUTCDate() - (period === "7d" ? 6 : 29) + i);
-        const key = date.toISOString().slice(0, 10);
-        return {
-          date: key,
-          value: days
-            .filter((d) => d.date === key)
-            .reduce((sum, d) => sum + d[metric], 0),
-        };
-      }),
-    [days, period, metric],
-  );
-  const maximum = Math.max(4, ...series.map((d) => d.value)) * 1.18;
-  const points = series.map((d, i) => ({
-    ...d,
-    x: 56 + (i * 684) / (series.length - 1),
-    y: 200 - (d.value / maximum) * 170,
-  }));
-  const active = hover === null ? null : points[hover];
-  const formatDate = (date: string) =>
-    new Date(`${date}T12:00:00Z`).toLocaleDateString("fr-CA", {
-      day: "numeric",
-      month: "short",
-      timeZone: "UTC",
-    });
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    dialog?.showModal();
+    return () => dialog?.close();
+  }, []);
   return (
-    <div className={s.chartContainer}>
-      <svg
-        viewBox="0 0 760 240"
-        aria-label={`Évolution des ${chartLabels[metric].toLowerCase()} sur ${series.length} jours. Données fictives.`}
-        role="group"
-      >
-        {[0, 1, 2, 3].map((i) => (
-          <g key={i}>
-            <line
-              x1="56"
-              x2="740"
-              y1={30 + (i * 170) / 3}
-              y2={30 + (i * 170) / 3}
-              stroke="currentColor"
-              className={s.chartGrid}
-              strokeDasharray={i === 3 ? undefined : "3 5"}
-            />
-            <text
-              x="43"
-              y={34 + (i * 170) / 3}
-              textAnchor="end"
-              className={s.chartLabel}
-            >
-              {new Intl.NumberFormat("fr-CA", {
-                notation: "compact",
-                maximumFractionDigits: 0,
-              }).format(maximum * (1 - i / 3))}
-            </text>
-          </g>
+    <dialog
+      ref={ref}
+      className={s.dialog}
+      aria-labelledby="statistics-detail-title"
+      onClose={() => {
+        if (!ref.current?.open) close();
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          const box = e.currentTarget.getBoundingClientRect();
+          if (
+            e.clientX < box.left ||
+            e.clientX > box.right ||
+            e.clientY < box.top ||
+            e.clientY > box.bottom
+          )
+            close();
+        }
+      }}
+    >
+      <div className={s.dialogHead}>
+        <h2 id="statistics-detail-title">{title}</h2>
+        <button type="button" onClick={close} aria-label="Fermer le détail">
+          <Icon name="close" />
+        </button>
+      </div>
+      <dl>
+        {items.map(([label, value]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
         ))}
-        <path
-          d={`M56,200 ${points.map((p) => `L${p.x},${p.y}`).join(" ")} L740,200 Z`}
-          className={s.chartArea}
-        />
-        <polyline
-          points={points.map((p) => `${p.x},${p.y}`).join(" ")}
-          fill="none"
-          className={s.chartLine}
-          strokeWidth="2.6"
-          strokeLinejoin="round"
-        />
-        {points.map((p, i) => (
-          <g
-            key={p.date}
-            tabIndex={0}
-            role="img"
-            aria-label={`${formatDate(p.date)} : ${number(p.value)} ${chartLabels[metric]}`}
-            onFocus={() => setHover(i)}
-            onBlur={() => setHover(null)}
-            onMouseEnter={() => setHover(i)}
-            onMouseLeave={() => setHover(null)}
-          >
-            <circle cx={p.x} cy={p.y} r="10" fill="transparent" />
-            <circle
-              cx={p.x}
-              cy={p.y}
-              r={hover === i ? 4 : 0}
-              className={s.chartPoint}
-            />
-          </g>
-        ))}
-        {[
-          0,
-          Math.floor((points.length - 1) / 3),
-          Math.floor(((points.length - 1) * 2) / 3),
-          points.length - 1,
-        ].map((i) => (
-          <text
-            key={i}
-            x={points[i].x}
-            y="229"
-            textAnchor={
-              i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"
-            }
-            className={s.chartLabel}
-          >
-            {formatDate(points[i].date)}
-          </text>
-        ))}
-        {active && (
-          <g
-            transform={`translate(${Math.max(60, Math.min(584, active.x - 76))}, 0)`}
-            className={s.chartTooltip}
-          >
-            <rect width="150" height="47" rx="6" />
-            <text x="12" y="18">
-              {formatDate(active.date)}
-            </text>
-            <text x="12" y="35">
-              {number(active.value)} {chartLabels[metric].toLowerCase()}
-            </text>
-          </g>
-        )}
-      </svg>
-    </div>
+      </dl>
+      <p>{children}</p>
+    </dialog>
   );
 }
 
 export default function StatsPage() {
-  const { visibleCampaigns, notify } = useStudio();
-  const [period, setPeriod] = useState<Period>("30d");
-  const [platform, setPlatform] = useState<PlatformFilter>("all");
-  const [campaignId, setCampaignId] = useState("all");
-  const [metric, setMetric] = useState<ChartMetric | null>(null);
-  const availableCampaigns = visibleCampaigns.filter(
-    (c) => campaignStatus(c) === "on_air",
+  const [campaignId, setCampaignId] = useState("admissions");
+  const [period, setPeriod] = useState<StatisticsPeriod>("all");
+  const [query, setQuery] = useState("");
+  const [ascending, setAscending] = useState(false);
+  const [detail, setDetail] = useState<Detail>(null);
+  const campaign = STATISTICS_CAMPAIGNS.find((c) => c.id === campaignId);
+  const channels = campaign ? statisticsRows(campaign, period) : [];
+  const totals = statisticsTotals(channels);
+  const search = query.trim().toLocaleLowerCase("fr");
+  const visibleChannels = channels
+    .filter((c) =>
+      `${c.name} ${c.subtitle}`.toLocaleLowerCase("fr").includes(search),
+    )
+    .sort((a, b) => (ascending ? a.leads - b.leads : b.leads - a.leads));
+  const ranking = statisticsRanking(STATISTICS_CAMPAIGNS, period).filter(
+    (r) => campaign || r.campaign.name.toLocaleLowerCase("fr").includes(search),
   );
-  const selectedCampaign = availableCampaigns.some((c) => c.id === campaignId)
-    ? campaignId
-    : "all";
-  const live = availableCampaigns.filter(
-    (c) =>
-      (selectedCampaign === "all" || c.id === selectedCampaign) &&
-      (platform === "all" || c.creatives.some((a) => a.platform === platform)),
-  );
-  const days = periodMetrics(live, period, platform);
-  const totals = summarizeMetrics(days);
-  const channels = (["facebook", "instagram", "youtube", "display"] as const)
-    .map((channel) => ({
-      channel,
-      ...summarizeMetrics(days.filter((d) => d.platform === channel)),
-    }))
-    .sort((a, b) => b.impressions - a.impressions);
-  function exportCsv() {
-    const rows = [
-      [
-        "Campagne",
-        "Marque",
-        "Période",
-        "Canal",
-        "Impressions",
-        "Clics",
-        "CTR (%)",
-        "Conversions",
-        "Dépenses (CAD)",
-      ],
-    ];
-    for (const c of live) {
-      const m = summarizeMetrics(periodMetrics([c], period, platform));
-      rows.push([
-        c.name,
-        BRANDS[c.brandId].name,
-        period,
-        platform === "all" ? "Tous" : PLATFORM_LABELS[platform],
-        String(m.impressions),
-        String(m.clicks),
-        m.ctr.toFixed(2),
-        String(m.conversions),
-        m.spend.toFixed(2),
-      ]);
+  function chooseCampaign(id: string) {
+    setCampaignId(id);
+    setQuery("");
+    setDetail(null);
+  }
+  const cards: { id: Metric; label: string; value: string; caption: string }[] =
+    campaign
+      ? [
+          {
+            id: "admissions",
+            label: "Admissions",
+            value: number(totals.admissions),
+            caption: "Confirmées · simulation Zoho",
+          },
+          {
+            id: "leads",
+            label: "Prospects générés",
+            value: number(totals.leads),
+            caption: "Prospects uniques · simulation Zoho",
+          },
+          {
+            id: "budget",
+            label: "Budget dépensé",
+            value: money(totals.spend),
+            caption: `sur ${money(campaign.budget)} alloués`,
+          },
+          {
+            id: "cpl",
+            label: "Coût par prospect",
+            value: money(costPerLead(totals), 2),
+            caption: "Dépenses ÷ prospects",
+          },
+          {
+            id: "conversion",
+            label: "Conversion en prospects",
+            value: percent(prospectConversion(totals)),
+            caption: `sur ${number(totals.impressions)} impressions`,
+          },
+        ]
+      : [];
+  let dialog: {
+    title: string;
+    items: [string, string][];
+    note: string;
+  } | null = null;
+  if (detail && campaign) {
+    const timeLabel = period === "day" ? "30 octobre 2026" : "Campagne entière";
+    if (detail.kind === "channel") {
+      const row = channels.find((c) => c.id === detail.id);
+      if (row)
+        dialog = {
+          title: row.name,
+          items: [
+            ["Prospects attribués", number(row.leads)],
+            ["Admissions attribuées", number(row.admissions)],
+            ["Impressions", number(row.impressions)],
+            ["Dépensé", money(row.spend, 2)],
+            ["Coût par prospect", money(costPerLead(row), 2)],
+            ["Prospects / impressions", percent(prospectConversion(row))],
+          ],
+          note: "Données fictives. Prospects et admissions sont rattachés à une campagne et à un canal dans cet exemple. Le statut d’admission et la règle d’attribution Zoho restent à confirmer.",
+        };
+    } else {
+      const details: Record<Metric, DialogContent> = {
+        admissions: {
+          title: "Admissions",
+          items: [
+            ["Admissions de cette campagne", number(totals.admissions)],
+            ["Source prévue", "Zoho · à confirmer"],
+            ["Période", timeLabel],
+          ],
+          note: "Hypothèse de démonstration : admissions confirmées, comptées une seule fois. Le module et le statut exacts dans Zoho restent à définir. Un prospect converti en contact n’est pas automatiquement une admission.",
+        },
+        leads: {
+          title: "Prospects générés",
+          items: [
+            ["Prospects de cette campagne", number(totals.leads)],
+            ["Source prévue", "Zoho CRM"],
+            ["Période", timeLabel],
+          ],
+          note: "Déduplication et attribution à la campagne à confirmer. Aucun total ne fusionne les différentes campagnes.",
+        },
+        budget: {
+          title: "Budget de campagne",
+          items: [
+            ["Budget alloué", money(campaign.budget)],
+            ["Budget dépensé", money(totals.spend, 2)],
+            ["Budget restant", money(campaign.budget - totals.spend, 2)],
+          ],
+          note: "Budget alloué saisi à la création à l’avenir. Dépenses issues des régies à l’avenir ; valeurs fictives ici.",
+        },
+        cpl: {
+          title: "Coût par prospect",
+          items: [
+            ["Dépenses média", money(totals.spend, 2)],
+            ["Prospects", number(totals.leads)],
+            ["Calcul", money(costPerLead(totals), 2)],
+          ],
+          note: "Calcul propre à cette campagne et à la période. Sans prospect, le coût est indisponible.",
+        },
+        conversion: {
+          title: "Conversion en prospects",
+          items: [
+            ["Prospects", number(totals.leads)],
+            ["Impressions", number(totals.impressions)],
+            ["Prospects ÷ impressions", percent(prospectConversion(totals))],
+          ],
+          note: "La formule conserve le ratio prospects / impressions demandé. Les admissions sont un indicateur distinct.",
+        },
+      };
+      dialog = details[detail.id];
     }
-    const csv =
-      "\uFEFF" +
-      rows
-        .map((row) =>
-          row.map((value) => `"${value.replace(/"/g, '""')}"`).join(";"),
-        )
-        .join("\r\n");
-    const url = URL.createObjectURL(
-      new Blob([csv], { type: "text/csv;charset=utf-8" }),
-    );
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `statistiques-demo-${period}.csv`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    notify("Rapport CSV exporté avec les filtres actifs.");
   }
   return (
-    <>
-      <h1 className={s.visuallyHidden}>Statistiques</h1>
-      <div className={`${s.statsFilters} ${s.workspaceToolbar}`}>
-        <div>
-          <label>
-            <Icon name="bookmark" size={15} />
-            <select
-              aria-label="Campagne des statistiques"
-              value={selectedCampaign}
-              onChange={(e) => setCampaignId(e.target.value)}
-            >
-              <option value="all">Toutes les campagnes</option>
-              {availableCampaigns.map((campaign) => (
-                <option key={campaign.id} value={campaign.id}>
-                  {campaign.name} · {BRANDS[campaign.brandId].name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            <Icon name="calendar" size={15} />
-            <select
-              aria-label="Période des statistiques"
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as Period)}
-            >
-              <option value="30d">30 derniers jours</option>
-              <option value="7d">7 derniers jours</option>
-            </select>
-          </label>
-          <label>
-            <Icon name="grid" size={15} />
-            <select
-              aria-label="Canal des statistiques"
-              value={platform}
-              onChange={(e) => setPlatform(e.target.value as PlatformFilter)}
-            >
-              <option value="all">Tous les canaux</option>
-              {Object.entries(PLATFORM_LABELS).map(([key, value]) => (
-                <option key={key} value={key}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <button
-          type="button"
-          className={s.exportIcon}
-          onClick={exportCsv}
-          aria-label="Exporter CSV"
-          title="Exporter CSV"
-        >
-          <Icon name="download" size={17} />
-        </button>
-        <StudioSearch />
+    <div className={s.dashboard} data-statistics-demo>
+      <div className={s.top}>
+        <h1>Statistiques</h1>
+        <span className={s.demo}>
+          <i aria-hidden="true" />
+          Données fictives
+        </span>
       </div>
-      <div className={s.essentialMetrics} aria-label="Chiffres essentiels">
-        {[
-          {
-            id: "impressions" as const,
-            label: "Impressions",
-            value: number(totals.impressions),
-            caption: "Affichages de vos annonces",
-          },
-          {
-            id: "clicks" as const,
-            label: "Clics",
-            value: number(totals.clicks),
-            caption: "Visites vers vos destinations",
-          },
-          {
-            id: "conversions" as const,
-            label: "Conversions",
-            value: number(totals.conversions),
-            caption: "Actions réalisées",
-          },
-        ].map((m) => (
-          <button
-            key={m.id}
-            className={s.metricButton}
-            aria-expanded={metric === m.id}
-            aria-controls={metric === m.id ? "metric-detail" : undefined}
-            onClick={() => setMetric(metric === m.id ? null : m.id)}
+      <div className={s.toolbar}>
+        <label className={s.select}>
+          <Icon name="campaign" size={17} />
+          <select
+            aria-label="Campagne"
+            value={campaignId}
+            onChange={(e) => chooseCampaign(e.target.value)}
           >
-            <span>
-              {m.label}
-              <Icon name={metric === m.id ? "close" : "arrow"} size={16} />
-            </span>
-            <strong>{m.value}</strong>
-            <small>
-              {metric === m.id ? "Masquer l’évolution" : "Voir l’évolution"}
-            </small>
-          </button>
-        ))}
+            <option value="all">Toutes les campagnes</option>
+            {STATISTICS_CAMPAIGNS.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <Icon name="down" size={14} />
+        </label>
+        <label className={s.select}>
+          <Icon name="calendar" size={17} />
+          <select
+            aria-label="Période"
+            value={period}
+            onChange={(e) => {
+              setPeriod(e.target.value as StatisticsPeriod);
+              setDetail(null);
+            }}
+          >
+            <option value="all">Toute la campagne</option>
+            <option value="day">Aujourd’hui</option>
+          </select>
+          <Icon name="down" size={14} />
+        </label>
+        <label className={s.search}>
+          <Icon name="search" size={21} />
+          <input
+            type="search"
+            aria-label={
+              campaign ? "Rechercher un canal" : "Rechercher une campagne"
+            }
+            placeholder={
+              campaign ? "Rechercher un canal…" : "Rechercher une campagne…"
+            }
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </label>
       </div>
-      {metric && (
-        <div className={s.chartOverview} id="metric-detail">
-          <section
-            className={s.chartPanel}
-            aria-label={`Détail des ${chartLabels[metric].toLowerCase()}`}
-          >
-            <div className={s.panelHeading}>
-              <div>
-                <h2>{chartLabels[metric]} · évolution</h2>
-              </div>
-              <button
-                className={s.detailIcon}
-                aria-label="Fermer l’évolution"
-                onClick={() => setMetric(null)}
-              >
-                <Icon name="close" size={16} />
-              </button>
-            </div>
-            <PerformanceChart
-              key={`${metric}-${period}`}
-              days={days}
-              period={period}
-              metric={metric}
-            />
-          </section>
-        </div>
-      )}
-      <details className={s.statsDetails}>
-        <summary>Campagnes, canaux et coûts</summary>
-        <div className={s.secondaryMetrics}>
-          <span>
-            Taux de clic <strong>{percent(totals.ctr)}</strong>
-          </span>
-          <span>
-            Dépenses <strong>{money(totals.spend)}</strong>
-          </span>
-          <span>
-            CPC moyen <strong>{money(totals.cpc)}</strong>
-          </span>
-        </div>
-        <section className={s.tablePanel}>
-          <div className={s.panelHeading}>
-            <div>
-              <h2>Performance des campagnes</h2>
-            </div>
-            <span className={s.countPill}>{live.length}</span>
+      {campaign && (
+        <>
+          <div className={s.context}>
+            <h2>{campaign.name}</h2>
+            <p>
+              <Icon name="calendar" size={14} />
+              {campaign.dates} · {campaign.days} jours
+            </p>
           </div>
-          <div className={s.tableScroll}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Campagne</th>
-                  <th>Impressions</th>
-                  <th>Clics</th>
-                  <th>CTR</th>
-                  <th>Conversions</th>
-                  <th>Dépenses</th>
-                </tr>
-              </thead>
-              <tbody>
-                {live.map((c) => {
-                  const m = summarizeMetrics(
-                    periodMetrics([c], period, platform),
-                  );
-                  return (
-                    <tr key={c.id}>
-                      <td>
-                        <div className={s.tableCampaign}>
-                          <span
-                            className={`${s.brandMonogram} ${c.brandId === "cu" ? s.cuBrand : s.cmsaBrand}`}
-                          >
-                            {c.brandId === "cu" ? "U" : "M"}
-                          </span>
-                          <span>
-                            <strong>{c.name}</strong>
-                            <small>{BRANDS[c.brandId].name}</small>
-                          </span>
-                        </div>
-                      </td>
-                      <td>{number(m.impressions)}</td>
-                      <td>{number(m.clicks)}</td>
-                      <td>{percent(m.ctr)}</td>
-                      <td>{number(m.conversions)}</td>
-                      <td>{money(m.spend)}</td>
-                    </tr>
-                  );
-                })}
-                {!live.length && (
-                  <tr>
-                    <td colSpan={6} className={s.emptyTable}>
-                      Aucune campagne on air ne correspond à ces filtres.
-                    </td>
-                  </tr>
+          <section className={s.kpis} aria-label="Chiffres essentiels">
+            {cards.map((card) => (
+              <button
+                type="button"
+                key={card.id}
+                className={`${s.kpi} ${card.id === "admissions" ? s.admissionKpi : ""}`}
+                onClick={() => setDetail({ kind: "metric", id: card.id })}
+                aria-haspopup="dialog"
+              >
+                <span className={s.cardLabel}>
+                  {card.label}
+                  <Icon name="arrow" size={15} />
+                </span>
+                <b>{card.value}</b>
+                <small>{card.caption}</small>
+                {card.id === "budget" && (
+                  <span className={s.track} aria-hidden="true">
+                    <i
+                      style={{
+                        width: `${Math.min(100, (totals.spend / campaign.budget) * 100)}%`,
+                      }}
+                    />
+                  </span>
                 )}
-              </tbody>
-              {live.length > 0 && (
+              </button>
+            ))}
+          </section>
+          <section aria-labelledby="statistics-channels-title">
+            <header className={s.tableHeading}>
+              <h2 id="statistics-channels-title">Comparaison des canaux</h2>
+              <span>Cliquez sur un canal pour le détail</span>
+            </header>
+            <div className={s.tablewrap}>
+              <table aria-label="Performance par canal">
+                <thead>
+                  <tr>
+                    <th scope="col">Canal</th>
+                    <th
+                      scope="col"
+                      aria-sort={ascending ? "ascending" : "descending"}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setAscending((v) => !v)}
+                        aria-label={`Trier les prospects par ordre ${ascending ? "décroissant" : "croissant"}`}
+                      >
+                        Prospects
+                        <Icon
+                          name="down"
+                          size={12}
+                          style={{
+                            transform: ascending ? "rotate(180deg)" : undefined,
+                          }}
+                        />
+                      </button>
+                    </th>
+                    <th scope="col">Admissions</th>
+                    <th scope="col">Dépensé</th>
+                    <th scope="col">Coût / prospect</th>
+                    <th scope="col" title="Prospects ÷ impressions">
+                      Conversion
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleChannels.map((row) => (
+                    <tr
+                      key={row.id}
+                      onClick={() => setDetail({ kind: "channel", id: row.id })}
+                    >
+                      <td>
+                        <button
+                          type="button"
+                          className={s.channel}
+                          aria-label={`Détail ${row.name}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetail({ kind: "channel", id: row.id });
+                          }}
+                        >
+                          {row.logo ? (
+                            <ChannelIcon
+                              channel={row.logo}
+                              size={26}
+                              tone="brand"
+                              variant="ads"
+                            />
+                          ) : (
+                            <span className={s.mark} aria-hidden="true">
+                              <Icon name="campaign" size={22} />
+                            </span>
+                          )}
+                          <span>
+                            <strong>{row.name}</strong>
+                            <small>{row.subtitle}</small>
+                          </span>
+                        </button>
+                      </td>
+                      <td className={s.emphasis}>{number(row.leads)}</td>
+                      <td className={s.emphasis}>{number(row.admissions)}</td>
+                      <td>{money(row.spend)}</td>
+                      <td>{money(costPerLead(row), 2)}</td>
+                      <td className={s.ratio}>
+                        {percent(prospectConversion(row))}
+                      </td>
+                    </tr>
+                  ))}
+                  {!visibleChannels.length && (
+                    <tr>
+                      <td colSpan={6} className={s.empty}>
+                        Aucun canal ne correspond à cette recherche.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
                 <tfoot>
                   <tr>
-                    <td>Total</td>
-                    <td>{number(totals.impressions)}</td>
-                    <td>{number(totals.clicks)}</td>
-                    <td>{percent(totals.ctr)}</td>
-                    <td>{number(totals.conversions)}</td>
+                    <td>Total campagne</td>
+                    <td>{number(totals.leads)}</td>
+                    <td>{number(totals.admissions)}</td>
                     <td>{money(totals.spend)}</td>
+                    <td>{money(costPerLead(totals), 2)}</td>
+                    <td>{percent(prospectConversion(totals))}</td>
                   </tr>
                 </tfoot>
-              )}
-            </table>
-          </div>
-        </section>
-        <section className={s.channelPanel}>
-          <div className={s.panelHeading}>
-            <div>
-              <h2>Répartition par canal</h2>
-              <p>Part des impressions</p>
+              </table>
             </div>
-            <Icon name="grid" size={17} />
-          </div>
-          <div className={s.channelRows}>
-            {channels.map((c) => (
-              <div key={c.channel}>
-                <div>
-                  <span>
-                    <i className={s[c.channel]} />
-                    {PLATFORM_LABELS[c.channel]}
-                  </span>
-                  <strong>
-                    {percent(
-                      totals.impressions
-                        ? (c.impressions / totals.impressions) * 100
-                        : 0,
-                    )}
-                  </strong>
-                </div>
-                <span className={s.channelTrack}>
-                  <span
-                    className={s[c.channel]}
-                    style={{
-                      width: `${totals.impressions ? (c.impressions / totals.impressions) * 100 : 0}%`,
-                    }}
-                  />
-                </span>
-                <small>{number(c.impressions)} impressions</small>
-              </div>
-            ))}
-          </div>
-        </section>
-      </details>
-    </>
+          </section>
+        </>
+      )}
+      <section className={s.ranking} aria-labelledby="statistics-ranking-title">
+        <header className={s.tableHeading}>
+          <h2 id="statistics-ranking-title">Campagnes les plus performantes</h2>
+          <span>Top 5 · en cours</span>
+        </header>
+        <div className={s.tablewrap}>
+          <table aria-label="Classement des campagnes">
+            <thead>
+              <tr>
+                <th scope="col">Campagne</th>
+                <th scope="col">Admissions</th>
+                <th scope="col">Prospects</th>
+                <th scope="col">Coût / prospect</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ranking.map(({ campaign: c, metrics }, i) => (
+                <tr key={c.id} onClick={() => chooseCampaign(c.id)}>
+                  <td>
+                    <button
+                      type="button"
+                      className={s.campaignButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        chooseCampaign(c.id);
+                      }}
+                      aria-label={`Ouvrir ${c.name}`}
+                    >
+                      <span className={s.rank}>{i + 1}</span>
+                      <strong>{c.name}</strong>
+                    </button>
+                  </td>
+                  <td>{number(metrics.admissions)}</td>
+                  <td>{number(metrics.leads)}</td>
+                  <td>{money(costPerLead(metrics), 2)}</td>
+                </tr>
+              ))}
+              {!ranking.length && (
+                <tr>
+                  <td colSpan={4} className={s.empty}>
+                    Aucune campagne ne correspond à cette recherche.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <small className={s.rankingNote}>
+          Classement par admissions, puis prospects · même période
+        </small>
+      </section>
+      <div className={s.footer}>
+        <span>
+          <Icon name="clock" size={13} />
+          Simulation du 30 octobre 2026 à 08:00 · Montréal
+        </span>
+        <span>Montants en dollars canadiens · dépenses média</span>
+      </div>
+      <p className={s.note}>
+        Démonstration. Tous les chiffres sont fictifs ; aucune régie ni aucun
+        CRM n’est connecté ici.
+      </p>
+      {dialog && (
+        <DetailDialog
+          title={dialog.title}
+          items={dialog.items}
+          close={() => setDetail(null)}
+        >
+          {dialog.note}
+        </DetailDialog>
+      )}
+    </div>
   );
 }

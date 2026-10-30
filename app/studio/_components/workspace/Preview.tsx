@@ -37,7 +37,7 @@ export function MediaPreview({
     <div
       className={`${s.media} ${vertical ? s.vertical : ""} ${thumbnail ? s.thumbnail : ""}`}
       style={
-        !thumbnail && media?.width && media.height
+        media?.width && media.height
           ? { aspectRatio: `${media.width} / ${media.height}` }
           : undefined
       }

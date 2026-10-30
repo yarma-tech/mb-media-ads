@@ -945,3 +945,22 @@
   text-align: left;
   background: #fff;
 }
+
+/* On air uses the actual media ratio; only the channel retains its card. */
+.surface .artboard:not([data-channel="google"]) .liveTile {
+  aspect-ratio: auto;
+  height: auto;
+  max-height: none;
+  align-self: start;
+  border-radius: 0;
+  background: transparent;
+}
+.mediaDimensions {
+  display: block;
+  margin-top: 7px;
+  color: #626b83;
+  font-size: 11px;
+  line-height: 1.4;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

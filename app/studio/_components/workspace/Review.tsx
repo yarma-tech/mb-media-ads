@@ -1107,8 +1107,9 @@ function LiveBoards({
                     : undefined
                 }
               >
-                {entries.map(({ c, a, live }) =>
-                  live ? (
+                {entries.map(({ c, a, live }) => {
+                  const media = c.media.find((m) => m.id === live?.mediaId);
+                  return live ? (
                     <button
                       key={a.id}
                       className={r.liveTile}
@@ -1121,6 +1122,14 @@ function LiveBoards({
                       ) : (
                         <MediaPreview campaign={c} ad={live} thumbnail />
                       )}
+                      {channel === "display" &&
+                        media &&
+                        media.width > 0 &&
+                        media.height > 0 && (
+                          <small className={r.mediaDimensions}>
+                            {media.width} X {media.height}
+                          </small>
+                        )}
                     </button>
                   ) : (
                     <div
@@ -1144,8 +1153,8 @@ function LiveBoards({
                         />
                       )}
                     </div>
-                  ),
-                )}
+                  );
+                })}
                 {!entries.length && (
                   <div className={r.noAds}>Aucune annonce créée</div>
                 )}

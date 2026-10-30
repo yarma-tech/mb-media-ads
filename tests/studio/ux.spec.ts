@@ -4181,3 +4181,133 @@ for (const width of [1440, 390]) {
     });
   });
 }
+
+for (const width of [1440, 390]) {
+  test.describe(`visuels seuls On air ${width}px`, () => {
+    test.use({
+      isMobile: width === 390,
+      hasTouch: width === 390,
+      viewport: { width, height: 900 },
+    });
+    test("ratios réels, aucun fond ni cadre et dimensions Display avec GIF animé", async ({
+      page,
+    }, testInfo) => {
+      const f = await fixture(page, "on_air");
+      let c = f.campaigns[1];
+      c.ads = [];
+      const specimens = [
+        {
+          channel: "facebook",
+          format: "square",
+          width: 1080,
+          height: 1080,
+          file: "/deck-demo/cu-generique-square.jpg",
+          mime: "image/jpeg",
+        },
+        {
+          channel: "instagram",
+          format: "portrait",
+          width: 1080,
+          height: 1350,
+          file: "/deck-demo/cu-generique-portrait.jpg",
+          mime: "image/jpeg",
+        },
+        {
+          channel: "display",
+          format: "rectangle",
+          width: 300,
+          height: 250,
+          file: "/__animated-banner.gif",
+          mime: "image/gif",
+        },
+        {
+          channel: "display",
+          format: "billboard",
+          width: 970,
+          height: 250,
+          file: "/deck-demo/cu-970x250.gif",
+          mime: "image/gif",
+        },
+      ] as const;
+      await page.route("**/__animated-banner.gif", (route) =>
+        route.fulfill({
+          path: "tests/studio/fixtures/animated-300x250.gif",
+          contentType: "image/gif",
+        }),
+      );
+      for (const [i, item] of specimens.entries()) {
+        c = addAd(c, item.channel, item.format, actor, now);
+        Object.assign(c.ads.at(-1)!, {
+          name: "Format " + i,
+          status: "on_air",
+          mediaId: "format-" + i,
+        });
+        c.media.push({
+          id: "format-" + i,
+          path: "format-" + i,
+          name: "format-" + i,
+          mime: item.mime,
+          bytes: 5000,
+          width: item.width,
+          height: item.height,
+          duration: null,
+          channel: item.channel,
+          state: "ready",
+          errors: [],
+        });
+        f.setMediaUrl("format-" + i, base + item.file);
+      }
+      f.campaigns[1] = c;
+      await page.goto(base + "/studio/on-air?campagne=" + c.id);
+      for (const [i, item] of specimens.entries()) {
+        const tile = page.getByRole("button", {
+          name: `Ouvrir Format ${i} · Beta`,
+          exact: true,
+        });
+        const img = tile.locator("img");
+        await expect(img).toHaveAttribute("src", base + item.file);
+        await expect
+          .poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth))
+          .toBe(item.width);
+        const surface = img.locator("..");
+        await expect(surface).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+        await expect(tile).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+        await expect(tile).toHaveCSS("border-radius", "0px");
+        await expect(tile).toHaveCSS("padding", "0px");
+        await expect(tile).toHaveCSS("border-width", "0px");
+        const box = await surface.boundingBox();
+        expect(box!.width / box!.height).toBeCloseTo(
+          item.width / item.height,
+          2,
+        );
+        const imageBox = await img.boundingBox();
+        expect(imageBox!.width).toBeCloseTo(box!.width, 1);
+        expect(imageBox!.height).toBeCloseTo(box!.height, 1);
+        if (item.channel === "display") {
+          const dimensions = tile.getByText(`${item.width} X ${item.height}`, {
+            exact: true,
+          });
+          await expect(dimensions).toBeVisible();
+          await expect(dimensions).toHaveCSS("text-align", "center");
+          const caption = await dimensions.boundingBox();
+          expect(caption!.y).toBeGreaterThanOrEqual(
+            imageBox!.y + imageBox!.height,
+          );
+        }
+      }
+      const gif = page
+        .getByRole("button", { name: "Ouvrir Format 2 · Beta", exact: true })
+        .locator("img");
+      const first = (await gif.screenshot()).toString("base64");
+      await expect
+        .poll(async () => (await gif.screenshot()).toString("base64"), {
+          timeout: 4000,
+        })
+        .not.toBe(first);
+      await page.screenshot({
+        path: testInfo.outputPath(`visuels-seuls-${width}.png`),
+        fullPage: true,
+      });
+    });
+  });
+}

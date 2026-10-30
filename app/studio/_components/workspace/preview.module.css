@@ -673,10 +673,11 @@
   padding: 0;
 }
 .thumbnail {
-  height: 100%;
+  height: auto;
   width: 100%;
-  aspect-ratio: auto;
+  max-height: none;
   min-height: 0;
+  background: transparent;
 }
 .thumbnail img,
 .thumbnail video {

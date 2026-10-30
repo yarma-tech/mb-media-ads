@@ -3551,3 +3551,254 @@ test("champs desktop conservent leurs proportions", async ({ page }) => {
     page.getByLabel("Texte de Beta annonce", { exact: true }),
   ).toHaveCSS("font-size", "14px");
 });
+
+test.describe("Arrivée mobile en création", () => {
+  test.use({
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+  });
+  for (const destination of ["formulaire", "tableau"] as const) {
+    test(`échelle stable pendant arrivée et navigation : ${destination}`, async ({
+      page,
+    }, testInfo) => {
+      await page.addInitScript(() => {
+        type Sample = { event: string; scale: number; width: number };
+        const observed = window as typeof window & {
+          __studioViewportSamples: Sample[];
+        };
+        observed.__studioViewportSamples = [];
+        const sample = (event: Event | string) => {
+          observed.__studioViewportSamples.push({
+            event: typeof event === "string" ? event : event.type,
+            scale: window.visualViewport?.scale ?? 1,
+            width: window.visualViewport?.width ?? innerWidth,
+          });
+        };
+        window.visualViewport?.addEventListener("resize", sample);
+        window.addEventListener("pageshow", sample);
+        window.addEventListener("load", sample);
+        document.addEventListener("DOMContentLoaded", sample);
+        document.addEventListener("focusin", sample);
+        sample("initial");
+      });
+      const f = await fixture(page, "draft", true);
+      const path =
+        destination === "formulaire"
+          ? "/studio/configuration?nouvelle=1"
+          : "/studio/configuration?campagne=" +
+            f.campaigns[1].id +
+            "&canal=facebook";
+      const ready = () =>
+        destination === "formulaire"
+          ? expect(
+              page.getByLabel("Nom de campagne", { exact: true }),
+            ).toBeVisible()
+          : expect(
+              page.getByLabel("Texte de Beta annonce", { exact: true }),
+            ).toBeVisible();
+      async function checkViewport(stage: string, noEditableFocus = true) {
+        await ready();
+        // Two frames allow layout to settle; listeners retain any transient zoom.
+        const observation = await page.evaluate(async () => {
+          await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+          );
+          const observed = window as typeof window & {
+            __studioViewportSamples: {
+              event: string;
+              scale: number;
+              width: number;
+            }[];
+          };
+          const result = {
+            scale: visualViewport?.scale ?? 1,
+            visualWidth: visualViewport?.width ?? innerWidth,
+            innerWidth,
+            scrollWidth: document.documentElement.scrollWidth,
+            editableFocus: !!document.activeElement?.matches(
+              'textarea,select,[contenteditable="true"],input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"])',
+            ),
+            samples: observed.__studioViewportSamples,
+          };
+          observed.__studioViewportSamples = [];
+          return result;
+        });
+        await testInfo.attach(stage, {
+          body: JSON.stringify(observation),
+          contentType: "application/json",
+        });
+        expect(observation.scale, stage).toBeCloseTo(1, 2);
+        expect(observation.visualWidth, stage).toBeCloseTo(
+          observation.innerWidth,
+          0,
+        );
+        expect(observation.innerWidth, stage).toBe(390);
+        expect(observation.scrollWidth, stage).toBeLessThanOrEqual(390);
+        expect(
+          Math.max(...observation.samples.map((sample) => sample.scale), 1),
+          stage,
+        ).toBeLessThanOrEqual(1.01);
+        if (noEditableFocus)
+          expect(observation.editableFocus, stage).toBe(false);
+      }
+      await page.goto(base + path);
+      await checkViewport("arrivée directe");
+      await page.reload();
+      await checkViewport("rechargement");
+      await page.goto(base + "/studio");
+      await expect(
+        page.getByRole("heading", { name: "Vos campagnes", exact: true }),
+      ).toBeVisible();
+      if (destination === "formulaire")
+        await page
+          .getByRole("link", { name: "Créer votre campagne", exact: true })
+          .tap();
+      else await page.getByRole("link", { name: /Beta/ }).tap();
+      await checkViewport("navigation depuis accueil");
+      await page.goBack();
+      await expect(
+        page.getByRole("heading", { name: "Vos campagnes", exact: true }),
+      ).toBeVisible();
+      await page.goForward();
+      await checkViewport("historique sans édition");
+      const field =
+        destination === "formulaire"
+          ? page.getByLabel("Nom de campagne", { exact: true })
+          : page.getByLabel("Texte de Beta annonce", { exact: true });
+      await field.tap();
+      await checkViewport("champ touché volontairement", false);
+      await page.goBack();
+      await expect(
+        page.getByRole("heading", { name: "Vos campagnes", exact: true }),
+      ).toBeVisible();
+      await page.goForward();
+      // History may legitimately restore the field the user focused earlier.
+      await checkViewport("historique après focus volontaire", false);
+    });
+  }
+});
+
+test("statut tableau : compléter le dernier champ rend prête avant et après sauvegarde", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft", true);
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=facebook",
+  );
+  await expect(
+    page.getByRole("cell", { name: "À compléter", exact: true }),
+  ).toBeVisible();
+  const release = f.hold("edit");
+  try {
+    await page
+      .getByLabel("Texte de Beta annonce", { exact: true })
+      .fill("Texte final de l’annonce");
+    await expect(
+      page.getByRole("cell", { name: "Prête", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/1 annonce · 1 prête à envoyer/, { exact: false }),
+    ).toBeVisible();
+  } finally {
+    release();
+  }
+  await expect
+    .poll(() => f.campaigns[1].ads[0].copy)
+    .toBe("Texte final de l’annonce");
+  await page
+    .getByRole("heading", { name: "Compléter les annonces", exact: true })
+    .click();
+  await page.reload();
+  await expect(
+    page.getByRole("cell", { name: "Prête", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Envoyer Beta annonce", exact: true })
+    .click();
+  await expect(
+    page.getByRole("cell", { name: "À valider", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/1 annonce · 1 à valider/, { exact: false }),
+  ).toBeVisible();
+});
+
+test("statut tableau : annonces complètes déjà envoyées sont comptées à valider", async ({
+  page,
+}) => {
+  const f = await fixture(page, "pending");
+  let c = f.campaigns[1];
+  for (const name of ["Deuxième annonce", "Troisième annonce"]) {
+    c = addAd(c, "google", "search", actor, now);
+    Object.assign(c.ads.at(-1)!, {
+      name,
+      status: "pending",
+      headlines: ["Titre un", "Titre deux", "Titre trois"],
+      descriptions: ["Description un", "Description deux"],
+    });
+  }
+  f.campaigns[1] = c;
+  await page.goto(
+    base + "/studio/configuration?campagne=" + c.id + "&canal=google",
+  );
+  await expect(
+    page.getByRole("cell", { name: "À valider", exact: true }),
+  ).toHaveCount(3);
+  await expect(
+    page.getByText(/3 annonces · 3 à valider/, { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByText(/0 prête/, { exact: false })).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Envoyer les annonces prêtes", exact: true })
+    .click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "déjà envoyées en validation" }),
+  ).toBeVisible();
+  expect(
+    f.commands.filter((command) => command.type === "submit"),
+  ).toHaveLength(0);
+});
+
+test("statut tableau : correction prête reste à renvoyer et annonce pending reste à valider", async ({
+  page,
+}) => {
+  const f = await fixture(page, "changes_requested", true);
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=facebook",
+  );
+  await page
+    .getByLabel("Texte de Beta annonce", { exact: true })
+    .fill("Texte corrigé");
+  await expect.poll(() => f.campaigns[1].ads[0].copy).toBe("Texte corrigé");
+  await expect(
+    page.getByRole("cell", { name: "À modifier", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/1 annonce · 1 prête à envoyer/, { exact: false }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Envoyer les annonces prêtes", exact: true })
+    .click();
+  await expect(
+    page.getByRole("cell", { name: "À valider", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Texte de Beta annonce", { exact: true })
+    .fill("Texte ajusté encore");
+  await expect
+    .poll(() => f.campaigns[1].ads[0].copy)
+    .toBe("Texte ajusté encore");
+  await expect(
+    page.getByRole("cell", { name: "À valider", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(/1 annonce · 1 à valider/, { exact: false }),
+  ).toBeVisible();
+});

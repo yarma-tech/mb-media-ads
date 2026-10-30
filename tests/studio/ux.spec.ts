@@ -86,7 +86,10 @@ async function fixture(
     catalog: CATALOG,
     channels: CHANNELS,
     mediaUrls: {} as Record<string, string>,
+    thumbnailUrls: {} as Record<string, string>,
   };
+  let resumableLength = 0;
+  let resumableOffset = 0;
   const commands: Record<string, unknown>[] = [];
   const leases = new Map<string, string>();
   const heldCommands = new Map<string, Promise<void>>();
@@ -153,12 +156,16 @@ async function fixture(
       const cors = {
         "Access-Control-Allow-Origin": base,
         "Access-Control-Allow-Methods": "POST,PATCH,HEAD,OPTIONS",
-        "Access-Control-Allow-Headers": "*",
+        "Access-Control-Allow-Headers":
+          req.headers()["access-control-request-headers"] ??
+          "authorization,apikey,x-signature,x-upsert,tus-resumable,upload-length,upload-metadata,upload-offset,content-type",
         "Access-Control-Expose-Headers": "Location,Upload-Offset,Tus-Resumable",
       };
       if (req.method() === "OPTIONS")
         return route.fulfill({ status: 204, headers: cors });
-      if (req.method() === "POST")
+      if (req.method() === "POST") {
+        resumableLength = Number(req.headers()["upload-length"]);
+        resumableOffset = 0;
         return route.fulfill({
           status: 201,
           headers: {
@@ -168,12 +175,20 @@ async function fixture(
             "Upload-Offset": "0",
           },
         });
+      }
+      // WebKit does not expose file-backed XHR bodies through postDataBuffer.
+      // The fixture acknowledges the known length from the TUS creation request.
+      if (req.method() === "PATCH")
+        resumableOffset = Math.min(
+          resumableLength,
+          resumableOffset + (req.postDataBuffer()?.length ?? resumableLength),
+        );
       return route.fulfill({
         status: 204,
         headers: {
           ...cors,
           "Tus-Resumable": "1.0.0",
-          "Upload-Offset": String(req.postDataBuffer()?.length ?? 0),
+          "Upload-Offset": String(resumableOffset),
         },
       });
     }
@@ -307,6 +322,9 @@ async function fixture(
           data.mediaUrls[media.id] =
             base +
             (video ? "/__ux-video.mp4" : "/deck-demo/cu-generique-square.jpg");
+          if (video)
+            data.thumbnailUrls[media.id] =
+              base + "/deck-demo/cu-generique-square.jpg";
         }
         if (cmd.type === "edit")
           c = editAd(
@@ -381,6 +399,9 @@ async function fixture(
     commands,
     expireLeases: () => leases.clear(),
     claimElsewhere: (adId: string) => leases.set(adId, "another-editor-token"),
+    setThumbnailUrl: (id: string, url: string) => {
+      data.thumbnailUrls[id] = url;
+    },
     setMediaUrl: (id: string, url: string) => {
       data.mediaUrls[id] = url;
     },
@@ -949,7 +970,7 @@ for (const kind of ["image", "video"] as const) {
     await expect(
       library.getByRole("button", { name: "Pause", exact: true }),
     ).toHaveCount(0);
-    const media = library.locator(kind === "image" ? "img" : "video");
+    const media = library.locator("img");
     await expect(media).toBeVisible();
     await expect
       .poll(() =>
@@ -961,14 +982,20 @@ for (const kind of ["image", "video"] as const) {
       )
       .toBeGreaterThan(0);
     if (kind === "video") {
-      await media.evaluate((el) => {
+      await expect(library.locator("video")).toHaveCount(0);
+      await library
+        .getByRole("button", { name: "Lire video-640x360.mp4", exact: true })
+        .click();
+      await library.locator("video").evaluate((el) => {
         const v = el as HTMLVideoElement;
         v.muted = true;
         return v.play();
       });
       await expect
         .poll(() =>
-          media.evaluate((el) => (el as HTMLVideoElement).currentTime),
+          library
+            .locator("video")
+            .evaluate((el) => (el as HTMLVideoElement).currentTime),
         )
         .toBeGreaterThan(0);
     }
@@ -3892,7 +3919,7 @@ for (const width of [1440, 390]) {
       ).toContainText("Titre un");
     });
 
-    test(`On air : vidéos YouTube TikTok montrent une frame sans autoplay à ${width}px`, async ({
+    test(`On air : vidéos YouTube TikTok chargent seulement leur miniature à ${width}px`, async ({
       page,
     }, testInfo) => {
       const f = await fixture(page, "on_air");
@@ -3925,35 +3952,30 @@ for (const width of [1440, 390]) {
           errors: [],
         });
         f.setMediaUrl("video-" + channel, base + "/__ux-video.mp4");
+        f.setThumbnailUrl(
+          "video-" + channel,
+          base + "/deck-demo/cu-generique-square.jpg",
+        );
       }
+      let videoRequests = 0;
+      page.on("request", (request) => {
+        if (request.url().includes("/__ux-video.mp4")) videoRequests++;
+      });
       f.campaigns[1] = c;
       await page.goto(base + "/studio/on-air?campagne=" + c.id);
       for (const label of ["YouTube", "TikTok"]) {
         const board = page.getByRole("region", { name: label, exact: true });
-        const video = board.locator("video");
+        await expect(board).toBeVisible();
+        await expect(board.locator("video")).toHaveCount(0);
+        const poster = board.locator("img");
+        await expect(poster).toBeVisible();
         await expect
-          .poll(() => video.evaluate((el: HTMLVideoElement) => el.readyState))
-          .toBeGreaterThanOrEqual(2);
-        await expect
-          .poll(() => video.evaluate((el: HTMLVideoElement) => el.currentTime))
+          .poll(() =>
+            poster.evaluate((el: HTMLImageElement) => el.naturalWidth),
+          )
           .toBeGreaterThan(0);
-        await expect(video).toHaveAttribute("data-frame", "ready");
-        expect(
-          await video.evaluate((el: HTMLVideoElement) => ({
-            paused: el.paused,
-            autoplay: el.autoplay,
-            inline: el.playsInline,
-            muted: el.muted,
-            controls: el.controls,
-          })),
-        ).toEqual({
-          paused: true,
-          autoplay: false,
-          inline: true,
-          muted: true,
-          controls: false,
-        });
       }
+      expect(videoRequests).toBe(0);
       await page.screenshot({
         path: testInfo.outputPath(`videos-onair-${width}.png`),
         fullPage: true,
@@ -3981,5 +4003,57 @@ for (const width of [1440, 390]) {
         .toBe(false);
       await player.evaluate((el: HTMLVideoElement) => el.pause());
     });
+  });
+}
+
+for (const brokenThumbnail of [false, true]) {
+  test(`vidéo ${brokenThumbnail ? "miniature expirée" : "historique sans miniature"} ne charge jamais l’original en grille`, async ({
+    page,
+  }) => {
+    const f = await fixture(page, "on_air");
+    let c = f.campaigns[1];
+    c.ads = [];
+    c = addAd(c, "youtube", "instream", actor, now);
+    Object.assign(c.ads[0], {
+      name: "Historique",
+      status: "on_air",
+      mediaId: "legacy",
+    });
+    c.media.push({
+      id: "legacy",
+      path: "legacy",
+      name: "legacy.mp4",
+      mime: "video/mp4",
+      bytes: 3286,
+      width: 640,
+      height: 360,
+      duration: 2,
+      channel: "youtube",
+      state: "ready",
+      errors: [],
+    });
+    f.setMediaUrl("legacy", base + "/__ux-video.mp4");
+    if (brokenThumbnail) {
+      f.setThumbnailUrl("legacy", base + "/__missing-poster.jpg");
+      await page.route("**/__missing-poster.jpg", (route) =>
+        route.fulfill({ status: 403, body: "Expired" }),
+      );
+    }
+    f.campaigns[1] = c;
+    let originalRequests = 0;
+    page.on("request", (request) => {
+      if (request.url().includes("/__ux-video.mp4")) originalRequests++;
+    });
+    await page.goto(base + "/studio/on-air?campagne=" + c.id);
+    const tile = page.getByRole("button", {
+      name: "Ouvrir Historique · Beta",
+      exact: true,
+    });
+    await expect(tile).toContainText("Aperçu vidéo indisponible");
+    await expect(tile.locator("video")).toHaveCount(0);
+    await expect(tile.locator("img")).toHaveCount(0);
+    expect(originalRequests).toBe(0);
+    await tile.click();
+    await expect(page.getByRole("dialog").locator("video")).toBeVisible();
   });
 }

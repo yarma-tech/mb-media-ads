@@ -54,7 +54,8 @@
   font-size: 13px;
   display: block;
 }
-.label input {
+.label input,
+.label select {
   display: block;
   width: 100%;
   padding: 12px;

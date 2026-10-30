@@ -17,6 +17,38 @@ export default function ShareCampaign({
     [error, setError] = useState(""),
     [copied, setCopied] = useState(false),
     [confirm, setConfirm] = useState(false);
+  const [mode, setMode] = useState<"validation" | "presentation">("validation");
+  const [scope, setScope] = useState<"video" | "all">("video");
+  const campaign = data?.campaigns.find((item) => item.id === campaignId);
+  const count =
+    campaign?.status === "active"
+      ? campaign.ads.filter(
+          (ad) =>
+            ad.status === "pending" &&
+            (scope === "all" ||
+              campaign.media.some(
+                (media) =>
+                  media.id === ad.mediaId && media.mime.startsWith("video/"),
+              )),
+        ).length
+      : 0;
+  const params = new URLSearchParams({
+    campagne: campaignId,
+    statut: "pending",
+  });
+  if (scope === "video") params.set("media", "video");
+  const validationUrl =
+    (typeof window === "undefined" ? "" : window.location.origin) +
+    "/studio/validation?" +
+    params;
+  async function copy(value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+    } catch {
+      setError("Sélectionnez le lien pour le copier.");
+    }
+  }
   const dialog = useRef<HTMLDialogElement>(null);
   const active =
     data?.shareLinks?.some(
@@ -26,8 +58,7 @@ export default function ShareCampaign({
     if (open) dialog.current?.showModal();
     else dialog.current?.close();
   }, [open]);
-  if (data?.actor.kind !== "human" || data.actor.role !== "validator")
-    return null;
+  if (data?.actor.kind !== "human") return null;
   async function act(action: "create" | "revoke") {
     if (busy) return;
     setBusy(true);
@@ -74,74 +105,137 @@ export default function ShareCampaign({
           </button>
         </div>
         <p>{name}</p>
-        <p className={s.help}>
-          Toute personne disposant du lien peut consulter les annonces, sans
-          pouvoir les modifier.
-        </p>
-        {url ? (
+        {data.actor.role === "validator" && (
+          <label className={s.label}>
+            Type de lien
+            <select
+              aria-label="Type de lien"
+              value={mode}
+              onChange={(event) => {
+                setMode(event.target.value as "validation" | "presentation");
+                setCopied(false);
+                setError("");
+              }}
+            >
+              <option value="validation">Validation avec connexion</option>
+              <option value="presentation">Présentation publique</option>
+            </select>
+          </label>
+        )}
+        {mode === "validation" || data.actor.role !== "validator" ? (
           <>
             <label className={s.label}>
-              Lien public
+              Annonces à partager
+              <select
+                aria-label="Annonces à partager"
+                value={scope}
+                onChange={(event) => {
+                  setScope(event.target.value as "video" | "all");
+                  setCopied(false);
+                }}
+              >
+                <option value="video">Vidéos uniquement</option>
+                <option value="all">Toutes les annonces</option>
+              </select>
+            </label>
+            <p className={s.help}>
+              Connexion requise avec un compte Validateur pour approuver,
+              commenter ou modifier.
+            </p>
+            <p role="status">
+              {count
+                ? `${count} annonce${count > 1 ? "s" : ""} à valider`
+                : "Aucune annonce à valider dans cette sélection."}
+            </p>
+            <label className={s.label}>
+              Lien de validation
               <input
                 readOnly
-                value={url}
-                onFocus={(e) => e.currentTarget.select()}
+                value={validationUrl}
+                onFocus={(event) => event.currentTarget.select()}
               />
             </label>
             <button
               className={s.primary}
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(url);
-                  setCopied(true);
-                } catch {
-                  setError("Sélectionnez le lien pour le copier.");
-                }
-              }}
+              disabled={!count}
+              onClick={() => void copy(validationUrl)}
             >
               {copied ? "Lien copié" : "Copier le lien"}
             </button>
           </>
         ) : (
-          <button
-            disabled={busy}
-            className={s.primary}
-            onClick={() => (active ? setConfirm(true) : void act("create"))}
-          >
-            {active ? "Créer un nouveau lien" : "Créer le lien public"}
-          </button>
-        )}
-        {active && !url && (
-          <p className={s.help}>
-            Un lien est actif. Un nouveau lien remplacera l’ancien.
-          </p>
-        )}
-        {(active || url) && (
-          <button
-            disabled={busy}
-            className={s.revoke}
-            onClick={() => setConfirm(true)}
-          >
-            Révoquer le lien
-          </button>
-        )}
-        {confirm && (
-          <div className={s.confirm}>
-            <p>
-              Le lien actuel cessera de fonctionner, y compris pour les médias.
+          <>
+            <p className={s.help}>
+              Toute personne disposant du lien peut consulter les annonces, sans
+              pouvoir les modifier.
             </p>
-            <button disabled={busy} onClick={() => void act("revoke")}>
-              Confirmer la révocation
-            </button>
-            {!url && (
-              <button disabled={busy} onClick={() => void act("create")}>
-                Remplacer par un nouveau lien
+            {url ? (
+              <>
+                <label className={s.label}>
+                  Lien public
+                  <input
+                    readOnly
+                    value={url}
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                </label>
+                <button
+                  className={s.primary}
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(url);
+                      setCopied(true);
+                    } catch {
+                      setError("Sélectionnez le lien pour le copier.");
+                    }
+                  }}
+                >
+                  {copied ? "Lien copié" : "Copier le lien"}
+                </button>
+              </>
+            ) : (
+              <button
+                disabled={busy}
+                className={s.primary}
+                onClick={() => (active ? setConfirm(true) : void act("create"))}
+              >
+                {active ? "Créer un nouveau lien" : "Créer le lien public"}
               </button>
             )}
-            <button disabled={busy} onClick={() => setConfirm(false)}>
-              Annuler
-            </button>
-          </div>
+            {active && !url && (
+              <p className={s.help}>
+                Un lien est actif. Un nouveau lien remplacera l’ancien.
+              </p>
+            )}
+            {(active || url) && (
+              <button
+                disabled={busy}
+                className={s.revoke}
+                onClick={() => setConfirm(true)}
+              >
+                Révoquer le lien
+              </button>
+            )}
+            {confirm && (
+              <div className={s.confirm}>
+                <p>
+                  Le lien actuel cessera de fonctionner, y compris pour les
+                  médias.
+                </p>
+                <button disabled={busy} onClick={() => void act("revoke")}>
+                  Confirmer la révocation
+                </button>
+                {!url && (
+                  <button disabled={busy} onClick={() => void act("create")}>
+                    Remplacer par un nouveau lien
+                  </button>
+                )}
+                <button disabled={busy} onClick={() => setConfirm(false)}>
+                  Annuler
+                </button>
+              </div>
+            )}
+          </>
         )}
         {error && <p role="alert">{error}</p>}
       </dialog>

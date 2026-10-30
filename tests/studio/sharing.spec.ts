@@ -123,6 +123,9 @@ test("validator creates, copies and revokes a campaign link", async ({
     .click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page
+    .getByLabel("Type de lien", { exact: true })
+    .selectOption("presentation");
+  await page
     .getByRole("button", { name: "Créer le lien public", exact: true })
     .click();
   await expect(page.getByLabel("Lien public", { exact: true })).toHaveValue(

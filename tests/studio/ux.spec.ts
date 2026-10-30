@@ -11,6 +11,7 @@ import {
   editAd,
   newVersion,
   submitAds,
+  decideAd,
 } from "../../lib/campaign-studio/workspace/workflow";
 import type {
   Actor,
@@ -34,6 +35,7 @@ async function fixture(
   withMedia = false,
   strictLocks = false,
   beforeSignIn?: (page: Page) => Promise<void>,
+  options: { role: "validator" | "preparer" } = { role: "preparer" },
 ) {
   const make = (name: string) => {
     let c = createCampaign(name, actor, now);
@@ -70,7 +72,7 @@ async function fixture(
       mediaId: "ready-media",
     });
   let data = {
-    actor,
+    actor: { ...actor, role: options.role } as Actor,
     brands: [
       {
         id: "brand-test",
@@ -326,6 +328,8 @@ async function fixture(
             data.thumbnailUrls[media.id] =
               base + "/deck-demo/cu-generique-square.jpg";
         }
+        if (cmd.type === "decide")
+          c = decideAd(c, cmd.adId, cmd.status, data.actor, now, cmd.comment);
         if (cmd.type === "edit")
           c = editAd(
             c,
@@ -427,6 +431,12 @@ async function fixture(
     },
   };
 }
+async function validatorFixture(...args: Parameters<typeof fixture>) {
+  const [page, status, withMedia, strictLocks, beforeSignIn] = args;
+  return fixture(page, status, withMedia, strictLocks, beforeSignIn, {
+    role: "validator",
+  });
+}
 async function beginCampaign(page: Page, name: string) {
   await page
     .getByRole("link", { name: "Créer votre campagne", exact: true })
@@ -513,7 +523,7 @@ async function openEditor(page: Page, id: string) {
 test("une correction survit à Échap, fermeture, clic extérieur et rechargement", async ({
   page,
 }) => {
-  const { campaigns } = await fixture(page);
+  const { campaigns } = await validatorFixture(page);
   await openEditor(page, campaigns[1].id);
   const field = page.getByLabel("Titres · un par ligne");
   const text = "Correction conservée\nTitre deux\nTitre trois";
@@ -623,7 +633,7 @@ test("double clic et Entrée répétés créent une seule campagne sous 800 ms",
 for (const width of [1440, 390, 320]) {
   test(`clavier et modale native à ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
-    const f = await fixture(page);
+    const f = await validatorFixture(page);
     await openEditor(page, f.campaigns[1].id);
     const dialog = page.getByRole("dialog");
     const field = page.getByLabel("Titres · un par ligne");
@@ -753,7 +763,7 @@ test("contexte historique et campagne B ne réutilisent aucune ligne ni sélecti
 test("échec de sauvegarde conserve correction, fermeture sûre si stockage indisponible", async ({
   page,
 }) => {
-  const f = await fixture(page);
+  const f = await validatorFixture(page);
   await openEditor(page, f.campaigns[1].id);
   const field = page.getByLabel("Titres · un par ligne");
   await page.evaluate(() => {
@@ -875,7 +885,8 @@ test("soumission avec sauvegarde préalable et demande de modification restent u
     page.getByRole("cell", { name: "À valider", exact: true }),
   ).toBeVisible();
   expect(f.commands.filter((c) => c.type === "submit")).toHaveLength(1);
-  await page.getByRole("link", { name: "Validation", exact: true }).click();
+  f.setActor(actor);
+  await page.goto(base + `/studio/validation?campagne=${f.campaigns[1].id}`);
   await page
     .getByRole("button", { name: "Demander une modification", exact: true })
     .click();
@@ -1012,7 +1023,7 @@ for (const kind of ["image", "video"] as const) {
 test("carrousel parcouru : reprendre sans modifier les statuts", async ({
   page,
 }) => {
-  const f = await fixture(page);
+  const f = await validatorFixture(page);
   await page.getByRole("link", { name: "Validation", exact: true }).click();
   await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
   await expect(page.getByRole("article")).toHaveCount(1);
@@ -1138,7 +1149,7 @@ test("raccourci clavier Aller au contenu cible la zone de travail", async ({
 test("reprendre au clavier ne valide jamais implicitement", async ({
   page,
 }) => {
-  const f = await fixture(page);
+  const f = await validatorFixture(page);
   await page.getByRole("link", { name: "Validation", exact: true }).click();
   await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
   await expect(page.getByRole("article")).toHaveCount(1);
@@ -1264,7 +1275,7 @@ test("rechargement conserve le bail de son éditeur sans ouvrir un second édite
 test("commentaire : focus initial, Entrée et Échap restent sûrs", async ({
   page,
 }) => {
-  const f = await fixture(page);
+  const f = await validatorFixture(page);
   await openEditor(page, f.campaigns[1].id);
   await page.keyboard.press("Escape");
   const trigger = page.getByRole("button", {
@@ -1355,7 +1366,7 @@ test("repères, titres et noms accessibles des principales vues", async ({
 test("erreur et chargement annoncés dans le dialogue de validation", async ({
   page,
 }) => {
-  const f = await fixture(page);
+  const f = await validatorFixture(page);
   await openEditor(page, f.campaigns[1].id);
   const dialog = page.getByRole("dialog");
   await page
@@ -1382,7 +1393,7 @@ test("erreur et chargement annoncés dans le dialogue de validation", async ({
 test("erreur de commentaire annoncée sans perdre la saisie", async ({
   page,
 }) => {
-  const f = await fixture(page);
+  const f = await validatorFixture(page);
   await page.getByRole("link", { name: "Validation", exact: true }).click();
   await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
   await expect(page.getByRole("article")).toHaveCount(1);
@@ -1556,7 +1567,7 @@ test("vérifier A ne masque pas l’erreur du transfert B", async ({ page }) => 
 });
 
 test("carrousel : hiérarchie de titres continue", async ({ page }) => {
-  const f = await fixture(page);
+  const f = await validatorFixture(page);
   await page.getByRole("link", { name: "Validation", exact: true }).click();
   await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
   await expect(page.getByRole("article")).toHaveCount(1);
@@ -1607,7 +1618,7 @@ test("connexion sans session : une seule invitation, vraies erreurs conservées"
 test("panne réseau à l’enregistrement : message français, brouillon préservé, aucune répétition automatique", async ({
   page,
 }) => {
-  const f = await fixture(page);
+  const f = await validatorFixture(page);
   await openEditor(page, f.campaigns[1].id);
   let attempts = 0;
   await page.route("**/api/studio/commands", (route) => {
@@ -2386,7 +2397,7 @@ test("direction D : commentaire traité conservé en gris sans validation", asyn
 test("direction D : validation affiche tout le groupe par défaut", async ({
   page,
 }) => {
-  const f = await fixture(page);
+  const f = await validatorFixture(page);
   const campaign = addAd(f.campaigns[1], "google", "search", actor, now);
   Object.assign(campaign.ads[1], {
     name: "Second texte du groupe",
@@ -2589,6 +2600,7 @@ test("fidélité maquettes : captures bureau avec campagne complète", async ({
     status: "pending" as const,
   }));
   f.campaigns[1] = campaign;
+  f.setActor(actor);
   await page.goto(base + `/studio/validation?campagne=${campaign.id}`);
   await capture("07-validation-facebook");
   await page
@@ -2769,7 +2781,7 @@ test("fidélité maquettes : captures bureau avec campagne complète", async ({
 test("Google SEM : aperçu réaliste, tous les textes conservés dans l’éditeur", async ({
   page,
 }) => {
-  const f = await fixture(page);
+  const f = await validatorFixture(page);
   const campaign = f.campaigns[1];
   const ad = campaign.ads[0];
   ad.headlines = Array.from({ length: 15 }, (_, i) => `Accroche ${i + 1}`);
@@ -4311,3 +4323,211 @@ for (const width of [1440, 390]) {
     });
   });
 }
+
+test("profil validateur : accueil et URL directe n’exposent pas la création", async ({
+  page,
+}) => {
+  const f = await validatorFixture(page);
+  f.campaigns[1].ads[0].status = "on_air";
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Vos campagnes" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("navigation", { name: "Navigation du studio" })
+      .getByRole("link", { name: "Configuration", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("link", { name: "Créer votre campagne", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("link").filter({ hasText: "Alpha" }),
+  ).toHaveAttribute("href", /\/studio\/validation\?/);
+  await expect(
+    page.getByRole("link").filter({ hasText: "Beta" }),
+  ).toHaveAttribute("href", /\/studio\/on-air\?/);
+  await page
+    .getByRole("button", { name: "Partager la campagne Beta", exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Copier le lien", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Fermer", exact: true })
+    .click();
+  f.campaigns[1].ads[0].status = "approved";
+  await page.reload();
+  await expect(
+    page.getByRole("link").filter({ hasText: "Beta" }),
+  ).toHaveAttribute("href", /\/studio\/validation\?.*statut=approved/);
+  await expect(
+    page.getByRole("link").filter({ hasText: "Beta" }),
+  ).toContainText("Validée");
+  f.campaigns[1].status = "finished";
+  await page.reload();
+  await expect(
+    page.getByRole("link").filter({ hasText: "Beta" }),
+  ).toHaveAttribute("href", /\/studio\/terminees\?/);
+  await page.addInitScript(() => {
+    (window as Window & { sawTable?: boolean }).sawTable = false;
+    new MutationObserver(() => {
+      if (document.querySelector("table"))
+        (window as Window & { sawTable?: boolean }).sawTable = true;
+    }).observe(document, { childList: true, subtree: true });
+  });
+  await page.goto(
+    base +
+      `/studio/configuration?campagne=${f.campaigns[0].id}&nouvelle=1&etape=editor`,
+  );
+  await expect(page).toHaveURL(
+    new RegExp(`/studio/validation\\?campagne=${f.campaigns[0].id}`),
+  );
+  expect(
+    await page.evaluate(
+      () => (window as Window & { sawTable?: boolean }).sawTable,
+    ),
+  ).toBe(false);
+  await expect(page.getByLabel("Nom de campagne", { exact: true })).toHaveCount(
+    0,
+  );
+});
+
+test("préparateur partage un lien de validation authentifiée propre et filtré", async ({
+  page,
+  context,
+  browserName,
+}, testInfo) => {
+  if (browserName === "webkit") {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript(() => {
+      let clipboard = "";
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async (value: string) => {
+            clipboard = value;
+          },
+          readText: async () => clipboard,
+        },
+      });
+    });
+  } else {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  }
+  const f = await fixture(page);
+  f.setActor({ ...actor, role: "preparer" });
+  let c = addAd(f.campaigns[1], "facebook", "reel", actor, now);
+  Object.assign(c.ads.at(-1)!, {
+    name: "Vidéo à valider",
+    status: "pending",
+    copy: "Message vidéo",
+    mediaId: "pending-video",
+  });
+  c.media.push({
+    id: "pending-video",
+    name: "video.mp4",
+    path: "private-video",
+    mime: "video/mp4",
+    bytes: 3286,
+    width: 1080,
+    height: 1920,
+    duration: 2,
+    channel: "facebook",
+    state: "ready",
+    errors: [],
+  });
+  for (const status of ["approved", "on_air", "draft"] as const) {
+    c = addAd(c, "facebook", "reel", actor, now);
+    Object.assign(c.ads.at(-1)!, {
+      name: "Vidéo " + status,
+      status,
+      copy: "Déjà traitée",
+      mediaId: "pending-video",
+    });
+  }
+  f.campaigns[1] = c;
+  f.setMediaUrl("pending-video", base + "/__ux-video.mp4");
+  f.setThumbnailUrl(
+    "pending-video",
+    base + "/deck-demo/cu-generique-vertical.jpg",
+  );
+
+  await page.goto(
+    base +
+      `/studio/configuration?campagne=${f.campaigns[1].id}&etape=editor&canal=google&q=parasite`,
+  );
+  await page
+    .getByRole("button", { name: "Partager la campagne Beta", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByText("Connexion requise", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Créer le lien public", exact: true }),
+  ).toHaveCount(0);
+  await page.screenshot({
+    path: testInfo.outputPath("partage-validation.png"),
+    fullPage: true,
+  });
+  await dialog
+    .getByRole("button", { name: "Copier le lien", exact: true })
+    .click();
+  const link = await page.evaluate(() => navigator.clipboard.readText());
+  const url = new URL(link);
+  expect(url.pathname).toBe("/studio/validation");
+  expect(Object.fromEntries(url.searchParams)).toEqual({
+    campagne: f.campaigns[1].id,
+    statut: "pending",
+    media: "video",
+  });
+  await dialog
+    .getByLabel("Annonces à partager", { exact: true })
+    .selectOption("all");
+  await dialog
+    .getByRole("button", { name: "Copier le lien", exact: true })
+    .click();
+  expect(
+    new URL(
+      await page.evaluate(() => navigator.clipboard.readText()),
+    ).searchParams.has("media"),
+  ).toBe(false);
+  expect(
+    f.commands.some((command) => command.type === "create_share_link"),
+  ).toBe(false);
+  await dialog.getByRole("button", { name: "Fermer", exact: true }).click();
+  f.setActor(actor);
+  await page.evaluate(() => localStorage.clear());
+  await context.clearCookies();
+  await page.goto(link);
+  await expect(page.getByLabel("E-mail", { exact: true })).toBeVisible();
+  await page
+    .getByLabel("E-mail", { exact: true })
+    .fill("validator@example.test");
+  await page.getByLabel("Mot de passe", { exact: true }).fill("test-password");
+  await page.getByRole("button", { name: "Se connecter", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Vidéos uniquement ×", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(page.locator('article[data-channel="facebook"]')).toContainText(
+    "Message vidéo",
+  );
+  await expect(page.locator('article[data-channel="google"]')).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("article")).toHaveCount(1);
+  await page.getByRole("button", { name: "Approuver", exact: true }).click();
+  await expect(page.getByRole("article")).toHaveCount(0);
+  expect(
+    f.campaigns[1].ads.find((ad) => ad.name === "Vidéo à valider")?.status,
+  ).toBe("approved");
+  expect(f.campaigns[1].ads[0].status).toBe("pending");
+  await page
+    .getByRole("button", { name: "Vidéos uniquement ×", exact: true })
+    .click();
+  await expect(page.locator('article[data-channel="google"]')).toHaveCount(1);
+});

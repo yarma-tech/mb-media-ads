@@ -4,8 +4,8 @@ import {
   loginErrorMessage,
   workspaceErrorMessage,
 } from "@/lib/campaign-studio/workspace/messages";
-import { usePathname } from "next/navigation";
-import { Suspense, useState, type FormEvent } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { Suspense, useState, useEffect, type FormEvent } from "react";
 import {
   authClient,
   WorkspaceProvider,
@@ -118,6 +118,22 @@ function App() {
         </form>
       </section>
     );
+  if (data.actor.role === "validator" && pathname === "/studio/configuration")
+    return (
+      <ValidationRedirect
+        href={navigation.href("/studio/validation", {
+          nouvelle: "",
+          etape: "",
+          canaux: "",
+          canal: "",
+          q: "",
+          theme: "",
+          groupe: "",
+          media: "",
+          statut: "pending",
+        })}
+      />
+    );
   const initials = data.actor.name
     .split(/\s+/)
     .map((part) => part[0])
@@ -140,7 +156,10 @@ function App() {
           {pages
             .filter(
               (p) =>
-                p.url !== "/studio/acces" || data.actor.role === "validator",
+                data.actor.role !== "validator" ||
+                ["/studio", "/studio/validation", "/studio/on-air"].includes(
+                  p.url,
+                ),
             )
             .map((p) => (
               <Link
@@ -175,9 +194,11 @@ function App() {
                 <Icon name="info" /> Accès
               </Link>
             )}
-            <Link href="/social">
-              <Icon name="external" /> Social Ads
-            </Link>
+            {data.actor.role !== "validator" && (
+              <Link href="/social">
+                <Icon name="external" /> Social Ads
+              </Link>
+            )}
             <button onClick={() => void logout()}>
               <Icon name="logout" /> Se déconnecter
             </button>
@@ -441,4 +462,12 @@ function Access() {
       )}
     </div>
   );
+}
+
+function ValidationRedirect({ href }: { href: string }) {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace(href);
+  }, [href, router]);
+  return <section role="status">Ouverture de la validation…</section>;
 }

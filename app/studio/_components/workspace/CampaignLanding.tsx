@@ -77,20 +77,47 @@ export default function CampaignLanding() {
           const brand = data!.brands.find(
             (item) => item.id === campaign.brandId,
           );
+          const hasPending = campaign.ads.some((ad) => ad.status === "pending");
+          const hasLive = campaign.ads.some((ad) => ad.status === "on_air");
+          const hasApproved = campaign.ads.some(
+            (ad) => ad.status === "approved",
+          );
+          const destination = !validator
+            ? "/studio/configuration"
+            : campaign.status === "finished"
+              ? "/studio/terminees"
+              : hasPending || !hasLive
+                ? "/studio/validation"
+                : "/studio/on-air";
+          const status =
+            validator && destination === "/studio/validation"
+              ? hasPending || !hasApproved
+                ? "pending"
+                : "approved"
+              : "";
           const label =
             campaign.status === "finished"
               ? "Terminée"
-              : campaign.ads.some((ad) => ad.status === "on_air")
-                ? "En diffusion"
-                : campaign.ads.some((ad) => ad.status === "pending")
-                  ? "À valider"
-                  : "Brouillon";
+              : validator && hasPending
+                ? "À valider"
+                : hasLive
+                  ? "En diffusion"
+                  : hasPending
+                    ? "À valider"
+                    : hasApproved
+                      ? "Validée"
+                      : "Brouillon";
           return (
             <div className={c.campaignCard} key={campaign.id}>
               <Link
                 className={c.campaignTile}
-                href={navigation.href("/studio/configuration", {
+                href={navigation.href(destination, {
                   campagne: campaign.id,
+                  statut: status,
+                  groupe: "",
+                  q: "",
+                  theme: "",
+                  media: "",
                   nouvelle: "",
                   etape: "",
                   canaux: "",
@@ -128,21 +155,23 @@ export default function CampaignLanding() {
             </div>
           );
         })}
-        <Link
-          className={c.newTile}
-          href={navigation.href("/studio/configuration", {
-            nouvelle: "1",
-            campagne: "",
-            etape: "",
-            canaux: "",
-            canal: "",
-          })}
-        >
-          <span className={c.plus} aria-hidden="true">
-            +
-          </span>
-          <strong>Créer votre campagne</strong>
-        </Link>
+        {!validator && (
+          <Link
+            className={c.newTile}
+            href={navigation.href("/studio/configuration", {
+              nouvelle: "1",
+              campagne: "",
+              etape: "",
+              canaux: "",
+              canal: "",
+            })}
+          >
+            <span className={c.plus} aria-hidden="true">
+              +
+            </span>
+            <strong>Créer votre campagne</strong>
+          </Link>
+        )}
       </div>
       {search && !campaigns.length && (
         <p className={c.noResults}>
@@ -154,7 +183,18 @@ export default function CampaignLanding() {
           className={c.pending}
           href={navigation.href(
             validator ? "/studio/validation" : "/studio/configuration",
-            { nouvelle: "", campagne: "", etape: "", canaux: "", canal: "" },
+            {
+              nouvelle: "",
+              campagne: "",
+              etape: "",
+              canaux: "",
+              canal: "",
+              statut: "pending",
+              groupe: "",
+              q: "",
+              theme: "",
+              media: "",
+            },
           )}
         >
           {pendingAds.length}{" "}

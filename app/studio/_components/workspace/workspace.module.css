@@ -2017,3 +2017,10 @@ button[aria-pressed="true"] .channelCheck {
     font-size: max(16px, 1em) !important;
   }
 }
+
+.editorHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}

@@ -5,6 +5,7 @@ import CampaignInfoForm from "./CampaignInfoForm";
 import CampaignLanding from "./CampaignLanding";
 import TableSession, { type CellTarget } from "./AdTable";
 import ChannelIcon from "./ChannelIcon";
+import ShareCampaign from "./ShareCampaign";
 import Icon from "../Icon";
 import { copyAdsText } from "@/lib/campaign-studio/workspace/presentation";
 import { useWorkspaceNavigation } from "./WorkspaceNavigation";
@@ -282,7 +283,10 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
   return (
     <>
       {steps}
-      <h2 className={w.editorTitle}>Compléter les annonces</h2>
+      <div className={w.editorHeading}>
+        <h2 className={w.editorTitle}>Compléter les annonces</h2>
+        <ShareCampaign campaignId={c.id} name={c.name} />
+      </div>
       <ChannelEditor
         key={channel}
         campaign={c}

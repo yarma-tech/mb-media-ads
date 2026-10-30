@@ -39,6 +39,8 @@ export default function Review({
     navigation.params.get("vue") === "carousel" ? "carousel" : "deck";
   const channel = navigation.params.get("canal") || "all";
   const theme = navigation.params.get("theme") || "all";
+  const videosOnly =
+    view === "validation" && navigation.params.get("media") === "video";
   const [detail, setDetail] = useState<{ c: Campaign; a: Ad } | null>(null);
   const campaignId = navigation.params.get("campagne") || "all";
   const query = navigation.params.get("q") || "";
@@ -67,6 +69,13 @@ export default function Review({
               : a.status === "stopped",
         )
         .map((a) => ({ c, a })),
+    )
+    .filter(
+      ({ c, a }) =>
+        !videosOnly ||
+        c.media.some(
+          (media) => media.id === a.mediaId && media.mime.startsWith("video/"),
+        ),
     )
     .filter(({ c, a }) =>
       (c.name + " " + (a.theme || "") + " " + a.name + " " + a.copy)
@@ -268,17 +277,23 @@ export default function Review({
                 Arrêter
               </button>
             )}
-            <button
-              disabled={pending("version", c.id, a.id)}
-              onClick={async () => {
-                try {
-                  await run({ type: "version", campaignId: c.id, adId: a.id });
-                  notify("Nouvelle version créée dans Configuration.");
-                } catch {}
-              }}
-            >
-              Créer une nouvelle version
-            </button>
+            {!validator && (
+              <button
+                disabled={pending("version", c.id, a.id)}
+                onClick={async () => {
+                  try {
+                    await run({
+                      type: "version",
+                      campaignId: c.id,
+                      adId: a.id,
+                    });
+                    notify("Nouvelle version créée dans Configuration.");
+                  } catch {}
+                }}
+              >
+                Créer une nouvelle version
+              </button>
+            )}
           </div>
         )}
         {view === "finished" &&
@@ -299,14 +314,16 @@ export default function Review({
           >
             <Icon name="more" />
           </summary>
-          <Link
-            href={navigation.href("/studio/configuration", {
-              campagne: c.id,
-              canal: a.channel,
-            })}
-          >
-            Ouvrir la configuration →
-          </Link>
+          {!validator && (
+            <Link
+              href={navigation.href("/studio/configuration", {
+                campagne: c.id,
+                canal: a.channel,
+              })}
+            >
+              Ouvrir la configuration →
+            </Link>
+          )}
           {a.stopReason && (
             <p>
               {
@@ -346,6 +363,15 @@ export default function Review({
             Validées
           </button>
         </div>
+      )}
+      {videosOnly && (
+        <button
+          type="button"
+          title="Afficher toutes les annonces"
+          onClick={() => navigation.update({ media: "", groupe: "" })}
+        >
+          Vidéos uniquement ×
+        </button>
       )}
       <select
         aria-label="Filtrer par campagne"

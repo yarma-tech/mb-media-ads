@@ -1092,9 +1092,9 @@ function LiveBoards({
                 </i>
               </header>
               <div
-                className={`${r.thumbnails} ${["instagram", "tiktok", "google"].includes(channel) ? r.verticalTiles : ""}`}
+                className={`${r.thumbnails} ${["instagram", "tiktok"].includes(channel) ? r.verticalTiles : ""}`}
                 style={
-                  channel === "instagram" || channel === "google"
+                  channel === "instagram"
                     ? {
                         gridTemplateColumns: `repeat(${Math.min(3, Math.max(entries.length, 1))}, minmax(0, 1fr))`,
                       }
@@ -1110,7 +1110,11 @@ function LiveBoards({
                       aria-label={"Ouvrir " + live.name + " · " + c.name}
                       onClick={() => onDetail({ c, a: live })}
                     >
-                      <MediaPreview campaign={c} ad={live} thumbnail />
+                      {channel === "google" ? (
+                        <Preview campaign={c} ad={live} grouped />
+                      ) : (
+                        <MediaPreview campaign={c} ad={live} thumbnail />
+                      )}
                     </button>
                   ) : (
                     <div

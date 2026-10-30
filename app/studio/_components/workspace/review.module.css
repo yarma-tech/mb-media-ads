@@ -930,3 +930,13 @@
     --preview-media-max: 280px;
   }
 }
+
+.artboard[data-channel="google"] .thumbnails {
+  grid-template-columns: minmax(0, 1fr);
+}
+.surface .artboard[data-channel="google"] .liveTile {
+  aspect-ratio: auto;
+  max-height: none;
+  text-align: left;
+  background: #fff;
+}

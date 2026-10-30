@@ -1,6 +1,10 @@
 /* eslint-disable @next/next/no-img-element -- Private signed URLs and original campaign media. */
 "use client";
-import type { SharedAd as Ad, PreviewCampaign as Campaign } from "@/lib/campaign-studio/workspace/share-types";
+import { useState } from "react";
+import type {
+  SharedAd as Ad,
+  PreviewCampaign as Campaign,
+} from "@/lib/campaign-studio/workspace/share-types";
 import { usePreviewData } from "./PreviewDataContext";
 import ChannelIcon from "./ChannelIcon";
 import PreviewCopy, { previewExcerpt } from "./PreviewCopy";
@@ -38,12 +42,11 @@ export function MediaPreview({
     >
       {src && media ? (
         media.mime.startsWith("video/") ? (
-          <video
+          <VideoPreview
+            key={`${src}:${thumbnail}`}
             src={src}
-            controls={!thumbnail}
-            muted={thumbnail}
-            preload="metadata"
-            aria-label={media.name}
+            name={media.name}
+            thumbnail={thumbnail}
           />
         ) : (
           <img src={src} alt={thumbnail ? "" : media.name} />
@@ -63,12 +66,69 @@ export function MediaPreview({
           )}
         </span>
       )}
-      {thumbnail && media?.mime.startsWith("video/") && (
+    </div>
+  );
+}
+
+function VideoPreview({
+  src,
+  name,
+  thumbnail,
+}: {
+  src: string;
+  name: string;
+  thumbnail: boolean;
+}) {
+  const [frame, setFrame] = useState<"loading" | "ready" | "error">("loading");
+  const frameReady = (video: HTMLVideoElement) => {
+    if (
+      video.readyState >= 2 &&
+      (!thumbnail || (video.currentTime > 0 && !video.seeking))
+    )
+      setFrame("ready");
+  };
+  return (
+    <>
+      <video
+        src={src}
+        controls={!thumbnail}
+        muted={thumbnail}
+        playsInline
+        preload={thumbnail ? "auto" : "metadata"}
+        aria-label={name}
+        data-frame={frame}
+        onLoadedMetadata={(event) => {
+          if (!thumbnail) return;
+          const video = event.currentTarget;
+          // Metadata alone does not decode a visible frame on iOS. Seek past
+          // the opening fade without playing audio or starting playback.
+          video.currentTime =
+            Number.isFinite(video.duration) && video.duration > 0
+              ? Math.min(1, video.duration / 2)
+              : 1;
+        }}
+        onLoadedData={(event) => frameReady(event.currentTarget)}
+        onSeeked={(event) => {
+          if (thumbnail) event.currentTarget.pause();
+          frameReady(event.currentTarget);
+        }}
+        onError={() => setFrame("error")}
+      />
+      {thumbnail && frame === "ready" && (
         <span className={s.play} aria-hidden="true">
           ▶
         </span>
       )}
-    </div>
+      {frame === "error" ? (
+        <span className={`${s.mediaEmpty} ${s.videoMessage}`}>
+          Aperçu vidéo indisponible{thumbnail ? " · Ouvrir le détail" : ""}
+        </span>
+      ) : thumbnail && frame === "loading" ? (
+        <span className={`${s.mediaEmpty} ${s.videoMessage}`}>
+          Chargement de l’aperçu vidéo…
+        </span>
+      ) : null}
+    </>
   );
 }
 

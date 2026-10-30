@@ -128,11 +128,27 @@ async function fixture(
             },
       });
     }
-    if (url.pathname === "/__ux-video.mp4")
+    if (url.pathname === "/__ux-video.mp4") {
+      const file = readFileSync("tests/studio/fixtures/video-640x360.mp4");
+      const range = req.headers()["range"]?.match(/bytes=(\d+)-(\d*)/);
+      const start = range ? Number(range[1]) : 0;
+      const end = range?.[2]
+        ? Math.min(Number(range[2]), file.length - 1)
+        : file.length - 1;
+      const body = file.subarray(start, end + 1);
       return route.fulfill({
-        path: "tests/studio/fixtures/video-640x360.mp4",
+        status: range ? 206 : 200,
+        body,
         contentType: "video/mp4",
+        headers: {
+          "Accept-Ranges": "bytes",
+          "Content-Length": String(body.length),
+          ...(range
+            ? { "Content-Range": `bytes ${start}-${end}/${file.length}` }
+            : {}),
+        },
       });
+    }
     if (url.pathname.startsWith("/storage/v1/upload/resumable")) {
       const cors = {
         "Access-Control-Allow-Origin": base,
@@ -3836,3 +3852,126 @@ test("statut tableau : résumé mixte sépare prête, incomplète et déjà envo
     fullPage: true,
   });
 });
+
+for (const width of [1440, 390]) {
+  test.describe(`Aperçus On air ${width}px`, () => {
+    test.use({ isMobile: width === 390, hasTouch: width === 390 });
+    test(`On air : Google affiche l’annonce Search entière à ${width}px`, async ({
+      page,
+    }, testInfo) => {
+      const f = await fixture(page, "on_air");
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(base + "/studio/on-air?campagne=" + f.campaigns[1].id);
+      const board = page.getByRole("region", {
+        name: "Google SEM",
+        exact: true,
+      });
+      const tile = board.getByRole("button", {
+        name: "Ouvrir Beta annonce · Beta",
+        exact: true,
+      });
+      await expect(tile).toContainText("Titre un | Titre deux | Titre trois");
+      await expect(tile).toContainText("Description un");
+      await expect(tile).toContainText("Marque test");
+      await expect(tile.locator("button,a,input,select")).toHaveCount(0);
+      await page.screenshot({
+        path: testInfo.outputPath(`search-onair-${width}.png`),
+        fullPage: true,
+      });
+      await tile.click();
+      await expect(
+        page.getByRole("dialog", { name: "Détail de l’annonce", exact: true }),
+      ).toContainText("Titre un");
+    });
+
+    test(`On air : vidéos YouTube TikTok montrent une frame sans autoplay à ${width}px`, async ({
+      page,
+    }, testInfo) => {
+      const f = await fixture(page, "on_air");
+      await page.setViewportSize({ width, height: 900 });
+      let c = f.campaigns[1];
+      c.ads = [];
+      for (const [channel, format] of [
+        ["youtube", "instream"],
+        ["tiktok", "vertical"],
+      ] as const) {
+        c = addAd(c, channel, format, actor, now);
+        const ad = c.ads.at(-1)!;
+        Object.assign(ad, {
+          name: "Vidéo " + channel,
+          status: "on_air",
+          mediaId: "video-" + channel,
+          copy: "Message vidéo",
+        });
+        c.media.push({
+          id: "video-" + channel,
+          name: "video-" + channel + ".mp4",
+          path: "video-" + channel + ".mp4",
+          channel,
+          mime: "video/mp4",
+          bytes: 3200,
+          width: 640,
+          height: 360,
+          duration: 2,
+          state: "ready",
+          errors: [],
+        });
+        f.setMediaUrl("video-" + channel, base + "/__ux-video.mp4");
+      }
+      f.campaigns[1] = c;
+      await page.goto(base + "/studio/on-air?campagne=" + c.id);
+      for (const label of ["YouTube", "TikTok"]) {
+        const board = page.getByRole("region", { name: label, exact: true });
+        const video = board.locator("video");
+        await expect
+          .poll(() => video.evaluate((el: HTMLVideoElement) => el.readyState))
+          .toBeGreaterThanOrEqual(2);
+        await expect
+          .poll(() => video.evaluate((el: HTMLVideoElement) => el.currentTime))
+          .toBeGreaterThan(0);
+        await expect(video).toHaveAttribute("data-frame", "ready");
+        expect(
+          await video.evaluate((el: HTMLVideoElement) => ({
+            paused: el.paused,
+            autoplay: el.autoplay,
+            inline: el.playsInline,
+            muted: el.muted,
+            controls: el.controls,
+          })),
+        ).toEqual({
+          paused: true,
+          autoplay: false,
+          inline: true,
+          muted: true,
+          controls: false,
+        });
+      }
+      await page.screenshot({
+        path: testInfo.outputPath(`videos-onair-${width}.png`),
+        fullPage: true,
+      });
+      await page
+        .getByRole("button", {
+          name: "Ouvrir Vidéo youtube · Beta",
+          exact: true,
+        })
+        .click();
+      const dialog = page.getByRole("dialog", {
+        name: "Détail de l’annonce",
+        exact: true,
+      });
+      const player = dialog.locator("video");
+      await expect(player).toBeVisible();
+      expect(
+        await player.evaluate(
+          (el: HTMLVideoElement) => el.controls && el.playsInline,
+        ),
+      ).toBe(true);
+      await player.evaluate((el: HTMLVideoElement) => el.play());
+      await expect
+        .poll(() => player.evaluate((el: HTMLVideoElement) => el.paused))
+        .toBe(false);
+      await player.evaluate((el: HTMLVideoElement) => el.pause());
+    });
+  });
+}

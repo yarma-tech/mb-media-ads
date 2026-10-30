@@ -963,3 +963,10 @@
     -webkit-line-clamp: 1;
   }
 }
+
+.videoMessage {
+  position: relative;
+  z-index: 1;
+  background: #f6f7f5;
+  max-width: 100%;
+}

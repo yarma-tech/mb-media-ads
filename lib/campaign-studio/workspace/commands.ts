@@ -28,7 +28,26 @@ export const FieldsSchema = z
   .partial()
   .strict();
 const target = { campaignId: uuid, revision: z.number().int().nonnegative() };
+export const ImportAdSchema = FieldsSchema.omit({ mediaId: true }).required({
+  format: true,
+  name: true,
+});
 export const CommandSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      type: z.literal("delete_ads"),
+      ...target,
+      adIds: z.array(uuid).min(1).max(200),
+    })
+    .strict(),
+  z
+    .object({
+      type: z.literal("import_ads"),
+      ...target,
+      channel: ChannelSchema,
+      rows: z.array(ImportAdSchema).min(1).max(200),
+    })
+    .strict(),
   z.object({ type: z.literal("create_share_link"), ...target }).strict(),
   z.object({ type: z.literal("revoke_share_link"), ...target }).strict(),
   z

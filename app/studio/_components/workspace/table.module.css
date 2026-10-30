@@ -51,7 +51,7 @@
   border-bottom-color: #d7dfda;
 }
 .table td:focus-within {
-  box-shadow: inset 0 -2px #274937;
+  box-shadow: none;
 }
 .table :is(textarea, select) {
   display: block;
@@ -126,19 +126,19 @@
   width: 36px;
 }
 .formatColumn {
-  width: 110px;
+  width: 120px;
 }
 .themeColumn {
-  width: 100px;
+  width: 85px;
 }
 .copyColumn {
-  width: 23%;
+  width: 210px;
 }
 .statusColumn {
-  width: 122px;
+  width: 112px;
 }
 .actionsColumn {
-  width: 120px;
+  width: 144px;
 }
 .table .iconCell {
   width: 32px;
@@ -160,21 +160,34 @@
   white-space: nowrap;
   font-size: 12px;
 }
-.status > :is(span, svg) {
-  display: inline-block;
-  vertical-align: middle;
-  margin-right: 7px;
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border: 1px solid #d6ddd9;
+  border-radius: 999px;
+  color: #55635d;
+  background: #f4f6f5;
+  line-height: 1.2;
 }
-.statusEmpty,
-.statusReady {
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  border: 1.5px solid #233449;
+.statusPill[data-status="pending"] {
+  color: #225483;
+  background: #edf5fc;
+  border-color: #c6dbed;
 }
-.statusReady {
-  background: #07864b;
-  border-color: #07864b;
+.statusPill:is(
+  [data-status="ready"],
+  [data-status="approved"],
+  [data-status="on_air"]
+) {
+  color: #126141;
+  background: #edf7f0;
+  border-color: #bfdcc9;
+}
+.statusPill[data-status="changes_requested"] {
+  color: #953b32;
+  background: #fff2ee;
+  border-color: #efcfc7;
 }
 .actions {
   display: flex;
@@ -187,7 +200,7 @@
   width: 36px;
   min-width: 0;
   min-height: 44px;
-  padding: 8px;
+  padding: 6px;
   border: 0 !important;
   background: transparent !important;
 }
@@ -370,7 +383,7 @@
     min-width: 44px !important;
   }
   .actionsColumn {
-    width: 140px;
+    width: 220px;
   }
   .handleColumn {
     width: 44px;
@@ -415,4 +428,14 @@
 }
 .preview {
   scroll-margin-top: 20px;
+}
+
+.fieldColumn {
+  width: 140px;
+}
+.linkColumn {
+  width: 140px;
+}
+.pathColumn {
+  width: 80px;
 }

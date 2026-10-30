@@ -6,9 +6,11 @@ import s from "./share.module.css";
 export default function ShareCampaign({
   campaignId,
   name,
+  labeled = false,
 }: {
   campaignId: string;
   name: string;
+  labeled?: boolean;
 }) {
   const { data, run } = useWorkspace();
   const [open, setOpen] = useState(false),
@@ -18,7 +20,7 @@ export default function ShareCampaign({
     [copied, setCopied] = useState(false),
     [confirm, setConfirm] = useState(false);
   const [mode, setMode] = useState<"validation" | "presentation">("validation");
-  const [scope, setScope] = useState<"video" | "all">("video");
+  const [scope, setScope] = useState<"video" | "all">("all");
   const campaign = data?.campaigns.find((item) => item.id === campaignId);
   const count =
     campaign?.status === "active"
@@ -84,12 +86,13 @@ export default function ShareCampaign({
   return (
     <>
       <button
-        className={s.trigger}
+        className={`${s.trigger} ${labeled ? s.labeled : ""}`}
         title="Partager la campagne"
         aria-label={`Partager la campagne ${name}`}
         onClick={() => setOpen(true)}
       >
         <Icon name="external" size={18} />
+        {labeled && <span>Demander une validation</span>}
       </button>
       <dialog
         ref={dialog}

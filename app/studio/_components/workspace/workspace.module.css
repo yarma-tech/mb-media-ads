@@ -348,7 +348,7 @@
   position: relative;
 }
 .formats label[data-selected="true"] {
-  outline: 2px solid #142b21;
+  border-color: #142b21;
   background: #f2f5f3;
 }
 .formats label > input {
@@ -2020,6 +2020,7 @@ button[aria-pressed="true"] .channelCheck {
 
 .editorHeading {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;

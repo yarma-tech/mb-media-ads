@@ -7,6 +7,8 @@ import {
   addAd,
   duplicateAd,
   moveAd,
+  deleteAds,
+  importAds,
   handleComment,
   editAd,
   newVersion,
@@ -340,6 +342,10 @@ async function fixture(
             now,
             cmd.unlocked,
           );
+        if (cmd.type === "delete_ads")
+          c = deleteAds(c, cmd.adIds, data.actor, now);
+        if (cmd.type === "import_ads")
+          c = importAds(c, cmd.channel, cmd.rows, data.actor, now);
         if (cmd.type === "move_ad")
           c = moveAd(c, cmd.adId, cmd.beforeId, actor, now);
         if (cmd.type === "handle_comment")
@@ -679,8 +685,7 @@ for (const width of [1440, 390, 320]) {
       style: getComputedStyle(el).outlineStyle,
       width: getComputedStyle(el).outlineWidth,
     }));
-    expect(outline.style).not.toBe("none");
-    expect(parseFloat(outline.width)).toBeGreaterThanOrEqual(2);
+    expect(outline.style).toBe("none");
     await page.screenshot({
       path: testInfo.outputPath(`modal-${width}.png`),
       fullPage: true,
@@ -4169,7 +4174,9 @@ test.describe("interaction tactile On air", () => {
   });
 });
 
-test("tuile On air conserve le focus visible au clavier", async ({ page }) => {
+test("tuile On air conserve le focus clavier sans contour", async ({
+  page,
+}) => {
   const f = await fixture(page, "on_air");
   await page.goto(base + "/studio/on-air?campagne=" + f.campaigns[1].id);
   const tile = page.getByRole("button", {
@@ -4180,8 +4187,7 @@ test("tuile On air conserve le focus visible au clavier", async ({ page }) => {
   await tile.focus();
   await expect(tile).toBeFocused();
   expect(await tile.evaluate((el) => el.matches(":focus-visible"))).toBe(true);
-  await expect(tile).toHaveCSS("outline-style", "solid");
-  await expect(tile).toHaveCSS("outline-width", "2px");
+  await expect(tile).toHaveCSS("outline-style", "none");
 });
 
 for (const width of [1440, 390]) {
@@ -4567,11 +4573,10 @@ test("préparateur partage un lien de validation authentifiée propre et filtré
   expect(Object.fromEntries(url.searchParams)).toEqual({
     campagne: f.campaigns[1].id,
     statut: "pending",
-    media: "video",
   });
   await dialog
     .getByLabel("Annonces à partager", { exact: true })
-    .selectOption("all");
+    .selectOption("video");
   await dialog
     .getByRole("button", { name: "Copier le lien", exact: true })
     .click();
@@ -4579,7 +4584,7 @@ test("préparateur partage un lien de validation authentifiée propre et filtré
     new URL(
       await page.evaluate(() => navigator.clipboard.readText()),
     ).searchParams.has("media"),
-  ).toBe(false);
+  ).toBe(true);
   expect(
     f.commands.some((command) => command.type === "create_share_link"),
   ).toBe(false);
@@ -4587,7 +4592,7 @@ test("préparateur partage un lien de validation authentifiée propre et filtré
   f.setActor(actor);
   await page.evaluate(() => localStorage.clear());
   await context.clearCookies();
-  await page.goto(link);
+  await page.goto(await page.evaluate(() => navigator.clipboard.readText()));
   await expect(page.getByLabel("E-mail", { exact: true })).toBeVisible();
   await page
     .getByLabel("E-mail", { exact: true })
@@ -4602,6 +4607,15 @@ test("préparateur partage un lien de validation authentifiée propre et filtré
     "Message vidéo",
   );
   await expect(page.locator('article[data-channel="google"]')).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Modifier et valider", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    page.getByRole("button", {
+      name: "Demander une modification",
+      exact: true,
+    }),
+  ).toBeEnabled();
   await page.reload();
   await expect(page.getByRole("article")).toHaveCount(1);
   await page.getByRole("button", { name: "Approuver", exact: true }).click();
@@ -4614,4 +4628,207 @@ test("préparateur partage un lien de validation authentifiée propre et filtré
     .getByRole("button", { name: "Vidéos uniquement ×", exact: true })
     .click();
   await expect(page.locator('article[data-channel="google"]')).toHaveCount(1);
+});
+
+test("tableau V1 : statut en pilule et aucun contour dans le login", async ({
+  page,
+}) => {
+  const f = await fixture(page, "pending", false, false, async (login) => {
+    const email = login.getByLabel("E-mail", { exact: true });
+    await email.focus();
+    await expect(email).toHaveCSS("outline-style", "none");
+    await expect(email).toHaveCSS("box-shadow", "none");
+  });
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=google",
+  );
+  const pill = page.locator('tbody [data-status="pending"]');
+  await expect(pill).toHaveText("À valider");
+  await expect(pill).toHaveCSS("border-radius", "999px");
+  const field = page.getByLabel("Thématique de Beta annonce", { exact: true });
+  await field.focus();
+  await expect(field).toHaveCSS("outline-style", "none");
+  expect(
+    await page
+      .locator("thead th")
+      .evaluateAll((cells) =>
+        cells.every((cell) => cell.scrollWidth <= cell.clientWidth + 1),
+      ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "/tmp/studio-editor-pills-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "/tmp/studio-editor-pills-mobile.png",
+    fullPage: true,
+  });
+});
+
+test("tableau V1 : glisser une ligne en ligne vers le bas persiste son ordre", async ({
+  page,
+}) => {
+  const f = await fixture(page, "on_air");
+  const c = addAd(f.campaigns[1], "google", "search", actor, now);
+  c.ads[1].name = "Deuxième annonce";
+  f.campaigns[1] = c;
+  await page.goto(
+    base + "/studio/configuration?campagne=" + c.id + "&canal=google",
+  );
+  const handle = page.getByRole("button", {
+    name: "Déplacer Beta annonce",
+    exact: true,
+  });
+  await expect(handle).toBeEnabled();
+  const target = page.locator("tr[data-ad-row]").nth(1);
+  await handle.dragTo(target, { targetPosition: { x: 50, y: 42 } });
+  await expect
+    .poll(() => f.campaigns[1].ads.map((a) => a.name))
+    .toEqual(["Deuxième annonce", "Beta annonce"]);
+  await page.reload();
+  await expect(page.locator("tr[data-ad-row]").last()).toHaveAttribute(
+    "data-ad-row",
+    c.ads[0].id,
+  );
+});
+
+test("tableau V1 : supprimer une annonce puis une sélection sans supprimer les médias", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft", true);
+  let c = f.campaigns[1];
+  c = addAd(c, "facebook", "square", actor, now);
+  c.ads[1].name = "Deuxième";
+  c = addAd(c, "facebook", "square", actor, now);
+  c.ads[2].name = "Troisième";
+  f.campaigns[1] = c;
+  await page.goto(
+    base + "/studio/configuration?campagne=" + c.id + "&canal=facebook",
+  );
+  page.once("dialog", (d) => d.dismiss());
+  await page
+    .getByRole("button", { name: "Supprimer Beta annonce", exact: true })
+    .click();
+  await expect(page.locator("tr[data-ad-row]")).toHaveCount(3);
+  page.once("dialog", (d) => d.accept());
+  await page
+    .getByRole("button", { name: "Supprimer Beta annonce", exact: true })
+    .click();
+  await expect(page.locator("tr[data-ad-row]")).toHaveCount(2);
+  await page
+    .getByRole("checkbox", { name: "Sélectionner Deuxième", exact: true })
+    .check();
+  await page
+    .getByRole("checkbox", { name: "Sélectionner Troisième", exact: true })
+    .check();
+  page.once("dialog", (d) => d.accept());
+  await page
+    .getByRole("button", { name: "Supprimer la sélection", exact: true })
+    .click();
+  await expect(page.locator("tr[data-ad-row]")).toHaveCount(0);
+  expect(f.campaigns[1].media).toHaveLength(1);
+  expect(f.commands.filter((c) => c.type === "delete_ads")).toHaveLength(2);
+});
+
+test("tableau V1 : gabarits CSV et Excel, erreurs explicites et import de brouillons", async ({
+  page,
+}) => {
+  const f = await fixture(page, "pending");
+  const c = f.campaigns[1];
+  await page.goto(
+    base + "/studio/configuration?campagne=" + c.id + "&canal=google",
+  );
+  await page
+    .getByRole("button", { name: "Importer des annonces", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Importer des annonces",
+    exact: true,
+  });
+  const csvDownload = page.waitForEvent("download");
+  await dialog
+    .getByRole("button", { name: "Gabarit CSV", exact: true })
+    .click();
+  const csv = await csvDownload;
+  expect(csv.suggestedFilename()).toBe("gabarit-google.csv");
+  const headers = (
+    await import("../../lib/campaign-studio/workspace/ad-import")
+  ).importHeaders("google");
+  const file = dialog.getByLabel("Fichier Excel ou CSV");
+  await file.setInputFiles({
+    name: "invalide.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("Nom;Texte\nNon;Test"),
+  });
+  await expect(dialog.getByRole("alert")).toContainText("Colonnes incorrectes");
+  const ExcelJS = (await import("exceljs")).default;
+  const xlsxDownload = page.waitForEvent("download");
+  await dialog
+    .getByRole("button", { name: "Gabarit Excel", exact: true })
+    .click();
+  const xlsx = await xlsxDownload;
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile((await xlsx.path())!);
+  const sheet = workbook.worksheets[0];
+  expect((sheet.getRow(1).values as string[]).slice(1)).toEqual(headers);
+  sheet.getCell(2, 1).value = "search";
+  sheet.getCell(2, 2).value = "Annonce importée";
+  sheet.getCell(2, 4).value = "Titre principal";
+  sheet.getCell(2, 5).value = "Titre deux";
+  sheet.getCell(2, 6).value = "Titre trois";
+  sheet.getCell(2, 19).value = "Description une";
+  sheet.getCell(2, 20).value = "Description deux";
+  await file.setInputFiles({
+    name: "annonces.xlsx",
+    mimeType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    buffer: Buffer.from(await workbook.xlsx.writeBuffer()),
+  });
+  await expect(dialog.getByRole("status")).toHaveText(
+    "1 annonce(s) à importer",
+  );
+  await dialog
+    .getByRole("button", { name: "Importer les annonces", exact: true })
+    .click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.locator("tr[data-ad-row]")).toHaveCount(2);
+  expect(f.campaigns[1].ads[0].status).toBe("pending");
+  expect(f.campaigns[1].ads[1].status).toBe("draft");
+  expect(f.campaigns[1].ads[1].headlines[0]).toBe("Titre principal");
+  await page.reload();
+  await expect(page.locator("tr[data-ad-row]")).toHaveCount(2);
+  await page
+    .getByRole("button", { name: "Importer des annonces", exact: true })
+    .click();
+  const csvValues = headers.map((header) =>
+    header === "Format"
+      ? "search"
+      : header === "Nom"
+        ? "Annonce CSV"
+        : header === "Titre 1"
+          ? "Titre CSV"
+          : "",
+  );
+  await dialog.getByLabel("Fichier Excel ou CSV").setInputFiles({
+    name: "annonces.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(headers.join(";") + "\n" + csvValues.join(";")),
+  });
+  await expect(dialog.getByRole("status")).toHaveText(
+    "1 annonce(s) à importer",
+  );
+  await dialog
+    .getByRole("button", { name: "Importer les annonces", exact: true })
+    .click();
+  await expect(page.locator("tr[data-ad-row]")).toHaveCount(3);
+  expect(f.campaigns[1].ads[2].headlines).toEqual(["Titre CSV"]);
 });

@@ -6,6 +6,8 @@ import CampaignLanding from "./CampaignLanding";
 import TableSession, { type CellTarget } from "./AdTable";
 import ChannelIcon from "./ChannelIcon";
 import ShareCampaign from "./ShareCampaign";
+import DeleteAds from "./DeleteAds";
+import ImportAds from "./ImportAds";
 import Icon from "../Icon";
 import { copyAdsText } from "@/lib/campaign-studio/workspace/presentation";
 import { useWorkspaceNavigation } from "./WorkspaceNavigation";
@@ -285,7 +287,7 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
       {steps}
       <div className={w.editorHeading}>
         <h2 className={w.editorTitle}>Compléter les annonces</h2>
-        <ShareCampaign campaignId={c.id} name={c.name} />
+        <ShareCampaign campaignId={c.id} name={c.name} labeled />
       </div>
       <ChannelEditor
         key={channel}
@@ -526,6 +528,18 @@ function ChannelEditor({
             >
               <Icon name="eye" />
             </button>
+            <ImportAds
+              campaign={c}
+              channel={channel}
+              flush={() => flushRef.current?.()}
+            />
+            <DeleteAds
+              campaign={c}
+              ids={selected}
+              label="Supprimer la sélection"
+              flush={() => flushRef.current?.()}
+              onDeleted={() => setSelected([])}
+            />
             {selected.length > 0 && (
               <button
                 aria-label={

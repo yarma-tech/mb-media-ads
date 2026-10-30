@@ -1,4 +1,9 @@
-import { CATALOG, compatibleFormats, mediaChannels } from "./catalog";
+import {
+  CATALOG,
+  compatibleFormats,
+  mediaChannels,
+  uniqueMediaFor,
+} from "./catalog";
 import type { Actor, Ad, AdFields, Campaign, Channel, Event } from "./types";
 const id = () => crypto.randomUUID();
 function humanValidator(a: Actor) {
@@ -514,6 +519,72 @@ export function duplicateAd(
   const ads = [...c.ads];
   ads.splice(ads.findIndex((a) => a.id === adId) + 1, 0, fresh);
   return { ...next, ads };
+}
+
+export function deleteAds(
+  c: Campaign,
+  ids: string[],
+  actor: Actor,
+  now: string,
+): Campaign {
+  active(c);
+  if (actor.kind !== "human")
+    throw new Error("Suppression réservée à un humain.");
+  const selected = [...new Set(ids)].map((id) => find(c, id));
+  if (!selected.length) throw new Error("Sélectionnez une annonce.");
+  if (selected.some((a) => a.status === "on_air" || a.status === "stopped"))
+    throw new Error(
+      "Les annonces déjà diffusées restent dans l’historique. Arrêtez leur diffusion depuis On air.",
+    );
+  return {
+    ...c,
+    revision: c.revision + 1,
+    ads: c.ads.filter((a) => !ids.includes(a.id)),
+    history: [
+      ...c.history,
+      event(
+        actor,
+        "ads_deleted",
+        {
+          ads: selected.map((a) => ({
+            id: a.id,
+            name: a.name,
+            status: a.status,
+          })),
+        },
+        {},
+        now,
+      ),
+    ],
+  };
+}
+export function importAds(
+  c: Campaign,
+  channel: Channel,
+  rows: (Partial<AdFields> & { format: string; name: string })[],
+  actor: Actor,
+  now: string,
+): Campaign {
+  active(c);
+  let next = c;
+  for (const [index, fields] of rows.entries()) {
+    if (!fields.name.trim())
+      throw new Error(`Ligne ${index + 2} : nom requis.`);
+    if (fields.url && !safeUrl(fields.url))
+      throw new Error(`Ligne ${index + 2} : URL HTTP(S) requise.`);
+    next = addAd(next, channel, fields.format, actor, now);
+    const ad = next.ads.at(-1)!;
+    const media = uniqueMediaFor(fields.format, channel, next.media);
+    next = editAd(
+      next,
+      ad.id,
+      { ...fields, ...(media ? { mediaId: media.id } : {}) },
+      actor,
+      "configuration",
+      now,
+    );
+  }
+  return next;
 }
 
 export function moveAd(

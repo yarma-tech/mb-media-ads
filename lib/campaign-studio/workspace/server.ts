@@ -4,6 +4,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { CommandSchema, type Command } from "./commands";
 import {
   addAd,
+  deleteAds,
+  importAds,
   duplicateAd,
   moveAd,
   handleComment,
@@ -469,6 +471,25 @@ export async function execute(raw: unknown, actor: Actor) {
     throw new StudioError("Campagne terminée.");
   let next = c;
   switch (command.type) {
+    case "delete_ads": {
+      const { data: locks, error } = await db
+        .from("studio_locks")
+        .select("owner_id")
+        .in("ad_id", command.adIds)
+        .gt("expires_at", now)
+        .neq("owner_id", actor.id);
+      if (error) throw error;
+      if (locks?.length)
+        throw new StudioError(
+          "Une annonce sélectionnée est en cours de modification par une autre personne.",
+          409,
+        );
+      next = deleteAds(c, command.adIds, actor, now);
+      break;
+    }
+    case "import_ads":
+      next = importAds(c, command.channel, command.rows, actor, now);
+      break;
     case "campaign": {
       if (
         command.fields.brandId !== undefined &&

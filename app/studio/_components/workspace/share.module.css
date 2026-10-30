@@ -91,3 +91,10 @@
   opacity: 0.5;
   cursor: wait;
 }
+
+.labeled {
+  width: auto;
+  gap: 8px;
+  padding: 0 14px;
+  white-space: nowrap;
+}

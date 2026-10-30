@@ -548,10 +548,10 @@
   height: 40px;
   min-height: 40px;
   padding: 8px;
-  background: transparent;
+  background: #fff1f0;
   border: 0;
   border-radius: 10px;
-  color: #66746e;
+  color: #91312f;
 }
 .landing .deleteCampaign:hover {
   background: #faeeee;

@@ -25,6 +25,7 @@ import { useAdEditor } from "./useAdEditor";
 import { uploadFile } from "./upload";
 import Preview from "./Preview";
 import History from "./History";
+import DeleteAds from "./DeleteAds";
 import CharacterCountdown from "./CharacterCountdown";
 import Icon from "../Icon";
 import w from "./workspace.module.css";
@@ -204,7 +205,11 @@ export default function TableSession(p: Props) {
                           column === "headlines" ||
                           column === "descriptions"
                         ? t.copyColumn
-                        : undefined
+                        : column === "url"
+                          ? t.linkColumn
+                          : column === "path1" || column === "path2"
+                            ? t.pathColumn
+                            : t.fieldColumn
                   }
                 />
               ))}
@@ -426,7 +431,13 @@ function AdRow(
         onDrop={(e) => {
           e.preventDefault();
           if (p.dragging) {
-            void p.onMove(p.dragging, a.id);
+            const bounds = e.currentTarget.getBoundingClientRect();
+            const after = e.clientY >= bounds.top + bounds.height / 2;
+            const target = after
+              ? (p.rows[p.rows.indexOf(a) + 1]?.id ?? null)
+              : a.id;
+            if (p.dragging !== a.id && target !== p.dragging)
+              void p.onMove(p.dragging, target);
             p.setDragging("");
           } else if (e.dataTransfer.files[0]) {
             if (!isActive || !editable)
@@ -443,8 +454,8 @@ function AdRow(
             title="Déplacer la ligne"
             aria-haspopup="dialog"
             onClick={() => reorder.current?.togglePopover()}
-            draggable={!frozen}
-            disabled={frozen}
+            draggable={c.status !== "finished"}
+            disabled={c.status === "finished"}
             onDragStart={(e) => {
               reorder.current?.hidePopover();
               p.setDragging(a.id);
@@ -577,21 +588,17 @@ function AdRow(
           );
         })}
         <td className={t.status} title={missing.join(" · ")}>
-          {a.status === "changes_requested" ? (
-            <Icon name="comment" size={15} />
-          ) : missing.length || a.status === "pending" ? (
-            <span className={t.statusEmpty} aria-hidden="true" />
-          ) : (
-            <span className={t.statusReady} aria-hidden="true" />
-          )}
-          <span>
-            {a.status === "changes_requested"
-              ? "À modifier"
-              : a.status === "draft" && !missing.length
+          <span
+            className={t.statusPill}
+            data-status={
+              a.status === "draft" && !missing.length ? "ready" : a.status
+            }
+          >
+            {a.status === "draft"
+              ? !missing.length
                 ? "Prête"
-                : a.status === "draft"
-                  ? "À compléter"
-                  : labels[a.status]}
+                : "À compléter"
+              : labels[a.status]}
           </span>
         </td>
         <td>
@@ -675,6 +682,15 @@ function AdRow(
             >
               <Icon name="copy" size={16} />
             </button>
+            <DeleteAds
+              campaign={c}
+              ids={[a.id]}
+              label={"Supprimer " + a.name}
+              flush={() => p.flushRef.current?.()}
+              onDeleted={() =>
+                p.setSelected(p.selected.filter((id) => id !== a.id))
+              }
+            />
           </div>
         </td>
       </tr>

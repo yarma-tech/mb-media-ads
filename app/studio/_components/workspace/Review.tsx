@@ -234,18 +234,20 @@ export default function Review({
             <button
               title="Demander une modification"
               aria-label="Demander une modification"
-              onClick={() =>
-                setEditing({ campaign: c.id, ad: a.id, mode: "comment" })
-              }
+              onClick={(event) => {
+                event.currentTarget.focus({ preventScroll: true });
+                setEditing({ campaign: c.id, ad: a.id, mode: "comment" });
+              }}
             >
               <Icon name="comment" size={21} />
             </button>
             <button
               title="Modifier et valider"
               aria-label="Modifier et valider"
-              onClick={() =>
-                setEditing({ campaign: c.id, ad: a.id, mode: "edit" })
-              }
+              onClick={(event) => {
+                event.currentTarget.focus({ preventScroll: true });
+                setEditing({ campaign: c.id, ad: a.id, mode: "edit" });
+              }}
             >
               <Icon name="edit" size={21} />
             </button>

@@ -10,6 +10,7 @@ import {
   handleComment,
   editAd,
   newVersion,
+  submitAds,
 } from "../../lib/campaign-studio/workspace/workflow";
 import type {
   Actor,
@@ -322,10 +323,9 @@ async function fixture(
         if (cmd.type === "version") c = newVersion(c, cmd.adId, actor, now);
         if (cmd.type === "duplicate") c = duplicateAd(c, cmd.adId, actor, now);
         if (cmd.type === "submit") {
-          c.ads
-            .filter((a) => cmd.adIds.includes(a.id))
-            .forEach((a) => (a.status = "pending"));
-          result.skipped = [];
+          const submission = submitAds(c, cmd.adIds, actor, now);
+          c = submission.campaign;
+          result.skipped = submission.skipped;
         }
         data = {
           ...data,
@@ -3729,7 +3729,8 @@ test("statut tableau : compléter le dernier champ rend prête avant et après s
 
 test("statut tableau : annonces complètes déjà envoyées sont comptées à valider", async ({
   page,
-}) => {
+}, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
   const f = await fixture(page, "pending");
   let c = f.campaigns[1];
   for (const name of ["Deuxième annonce", "Troisième annonce"]) {
@@ -3752,6 +3753,10 @@ test("statut tableau : annonces complètes déjà envoyées sont comptées à va
     page.getByText(/3 annonces · 3 à valider/, { exact: false }),
   ).toBeVisible();
   await expect(page.getByText(/0 prête/, { exact: false })).toHaveCount(0);
+  await page.screenshot({
+    path: testInfo.outputPath("mobile-annonces-a-valider.png"),
+    fullPage: true,
+  });
   await page
     .getByRole("button", { name: "Envoyer les annonces prêtes", exact: true })
     .click();
@@ -3801,4 +3806,33 @@ test("statut tableau : correction prête reste à renvoyer et annonce pending re
   await expect(
     page.getByText(/1 annonce · 1 à valider/, { exact: false }),
   ).toBeVisible();
+});
+
+test("statut tableau : résumé mixte sépare prête, incomplète et déjà envoyée", async ({
+  page,
+}, testInfo) => {
+  const f = await fixture(page, "draft");
+  let c = addAd(f.campaigns[1], "google", "search", actor, now);
+  c.ads[1].name = "À compléter";
+  c = addAd(c, "google", "search", actor, now);
+  Object.assign(c.ads[2], {
+    name: "Déjà envoyée",
+    status: "pending",
+    headlines: ["Titre un", "Titre deux", "Titre trois"],
+    descriptions: ["Description un", "Description deux"],
+  });
+  f.campaigns[1] = c;
+  await page.goto(
+    base + "/studio/configuration?campagne=" + c.id + "&canal=google",
+  );
+  await expect(
+    page.getByText(
+      "3 annonces · 1 prête à envoyer · 1 à compléter · 1 à valider",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await page.screenshot({
+    path: testInfo.outputPath("desktop-statuts-mixtes.png"),
+    fullPage: true,
+  });
 });

@@ -134,6 +134,32 @@ export default function TableSession(p: Props) {
       ["draft", "changes_requested"].includes(a.status) &&
       !isComplete(a, p.c).length,
   );
+  const readyIds = new Set(ready.map((ad) => ad.id));
+  const counts = {
+    ready: 0,
+    draft: 0,
+    changes_requested: 0,
+    pending: 0,
+    approved: 0,
+    on_air: 0,
+    stopped: 0,
+  };
+  for (const ad of effective)
+    counts[readyIds.has(ad.id) ? "ready" : ad.status]++;
+  const statusSummary = [
+    counts.ready &&
+      `${counts.ready} prête${counts.ready > 1 ? "s" : ""} à envoyer`,
+    counts.draft && `${counts.draft} à compléter`,
+    counts.changes_requested && `${counts.changes_requested} à modifier`,
+    counts.pending && `${counts.pending} à valider`,
+    counts.approved &&
+      `${counts.approved} validée${counts.approved > 1 ? "s" : ""}`,
+    counts.on_air && `${counts.on_air} en ligne`,
+    counts.stopped &&
+      `${counts.stopped} arrêtée${counts.stopped > 1 ? "s" : ""}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <div
       className={`${t.layout} ${p.previewOpen ? t.withPreview : ""}`}
@@ -235,19 +261,32 @@ export default function TableSession(p: Props) {
           </table>
         </div>
         <div className={t.footer}>
-          <span>
-            {p.rows.length} annonce{p.rows.length > 1 ? "s" : ""} ·{" "}
-            {ready.length} prête{ready.length > 1 ? "s" : ""}
+          <span aria-live="polite" aria-atomic="true">
+            {p.rows.length} annonce{p.rows.length > 1 ? "s" : ""}
+            {statusSummary && ` · ${statusSummary}`}
           </span>
           <button
             className={w.primary}
             disabled={p.submitting || p.c.status === "finished"}
             data-unavailable={!ready.length || undefined}
             onClick={() => {
-              if (!ready.length)
+              if (!ready.length) {
+                if (!effective.length)
+                  return notify(
+                    "Ajoutez une annonce avant de l’envoyer en validation.",
+                  );
+                if (counts.pending === effective.length)
+                  return notify(
+                    "Ces annonces sont déjà envoyées en validation.",
+                  );
+                if (!counts.draft && !counts.changes_requested)
+                  return notify(
+                    "Aucune annonce à envoyer : les annonces de ce canal sont déjà soumises, validées ou arrêtées.",
+                  );
                 return notify(
                   "Complétez au moins une annonce avant de l’envoyer en validation. Les champs manquants sont indiqués dans son statut.",
                 );
+              }
               void p.onSubmit(ready.map((a) => a.id)).catch(() => {});
             }}
           >

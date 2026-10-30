@@ -4070,6 +4070,73 @@ for (const brokenThumbnail of [false, true]) {
   });
 }
 
+for (const channel of ["google", "facebook"] as const) {
+  test(`survol On air ${channel} : zoom doux réversible sans contour ni déplacement`, async ({
+    page,
+  }, testInfo) => {
+    const f = await fixture(page, "on_air", channel === "facebook");
+    if (channel === "facebook")
+      f.setMediaUrl("ready-media", "/deck-demo/cu-generique-square.jpg");
+    await page.goto(base + "/studio/on-air?campagne=" + f.campaigns[1].id);
+    const tile = page.getByRole("button", {
+      name: "Ouvrir Beta annonce · Beta",
+      exact: true,
+    });
+    if (channel === "facebook") {
+      const image = tile.locator("img");
+      await expect(image).toHaveAttribute(
+        "src",
+        "/deck-demo/cu-generique-square.jpg",
+      );
+      await expect
+        .poll(() => image.evaluate((el: HTMLImageElement) => el.naturalWidth))
+        .toBeGreaterThan(0);
+    }
+    const layout = () =>
+      tile.evaluate((el: HTMLElement) => ({
+        width: el.offsetWidth,
+        height: el.offsetHeight,
+        left: el.offsetLeft,
+        top: el.offsetTop,
+        parentHeight: el.parentElement?.offsetHeight,
+      }));
+    const before = await layout();
+    await expect(tile).toHaveCSS("transform", "none");
+    await tile.hover();
+    await expect(tile).toHaveCSS("transform", "matrix(1.02, 0, 0, 1.02, 0, 0)");
+    await expect(tile).toHaveCSS("transition-duration", "0.22s");
+    await expect(tile).toHaveCSS(
+      "transition-timing-function",
+      "cubic-bezier(0.22, 1, 0.36, 1)",
+    );
+    await expect(tile).toHaveCSS("box-shadow", "none");
+    expect(await layout()).toEqual(before);
+    await page.screenshot({ path: testInfo.outputPath(`hover-${channel}.png`) });
+    await page.mouse.move(0, 0);
+    await expect(tile).toHaveCSS("transform", "none");
+    await expect(tile).toHaveCSS("box-shadow", "none");
+    expect(await layout()).toEqual(before);
+  });
+
+  test(`survol On air ${channel} : réduction des animations respectée`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const f = await fixture(page, "on_air", channel === "facebook");
+    if (channel === "facebook")
+      f.setMediaUrl("ready-media", "/deck-demo/cu-generique-square.jpg");
+    await page.goto(base + "/studio/on-air?campagne=" + f.campaigns[1].id);
+    const tile = page.getByRole("button", {
+      name: "Ouvrir Beta annonce · Beta",
+      exact: true,
+    });
+    await tile.hover();
+    await expect(tile).toHaveCSS("transform", "none");
+    await expect(tile).toHaveCSS("transition-duration", "0s");
+    await expect(tile).toHaveCSS("box-shadow", "none");
+  });
+}
+
 test.describe("interaction tactile On air", () => {
   test.use({
     isMobile: true,
@@ -4095,6 +4162,7 @@ test.describe("interaction tactile On air", () => {
       .tap({ timeout: 10000 });
     await expect(tile).toHaveCSS("box-shadow", "none");
     await expect(tile).toHaveCSS("outline-style", "none");
+    await expect(tile).toHaveCSS("transform", "none");
     await page.screenshot({ path: testInfo.outputPath("touch-after.png") });
   });
 });

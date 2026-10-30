@@ -362,9 +362,9 @@ export default function Preview({
             <span>
               <b>{brand?.name || "Marque non renseignée"}</b>
               <small>
-                {url}
-                {ad.path1 ? "/" + ad.path1 : ""}
-                {ad.path2 ? "/" + ad.path2 : ""}
+                {ad.path1 || ad.path2 ? url.replace(/\/+$/, "") : url}
+                {ad.path1 ? "/" + ad.path1.replace(/^\/+|\/+$/g, "") : ""}
+                {ad.path2 ? "/" + ad.path2.replace(/^\/+|\/+$/g, "") : ""}
               </small>
             </span>
           </div>

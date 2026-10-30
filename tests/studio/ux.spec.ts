@@ -3860,6 +3860,11 @@ for (const width of [1440, 390]) {
       page,
     }, testInfo) => {
       const f = await fixture(page, "on_air");
+      Object.assign(f.campaigns[1].ads[0], {
+        url: "https://example.test/",
+        path1: "facturation",
+        path2: "conversation",
+      });
       await page.setViewportSize({ width, height: 900 });
       await page.goto(base + "/studio/on-air?campagne=" + f.campaigns[1].id);
       const board = page.getByRole("region", {
@@ -3873,6 +3878,9 @@ for (const width of [1440, 390]) {
       await expect(tile).toContainText("Titre un | Titre deux | Titre trois");
       await expect(tile).toContainText("Description un");
       await expect(tile).toContainText("Marque test");
+      await expect(tile).toContainText(
+        "https://example.test/facturation/conversation",
+      );
       await expect(tile.locator("button,a,input,select")).toHaveCount(0);
       await page.screenshot({
         path: testInfo.outputPath(`search-onair-${width}.png`),

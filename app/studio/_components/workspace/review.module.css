@@ -499,7 +499,7 @@
   width: min(600px, calc(100vw - 32px));
   max-height: 90dvh;
   overflow: auto;
-  padding-top: 55px;
+  padding-top: 68px;
 }
 .overview {
   margin-top: -14px;
@@ -634,8 +634,10 @@
   display: block;
   min-height: 0;
 }
-.liveTile:hover {
-  box-shadow: 0 0 0 2px #8fa99a;
+@media (hover: hover) and (pointer: fine) {
+  .liveTile:hover {
+    box-shadow: 0 0 0 2px #8fa99a;
+  }
 }
 .waitingTile {
   border: 1px dashed #cdd4e1;
@@ -766,6 +768,9 @@
   .editDialog.editDialog {
     padding: 24px 18px;
   }
+  .detailDialog.editDialog {
+    padding-top: 68px;
+  }
   .surface .pagination small {
     position: static;
     max-width: 100%;
@@ -841,7 +846,7 @@
   .slideHeading > span:last-child {
     margin-left: auto;
   }
-  .slideHeading > span:first-child svg {
+  .slideHeading > span:first-child :is(svg, img) {
     width: 36px;
     height: 36px;
   }

@@ -1942,7 +1942,7 @@ button[aria-pressed="true"] .channelCheck {
     min-height: 155px;
     font-size: 16px;
   }
-  .channelChoices button > svg {
+  .channelChoices button > :is(svg, img) {
     width: 46px;
     height: 46px;
   }

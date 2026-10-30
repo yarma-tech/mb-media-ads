@@ -441,25 +441,10 @@
   gap: 28px;
 }
 .googleWord {
-  font:
-    500 29px/1 Arial,
-    sans-serif;
-  letter-spacing: -1.5px;
-  white-space: nowrap;
-}
-.googleWord i {
-  font-style: normal;
-  color: #4285f4;
-}
-.googleWord i:nth-child(2),
-.googleWord i:nth-child(6) {
-  color: #ea4335;
-}
-.googleWord i:nth-child(3) {
-  color: #fbbc05;
-}
-.googleWord i:nth-child(5) {
-  color: #34a853;
+  width: 86px;
+  height: auto;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 .searchBar {
   border: 1px solid #e0e3e8;
@@ -760,7 +745,7 @@
     gap: 12px;
   }
   .googleWord {
-    font-size: 22px;
+    width: 66px;
   }
   .searchBar {
     font-size: 12px;

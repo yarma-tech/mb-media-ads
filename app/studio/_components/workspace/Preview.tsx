@@ -144,14 +144,13 @@ export function SearchSceneHeader({ query }: { query: string }) {
   return (
     <div className={s.searchSceneHeader} aria-hidden="true">
       <div className={s.searchTop}>
-        <span className={s.googleWord}>
-          <i>G</i>
-          <i>o</i>
-          <i>o</i>
-          <i>g</i>
-          <i>l</i>
-          <i>e</i>
-        </span>
+        <img
+          className={s.googleWord}
+          src="/brands/channels/google-wordmark.png"
+          width={272}
+          height={92}
+          alt="Google"
+        />
         <span className={s.searchBar}>
           {query}
           <Icon name="close" size={17} />

@@ -3967,7 +3967,7 @@ for (const width of [1440, 390]) {
         const board = page.getByRole("region", { name: label, exact: true });
         await expect(board).toBeVisible();
         await expect(board.locator("video")).toHaveCount(0);
-        const poster = board.locator("img");
+        const poster = board.locator("button img");
         await expect(poster).toBeVisible();
         await expect
           .poll(() =>
@@ -4055,5 +4055,129 @@ for (const brokenThumbnail of [false, true]) {
     expect(originalRequests).toBe(0);
     await tile.click();
     await expect(page.getByRole("dialog").locator("video")).toBeVisible();
+  });
+}
+
+test.describe("interaction tactile On air", () => {
+  test.use({
+    isMobile: true,
+    hasTouch: true,
+    viewport: { width: 390, height: 844 },
+  });
+  test("une tuile Google ne conserve pas de contour de survol au toucher", async ({
+    page,
+  }, testInfo) => {
+    const f = await fixture(page, "on_air");
+    await page.goto(base + "/studio/on-air?campagne=" + f.campaigns[1].id);
+    const tile = page.getByRole("button", {
+      name: "Ouvrir Beta annonce · Beta",
+      exact: true,
+    });
+    await tile.tap();
+    await expect(
+      page.getByRole("dialog", { name: "Détail de l’annonce", exact: true }),
+    ).toBeVisible();
+    await expect(tile).toHaveCSS("box-shadow", "none");
+    await page
+      .getByRole("button", { name: "Fermer", exact: true })
+      .tap({ timeout: 10000 });
+    await expect(tile).toHaveCSS("box-shadow", "none");
+    await expect(tile).toHaveCSS("outline-style", "none");
+    await page.screenshot({ path: testInfo.outputPath("touch-after.png") });
+  });
+});
+
+test("tuile On air conserve le focus visible au clavier", async ({ page }) => {
+  const f = await fixture(page, "on_air");
+  await page.goto(base + "/studio/on-air?campagne=" + f.campaigns[1].id);
+  const tile = page.getByRole("button", {
+    name: "Ouvrir Beta annonce · Beta",
+    exact: true,
+  });
+  await page.keyboard.press("Tab");
+  await tile.focus();
+  await expect(tile).toBeFocused();
+  expect(await tile.evaluate((el) => el.matches(":focus-visible"))).toBe(true);
+  await expect(tile).toHaveCSS("outline-style", "solid");
+  await expect(tile).toHaveCSS("outline-width", "2px");
+});
+
+for (const width of [1440, 390]) {
+  test.describe(`logos officiels ${width}px`, () => {
+    test.use({
+      isMobile: width === 390,
+      hasTouch: width === 390,
+      viewport: { width, height: 900 },
+    });
+    test("canaux et artboards affichent les assets officiels sans recoloration", async ({
+      page,
+    }, testInfo) => {
+      const f = await fixture(page, "on_air");
+      const c = f.campaigns[1];
+      c.channels = [
+        "facebook",
+        "instagram",
+        "youtube",
+        "tiktok",
+        "google",
+        "display",
+      ];
+      await page.goto(
+        base + `/studio/configuration?campagne=${c.id}&etape=channels`,
+      );
+      const expected = {
+        facebook: "facebook.png",
+        instagram: "instagram.svg",
+        youtube: "youtube-mono.png",
+        tiktok: "tiktok.png",
+        google: "google-ads.svg",
+      };
+      for (const [channel, file] of Object.entries(expected)) {
+        const logo = page.locator(`img[data-channel-icon="${channel}"]`);
+        await expect(logo).toHaveAttribute("src", `/brands/channels/${file}`);
+        await expect(logo).toHaveCSS("filter", "none");
+        await expect
+          .poll(() =>
+            logo.evaluate((img: HTMLImageElement) => img.naturalWidth),
+          )
+          .toBeGreaterThan(0);
+      }
+      await page.goto(base + `/studio/on-air?campagne=${c.id}`);
+      for (const [channel, file] of Object.entries({
+        ...expected,
+        youtube: "youtube.png",
+        google: "google.svg",
+      })) {
+        const logo = page.locator(
+          `section header img[data-channel-icon="${channel}"]`,
+        );
+        await expect(logo).toHaveAttribute("src", `/brands/channels/${file}`);
+        await expect
+          .poll(() =>
+            logo.evaluate((img: HTMLImageElement) => img.naturalWidth),
+          )
+          .toBeGreaterThan(0);
+      }
+      await page.screenshot({
+        path: testInfo.outputPath(`logos-${width}.png`),
+        fullPage: true,
+      });
+      await page
+        .getByRole("button", {
+          name: "Ouvrir Beta annonce · Beta",
+          exact: true,
+        })
+        .click();
+      const wordmark = page.getByRole("dialog").locator('img[alt="Google"]');
+      await expect(wordmark).toHaveAttribute(
+        "src",
+        "/brands/channels/google-wordmark.png",
+      );
+      await expect
+        .poll(() =>
+          wordmark.evaluate((img: HTMLImageElement) => img.naturalWidth),
+        )
+        .toBe(272);
+    });
   });
 }

@@ -185,3 +185,70 @@ for (const mobile of [false, true])
       page.getByText("Dites-le. Leyon le facture.", { exact: true }),
     ).toHaveCount(0);
   });
+
+test("public video preview fetches only the revocable thumbnail until playback", async ({
+  page,
+}) => {
+  const c = addAd(
+    createCampaign("Vidéo publique", actor, new Date().toISOString()),
+    "youtube",
+    "instream",
+    actor,
+    new Date().toISOString(),
+  );
+  c.ads[0].mediaId = "public-video";
+  c.media.push({
+    id: "public-video",
+    name: "video.mp4",
+    path: "private-source",
+    mime: "video/mp4",
+    bytes: 3286,
+    width: 640,
+    height: 360,
+    duration: 2,
+    channel: "youtube",
+    state: "ready",
+    errors: [],
+  });
+  let originalRequests = 0;
+  await page.route(`**/api/studio/public/${token}`, (route) =>
+    route.fulfill({
+      json: {
+        campaign: c,
+        brands: [],
+        mediaUrls: {
+          "public-video": `/api/studio/public/${token}/media/public-video`,
+        },
+        thumbnailUrls: {
+          "public-video": `/api/studio/public/${token}/media/public-video?thumbnail=1`,
+        },
+      },
+    }),
+  );
+  await page.route(
+    `**/api/studio/public/${token}/media/public-video*`,
+    (route) => {
+      if (new URL(route.request().url()).searchParams.has("thumbnail"))
+        return route.fulfill({
+          path: "public/deck-demo/cu-generique-square.jpg",
+          contentType: "image/jpeg",
+        });
+      originalRequests++;
+      return route.fulfill({
+        path: "tests/studio/fixtures/video-640x360.mp4",
+        contentType: "video/mp4",
+      });
+    },
+  );
+  await page.goto(base + `/partage/${token}`);
+  const play = page.getByRole("button", {
+    name: "Lire video.mp4",
+    exact: true,
+  });
+  await expect(play.locator("img")).toBeVisible();
+  await expect(page.locator("video")).toHaveCount(0);
+  expect(originalRequests).toBe(0);
+  await play.click();
+  await expect(page.locator("video")).toBeVisible();
+  await expect.poll(() => originalRequests).toBeGreaterThan(0);
+});

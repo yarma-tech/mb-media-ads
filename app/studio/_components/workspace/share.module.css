@@ -64,6 +64,10 @@
   margin: 8px 0 16px;
   color: #163b30;
 }
+.label select {
+  height: 44px;
+  min-height: 44px;
+}
 .dialog .primary {
   background: #153c30;
   color: #fff;

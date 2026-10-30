@@ -28,6 +28,7 @@ beforeEach(() => {
   mocks.from.mockImplementation((table: string) => {
     const query = {
       select: () => query,
+      delete: () => query,
       eq: () => query,
       in: () => query,
       gt: () => query,
@@ -104,4 +105,20 @@ it("import API atomique : mauvais format refuse le fichier entier, bonne ligne c
   await execute({ ...cmd, rows: [cmd.rows[0]] }, actor);
   expect(campaign.ads).toHaveLength(2);
   expect(campaign.ads[1].status).toBe("draft");
+});
+
+it("libère sans erreur un ancien verrou après suppression de l’annonce", async () => {
+  await expect(
+    execute(
+      {
+        type: "release",
+        campaignId: campaign.id,
+        adId: crypto.randomUUID(),
+        token: crypto.randomUUID(),
+      },
+      actor,
+    ),
+  ).resolves.toEqual({ released: true });
+  expect(mocks.rpc).not.toHaveBeenCalled();
+  expect(campaign.ads).toHaveLength(1);
 });

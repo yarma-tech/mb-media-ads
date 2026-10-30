@@ -420,13 +420,25 @@ export async function execute(raw: unknown, actor: Actor) {
     if (memberError) throw memberError;
     return { invited: true };
   }
+  if (command.type === "release") {
+    // Cleanup is idempotent even after the ad or campaign has disappeared.
+    const { error } = await db
+      .from("studio_locks")
+      .delete()
+      .eq("campaign_id", command.campaignId)
+      .eq("ad_id", command.adId)
+      .eq("owner_id", actor.id)
+      .eq("token", command.token);
+    if (error) throw error;
+    return { released: true };
+  }
   let c = await readCampaign(command.campaignId);
   const ended = finishCampaign(c, now);
   if (ended !== c) {
     await commit(c, ended, actor);
     c = ended;
   }
-  if (command.type === "lock" || command.type === "release") {
+  if (command.type === "lock") {
     if (!c.ads.some((a) => a.id === command.adId))
       throw new StudioError("Annonce introuvable.", 404);
     if (
@@ -438,15 +450,7 @@ export async function execute(raw: unknown, actor: Actor) {
         ))
     )
       throw new StudioError("Version figée.");
-    if (command.type === "release") {
-      await db
-        .from("studio_locks")
-        .delete()
-        .eq("ad_id", command.adId)
-        .eq("owner_id", actor.id)
-        .eq("token", command.token);
-      return { released: true };
-    }
+
     const { data, error } = await db.rpc("studio_acquire_lock", {
       p_campaign: c.id,
       p_ad: command.adId,

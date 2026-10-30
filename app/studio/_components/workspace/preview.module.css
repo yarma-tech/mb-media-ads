@@ -64,7 +64,7 @@
   display: grid;
   place-items: center;
   aspect-ratio: 1;
-  background: #f6f7f5;
+  background: var(--preview-media-background, #f6f7f5);
   overflow: hidden;
   min-width: 0;
 }

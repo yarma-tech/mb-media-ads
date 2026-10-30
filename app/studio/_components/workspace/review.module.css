@@ -496,6 +496,7 @@
   margin-top: 6px;
 }
 .detailDialog.editDialog {
+  --preview-media-background: transparent;
   width: min(600px, calc(100vw - 32px));
   max-height: 90dvh;
   overflow: auto;

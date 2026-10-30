@@ -4111,7 +4111,9 @@ for (const channel of ["google", "facebook"] as const) {
     );
     await expect(tile).toHaveCSS("box-shadow", "none");
     expect(await layout()).toEqual(before);
-    await page.screenshot({ path: testInfo.outputPath(`hover-${channel}.png`) });
+    await page.screenshot({
+      path: testInfo.outputPath(`hover-${channel}.png`),
+    });
     await page.mouse.move(0, 0);
     await expect(tile).toHaveCSS("transform", "none");
     await expect(tile).toHaveCSS("box-shadow", "none");
@@ -4388,6 +4390,20 @@ for (const width of [1440, 390]) {
         path: testInfo.outputPath(`visuels-seuls-${width}.png`),
         fullPage: true,
       });
+      await page
+        .getByRole("button", {
+          name: "Ouvrir Format 1 · Beta",
+          exact: true,
+        })
+        .click();
+      const detailImage = page
+        .getByRole("dialog")
+        .locator('img[src$="cu-generique-portrait.jpg"]');
+      await expect(detailImage).toBeVisible();
+      await expect(detailImage.locator("..")).toHaveCSS(
+        "background-color",
+        "rgba(0, 0, 0, 0)",
+      );
     });
   });
 }

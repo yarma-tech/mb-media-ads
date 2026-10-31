@@ -1755,19 +1755,19 @@ button[aria-pressed="true"] .channelCheck {
 .editorTools {
   flex-shrink: 0;
 }
-.editorTools .inline {
+.editorTools > .inline {
   gap: 12px;
   flex-wrap: nowrap;
 }
-.editorTools button {
+.editorTools > .inline > button {
   width: 48px;
   padding: 12px;
 }
-.editorTools svg {
+.editorTools > .inline > button > svg {
   width: 22px;
   height: 22px;
 }
-.editorTools button[aria-pressed="true"] {
+.editorTools > .inline > button[aria-pressed="true"] {
   background: #eaf0ec;
 }
 .formatPicker:not([open]) {
@@ -1815,7 +1815,7 @@ button[aria-pressed="true"] .channelCheck {
   .editorToolbar {
     gap: 12px;
   }
-  .editorTools .inline {
+  .editorTools > .inline {
     gap: 6px;
   }
 }
@@ -1980,7 +1980,7 @@ button[aria-pressed="true"] .channelCheck {
   .channelTabs {
     width: 100%;
   }
-  .editorTools button {
+  .editorTools > .inline > button {
     width: 44px;
     min-height: 44px;
     padding: 10px;

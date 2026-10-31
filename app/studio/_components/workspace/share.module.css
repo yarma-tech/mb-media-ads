@@ -14,6 +14,8 @@
   margin: auto;
   width: min(520px, calc(100vw - 32px));
   padding: 28px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
   border: 0;
   border-radius: 24px;
   color: #153c30;
@@ -97,4 +99,33 @@
   gap: 8px;
   padding: 0 14px;
   white-space: nowrap;
+}
+
+.templates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.templates button {
+  width: 100%;
+  min-width: 0;
+  white-space: normal;
+}
+.heading button {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+.dialog .label input,
+.dialog .label select {
+  font-size: 16px;
+}
+@media (max-width: 600px) {
+  .dialog .primary {
+    width: 100%;
+  }
 }

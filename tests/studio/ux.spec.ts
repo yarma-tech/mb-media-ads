@@ -5181,3 +5181,52 @@ test("remplacement en lot : confirmation du Studio, annuler ne modifie aucune va
   await modal.getByRole("button", { name: "Remplacer", exact: true }).click();
   await expect.poll(() => f.campaigns[1].ads[0].copy).toBe("Texte remplacé");
 });
+
+for (const width of [320, 390, 430])
+  test(`import mobile ${width}px : boutons lisibles sans largeur héritée de la barre d’outils`, async ({
+    page,
+  }, info) => {
+    const f = await fixture(page, "draft", true);
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(
+      base +
+        "/studio/configuration?campagne=" +
+        f.campaigns[1].id +
+        "&canal=facebook&etape=editor",
+    );
+    await page
+      .getByRole("button", { name: "Importer des annonces", exact: true })
+      .click();
+    const dialog = page.getByRole("dialog", {
+      name: "Importer des annonces",
+      exact: true,
+    });
+    await expect(dialog).toBeVisible();
+    for (const name of [
+      "Gabarit Excel",
+      "Gabarit CSV",
+      "Importer les annonces",
+    ]) {
+      const button = dialog.getByRole("button", { name, exact: true });
+      await expect
+        .poll(() => button.evaluate((el) => el.scrollWidth <= el.clientWidth))
+        .toBe(true);
+      expect((await button.boundingBox())!.width).toBeGreaterThan(100);
+    }
+    const box = (await dialog.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(width);
+    await expect(dialog.locator('input[type="file"]')).toHaveCSS(
+      "font-size",
+      "16px",
+    );
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath("import-mobile.png"),
+      fullPage: true,
+    });
+  });

@@ -162,7 +162,7 @@ export default function ImportAds({
           existantes restent intactes. Les médias compatibles uniques sont
           associés automatiquement.
         </p>
-        <div>
+        <div className={s.templates}>
           <button disabled={busy} onClick={() => void template("xlsx")}>
             Gabarit Excel
           </button>{" "}

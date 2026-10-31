@@ -523,3 +523,78 @@
     transition: none;
   }
 }
+
+/* The selected card grows in normal flow, carrying both tables with it. */
+.kpis {
+  align-items: start;
+}
+.dashboard.dashboard .kpi {
+  min-height: 156px;
+}
+.dashboard.dashboard .kpiToggle {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 116px;
+  text-align: left;
+}
+.kpiToggle .cardLabel svg {
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.breakdown {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease-out;
+}
+.breakdown[data-expanded="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.breakdownInner {
+  min-height: 0;
+  overflow: hidden;
+}
+.breakdownContent {
+  padding-top: 22px;
+}
+.breakdownHeading {
+  display: block;
+  color: #617167;
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+.breakdown dl {
+  margin: 0;
+}
+.breakdown dl > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 34px;
+  padding: 8px 0;
+  border-bottom: 1px solid #142b210d;
+}
+.breakdown dl > div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.breakdown dt {
+  font-size: 11px;
+  min-width: 0;
+}
+.breakdown dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .breakdown,
+  .kpiToggle .cardLabel svg {
+    transition: none;
+  }
+}

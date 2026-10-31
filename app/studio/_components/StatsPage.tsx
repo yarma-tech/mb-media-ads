@@ -152,78 +152,36 @@ export default function StatsPage() {
           },
         ]
       : [];
-  let dialog: {
-    title: string;
-    items: [string, string][];
-    note: string;
-  } | null = null;
-  if (detail && campaign) {
-    const timeLabel = period === "day" ? "30 octobre 2026" : "Campagne entière";
-    if (detail.kind === "channel") {
-      const row = channels.find((c) => c.id === detail.id);
-      if (row)
-        dialog = {
-          title: row.name,
-          items: [
-            ["Prospects attribués", number(row.leads)],
-            ["Admissions attribuées", number(row.admissions)],
-            ["Impressions", number(row.impressions)],
-            ["Dépensé", money(row.spend, 2)],
-            ["Coût par prospect", money(costPerLead(row), 2)],
-            ["Prospects / impressions", percent(prospectConversion(row))],
-          ],
-          note: "Données fictives. Prospects et admissions sont rattachés à une campagne et à un canal dans cet exemple. Le statut d’admission et la règle d’attribution Zoho restent à confirmer.",
-        };
-    } else {
-      const details: Record<Metric, DialogContent> = {
-        admissions: {
-          title: "Admissions",
-          items: [
-            ["Admissions de cette campagne", number(totals.admissions)],
-            ["Source prévue", "Zoho · à confirmer"],
-            ["Période", timeLabel],
-          ],
-          note: "Hypothèse de démonstration : admissions confirmées, comptées une seule fois. Le module et le statut exacts dans Zoho restent à définir. Un prospect converti en contact n’est pas automatiquement une admission.",
-        },
-        leads: {
-          title: "Prospects générés",
-          items: [
-            ["Prospects de cette campagne", number(totals.leads)],
-            ["Source prévue", "Zoho CRM"],
-            ["Période", timeLabel],
-          ],
-          note: "Déduplication et attribution à la campagne à confirmer. Aucun total ne fusionne les différentes campagnes.",
-        },
-        budget: {
-          title: "Budget de campagne",
-          items: [
-            ["Budget alloué", money(campaign.budget)],
-            ["Budget dépensé", money(totals.spend, 2)],
-            ["Budget restant", money(campaign.budget - totals.spend, 2)],
-          ],
-          note: "Budget alloué saisi à la création à l’avenir. Dépenses issues des régies à l’avenir ; valeurs fictives ici.",
-        },
-        cpl: {
-          title: "Coût par prospect",
-          items: [
-            ["Dépenses média", money(totals.spend, 2)],
-            ["Prospects", number(totals.leads)],
-            ["Calcul", money(costPerLead(totals), 2)],
-          ],
-          note: "Calcul propre à cette campagne et à la période. Sans prospect, le coût est indisponible.",
-        },
-        conversion: {
-          title: "Conversion en prospects",
-          items: [
-            ["Prospects", number(totals.leads)],
-            ["Impressions", number(totals.impressions)],
-            ["Prospects ÷ impressions", percent(prospectConversion(totals))],
-          ],
-          note: "La formule conserve le ratio prospects / impressions demandé. Les admissions sont un indicateur distinct.",
-        },
-      };
-      dialog = details[detail.id];
+  function metricValue(id: Metric, row: typeof totals) {
+    switch (id) {
+      case "admissions":
+        return number(row.admissions);
+      case "leads":
+        return number(row.leads);
+      case "budget":
+        return money(row.spend);
+      case "cpl":
+        return money(costPerLead(row), 2);
+      case "conversion":
+        return percent(prospectConversion(row));
     }
+  }
+  let dialog: DialogContent | null = null;
+  if (detail?.kind === "channel" && campaign) {
+    const row = channels.find((c) => c.id === detail.id);
+    if (row)
+      dialog = {
+        title: row.name,
+        items: [
+          ["Prospects attribués", number(row.leads)],
+          ["Admissions attribuées", number(row.admissions)],
+          ["Impressions", number(row.impressions)],
+          ["Dépensé", money(row.spend, 2)],
+          ["Coût par prospect", money(costPerLead(row), 2)],
+          ["Prospects / impressions", percent(prospectConversion(row))],
+        ],
+        note: "Données fictives. Prospects et admissions sont rattachés à une campagne et à un canal dans cet exemple. Le statut d’admission et la règle d’attribution Zoho restent à confirmer.",
+      };
   }
   return (
     <div className={s.dashboard} data-statistics-demo>
@@ -291,31 +249,72 @@ export default function StatsPage() {
             </p>
           </div>
           <section className={s.kpis} aria-label="Chiffres essentiels">
-            {cards.map((card) => (
-              <button
-                type="button"
-                key={card.id}
-                className={`${s.kpi} ${card.id === "admissions" ? s.admissionKpi : ""}`}
-                onClick={() => setDetail({ kind: "metric", id: card.id })}
-                aria-haspopup="dialog"
-              >
-                <span className={s.cardLabel}>
-                  {card.label}
-                  <Icon name="arrow" size={15} />
-                </span>
-                <b>{card.value}</b>
-                <small>{card.caption}</small>
-                {card.id === "budget" && (
-                  <span className={s.track} aria-hidden="true">
-                    <i
-                      style={{
-                        width: `${Math.min(100, (totals.spend / campaign.budget) * 100)}%`,
-                      }}
-                    />
-                  </span>
-                )}
-              </button>
-            ))}
+            {cards.map((card) => {
+              const expanded =
+                detail?.kind === "metric" && detail.id === card.id;
+              return (
+                <div
+                  key={card.id}
+                  className={`${s.kpi} ${card.id === "admissions" ? s.admissionKpi : ""}`}
+                >
+                  <button
+                    type="button"
+                    className={s.kpiToggle}
+                    onClick={() =>
+                      setDetail(
+                        expanded ? null : { kind: "metric", id: card.id },
+                      )
+                    }
+                    aria-expanded={expanded}
+                    aria-controls={`statistics-breakdown-${card.id}`}
+                  >
+                    <span className={s.cardLabel}>
+                      {card.label}
+                      <Icon
+                        name="down"
+                        size={15}
+                        style={{
+                          transform: expanded ? "rotate(180deg)" : undefined,
+                        }}
+                      />
+                    </span>
+                    <b>{card.value}</b>
+                    <small>{card.caption}</small>
+                    {card.id === "budget" && (
+                      <span className={s.track} aria-hidden="true">
+                        <i
+                          style={{
+                            width: `${Math.min(100, (totals.spend / campaign.budget) * 100)}%`,
+                          }}
+                        />
+                      </span>
+                    )}
+                  </button>
+                  <div
+                    id={`statistics-breakdown-${card.id}`}
+                    className={s.breakdown}
+                    data-expanded={expanded}
+                    aria-hidden={!expanded}
+                    role="region"
+                    aria-label={`Détail par canal · ${card.label}`}
+                  >
+                    <div className={s.breakdownInner}>
+                      <div className={s.breakdownContent}>
+                        <span className={s.breakdownHeading}>Par canal</span>
+                        <dl>
+                          {channels.map((row) => (
+                            <div key={row.id}>
+                              <dt>{row.name}</dt>
+                              <dd>{metricValue(card.id, row)}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </section>
           <section aria-labelledby="statistics-channels-title">
             <header className={s.tableHeading}>

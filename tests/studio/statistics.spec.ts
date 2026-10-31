@@ -102,11 +102,65 @@ test("statistiques connectées : maquette, filtres et classement sans cumul", as
     r = await ranking.boundingBox();
   expect(r!.y).toBeGreaterThan(c!.y + c!.height);
   expect(r!.width).toBeLessThan(c!.width);
-  await cards.getByRole("button", { name: /^Admissions/ }).click();
-  await expect(page.getByRole("dialog")).toContainText(
-    "n’est pas automatiquement une admission",
+  const admissions = cards.getByRole("button", { name: /^Admissions/ });
+  const tableBefore = (await channels.boundingBox())!.y;
+  await admissions.click();
+  await expect(admissions).toHaveAttribute("aria-expanded", "true");
+  const breakdown = cards.getByRole("region", {
+    name: "Détail par canal · Admissions",
+    exact: true,
+  });
+  await expect(breakdown).toBeVisible();
+  await breakdown.evaluate((el) =>
+    Promise.all(
+      el
+        .getAnimations({ subtree: true })
+        .map((animation) => animation.finished),
+    ),
   );
-  await page.keyboard.press("Escape");
+  const lastChannel = await breakdown.locator("dl > div").last().boundingBox();
+  const expandedCard = await admissions.locator("..").boundingBox();
+  expect(lastChannel!.y + lastChannel!.height).toBeLessThanOrEqual(
+    expandedCard!.y + expandedCard!.height,
+  );
+
+  await expect(breakdown.locator("dl > div")).toHaveCount(8);
+  await expect(breakdown.locator("dl > div").first()).toContainText(
+    /Meta Ads.*8/s,
+  );
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect
+    .poll(async () => (await channels.boundingBox())!.y)
+    .toBeGreaterThan(tableBefore + 200);
+  await page.screenshot({
+    path: info.outputPath("statistics-expanded.png"),
+    fullPage: true,
+  });
+  await admissions.click();
+  await expect(admissions).toHaveAttribute("aria-expanded", "false");
+  await expect
+    .poll(async () => Math.abs((await channels.boundingBox())!.y - tableBefore))
+    .toBeLessThan(2);
+  for (const label of [
+    "Prospects générés",
+    "Budget dépensé",
+    "Coût par prospect",
+    "Conversion en prospects",
+  ]) {
+    const button = cards.getByRole("button", { name: new RegExp("^" + label) });
+    await button.click();
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    await expect(
+      cards
+        .getByRole("region", {
+          name: "Détail par canal · " + label,
+          exact: true,
+        })
+        .locator("dl > div"),
+    ).toHaveCount(8);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await button.click();
+  }
   await channels
     .getByRole("button", { name: "Détail Meta Ads", exact: true })
     .click();

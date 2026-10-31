@@ -280,7 +280,7 @@ h3 {
   margin-bottom: 8px;
 }
 .field input,
-.field select {
+.field :is(select, :where([data-studio-select])) {
   font: inherit;
   width: 100%;
   min-height: 46px;
@@ -295,7 +295,7 @@ h3 {
   color: var(--muted);
 }
 .field input:focus,
-.field select:focus {
+.field :is(select, :where([data-studio-select])):focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 4px var(--ring);
@@ -311,7 +311,7 @@ h3 {
   margin-top: 6px;
 }
 .field input[aria-invalid="true"],
-.field select[aria-invalid="true"] {
+.field :is(select, :where([data-studio-select]))[aria-invalid="true"] {
   border-color: var(--danger);
 }
 
@@ -1124,7 +1124,7 @@ td.num {
   z-index: 5;
 }
 .sap-add, .sap-share { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.sap-toolbar select {
+.sap-toolbar :is(select, :where([data-studio-select])) {
   padding: 9px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -1171,7 +1171,7 @@ td.num {
 .sap-field { display: flex; flex-direction: column; gap: 5px; flex: 1 1 160px; margin-bottom: 12px; }
 .sap-field > span { font-size: 12px; font-weight: 600; color: var(--ink-soft); display: flex; justify-content: space-between; }
 .sap-count { font-style: normal; font-weight: 400; color: var(--muted); }
-.sap-field input, .sap-field select, .sap-field textarea {
+.sap-field input, .sap-field :is(select, :where([data-studio-select])), .sap-field textarea {
   padding: 9px 11px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -1180,7 +1180,7 @@ td.num {
   font-size: 14px;
   resize: vertical;
 }
-.sap-field input:focus, .sap-field textarea:focus, .sap-field select:focus {
+.sap-field input:focus, .sap-field textarea:focus, .sap-field :is(select, :where([data-studio-select])):focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--ring);
@@ -1415,7 +1415,7 @@ td.num {
 @media(max-width:600px) { .sa-panel { padding: 16px; }.sa-brand-account { grid-template-columns: 1fr; }.sa-stage { padding: 8px; }.sa-preview-controls { gap: 8px; }.sa-native-actions { font-size: 10px; }.sa-native-cta { padding: 7px; font-size: 10px !important; }.sa-yt-info { padding: 10px; gap: 8px; }.sa-review-nav { top: 0; }.sap-decision-row { flex-wrap: wrap; }.sap-adcard-form,.sap-adcard-preview,.sap-review-preview,.sap-review-side { min-width: 0; }.sap-field-row { flex-wrap: wrap; }.sap-field { min-width: 0; }.sap-toolbar,.sap-sharebox { flex-wrap: wrap; } }
 
 /* A selected control keeps its ordinary border, without an extra focus ring. */
-:is(button, a, input, select, textarea, [tabindex]):is(:focus, :focus-visible) {
+:is(button, a, input, :is(select, :where([data-studio-select])), textarea, [tabindex]):is(:focus, :focus-visible) {
   outline: none !important;
   box-shadow: none !important;
 }

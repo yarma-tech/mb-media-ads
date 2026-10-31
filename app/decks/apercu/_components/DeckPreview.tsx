@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 
 import {
   useCallback,
@@ -140,7 +141,11 @@ export default function DeckPreview() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement;
-      if (target.matches("input, textarea, select, [contenteditable=true]"))
+      if (
+        target.matches(
+          "input, textarea, select, [data-studio-select], [contenteditable=true]",
+        )
+      )
         return;
       if (event.key === "Escape") setViewMode("workspace");
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "p") {
@@ -218,17 +223,19 @@ export default function DeckPreview() {
         <div className={styles.controls}>
           <label className={styles.selectLabel}>
             <span className={styles.srOnly}>Marque</span>
-            <select
+            <Select
               aria-label="Marque"
               value={brandId}
-              onChange={(e) => setBrandId(e.target.value as BrandId)}
+              onValueChange={(selectedValue) =>
+                setBrandId(selectedValue as BrandId)
+              }
             >
               {Object.values(BRANDS).map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <div className={styles.segment} aria-label="Version du deck">
             <button
@@ -290,18 +297,18 @@ export default function DeckPreview() {
       <footer className={styles.navigation}>
         <label className={styles.scenario}>
           <span className={styles.srOnly}>Exemple</span>
-          <select
+          <Select
             aria-label="Exemple"
             value={scenario}
-            onChange={(e) => {
-              setScenario(e.target.value as DemoScenario);
+            onValueChange={(selectedValue) => {
+              setScenario(selectedValue as DemoScenario);
               setIndex(0);
             }}
           >
             <option value="complete">Campagne complète</option>
             <option value="missing">Formats et textes manquants</option>
             <option value="empty">Campagne vide</option>
-          </select>
+          </Select>
         </label>
         <nav
           className={styles.slideNav}

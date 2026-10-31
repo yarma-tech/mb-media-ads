@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 import Link from "next/link";
 import {
   loginErrorMessage,
@@ -228,13 +229,13 @@ function App() {
                   selectedCampaign && (
                     <>
                       <Icon name="chevron" size={13} />
-                      <select
+                      <Select
                         className={w.breadcrumbCampaign}
                         aria-label="Campagne à configurer"
                         value={selectedCampaign.id}
-                        onChange={(event) =>
+                        onValueChange={(selectedValue) =>
                           navigation.update({
-                            campagne: event.target.value,
+                            campagne: selectedValue,
                             etape: "",
                             canaux: "",
                             canal: "",
@@ -246,7 +247,7 @@ function App() {
                             {campaign.name}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </>
                   )}
               </>
@@ -378,10 +379,13 @@ function Access() {
         </label>
         <label>
           Rôle
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
+          <Select
+            value={role}
+            onValueChange={(selectedValue) => setRole(selectedValue)}
+          >
             <option value="preparer">Préparateur</option>
             <option value="validator">Validateur</option>
-          </select>
+          </Select>
         </label>
         <button className={w.primary}>Inviter</button>
       </form>
@@ -395,22 +399,22 @@ function Access() {
                 {member.access === "active" ? "Accès actif" : "Accès révoqué"}
               </small>
             </span>
-            <select
+            <Select
               aria-label={"Rôle de " + member.name}
               disabled={member.id === data!.actor.id}
               value={member.role}
-              onChange={(e) =>
+              onValueChange={(selectedValue) =>
                 void run({
                   type: "member",
                   memberId: member.id,
-                  role: e.target.value,
+                  role: selectedValue,
                   access: member.access,
                 }).catch(() => {})
               }
             >
               <option value="preparer">Préparateur</option>
               <option value="validator">Validateur</option>
-            </select>
+            </Select>
             <button
               disabled={member.id === data!.actor.id}
               onClick={() =>

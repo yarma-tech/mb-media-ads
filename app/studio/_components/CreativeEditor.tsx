@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 import { useEffect, useRef, useState } from "react";
 import type { Creative, StudioCampaign } from "@/lib/campaign-studio/types";
 import {
@@ -137,10 +138,10 @@ export default function CreativeEditor({
               {creative.platform !== "display" ? (
                 <>
                   <label htmlFor="creative-cta">Appel à l’action (CTA)</label>
-                  <select
+                  <Select
                     id="creative-cta"
                     value={cta}
-                    onChange={(e) => setCta(e.target.value)}
+                    onValueChange={(selectedValue) => setCta(selectedValue)}
                   >
                     {[
                       "S’inscrire",
@@ -150,7 +151,7 @@ export default function CreativeEditor({
                     ].map((v) => (
                       <option key={v}>{v}</option>
                     ))}
-                  </select>
+                  </Select>
                 </>
               ) : (
                 <p>

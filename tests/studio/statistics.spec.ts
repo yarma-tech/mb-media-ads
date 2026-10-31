@@ -1,3 +1,4 @@
+import { chooseOption, expectFieldValue } from "./select";
 import { test, expect, type Page } from "@playwright/test";
 import { CATALOG, CHANNELS } from "../../lib/campaign-studio/workspace/catalog";
 
@@ -174,22 +175,25 @@ test("statistiques connectées : maquette, filtres et classement sans cumul", as
   await page.getByRole("searchbox").fill("introuvable");
   await expect(channels).toContainText("Aucun canal");
   await page.getByRole("searchbox").fill("");
-  await page.getByLabel("Période", { exact: true }).selectOption("day");
+  await chooseOption(page.getByLabel("Période", { exact: true }), "day");
   await expect(
     cards.getByRole("button", { name: /^Admissions/ }),
   ).toContainText("2");
   await expect(
     cards.getByRole("button", { name: /^Prospects générés/ }),
   ).toContainText("13");
-  await page.getByLabel("Période", { exact: true }).selectOption("all");
+  await chooseOption(page.getByLabel("Période", { exact: true }), "all");
   await ranking
     .getByRole("button", { name: "Ouvrir Universel · AEC hiver", exact: true })
     .click();
-  await expect(page.getByLabel("Campagne", { exact: true })).toHaveValue("aec");
+  await expectFieldValue(page.getByLabel("Campagne", { exact: true }), "aec");
   await expect(
     cards.getByRole("button", { name: /^Admissions/ }),
   ).toContainText("36");
-  await page.getByLabel("Campagne", { exact: true }).selectOption("admissions");
+  await chooseOption(
+    page.getByLabel("Campagne", { exact: true }),
+    "admissions",
+  );
   await page.mouse.move(0, 0);
   await page.evaluate(() => {
     (document.activeElement as HTMLElement)?.blur();
@@ -199,14 +203,17 @@ test("statistiques connectées : maquette, filtres et classement sans cumul", as
     path: info.outputPath("statistics-desktop.png"),
     fullPage: true,
   });
-  await page.getByLabel("Campagne", { exact: true }).selectOption("all");
+  await chooseOption(page.getByLabel("Campagne", { exact: true }), "all");
   await expect(cards).toHaveCount(0);
   await expect(channels).toHaveCount(0);
   await expect(ranking).toBeVisible();
   await page.getByRole("searchbox").fill("Portes");
   await expect(ranking.locator("tbody tr")).toHaveCount(1);
   await page.getByRole("searchbox").fill("");
-  await page.getByLabel("Campagne", { exact: true }).selectOption("admissions");
+  await chooseOption(
+    page.getByLabel("Campagne", { exact: true }),
+    "admissions",
+  );
   await page.setViewportSize({ width: 390, height: 844 });
   expect(
     await page.evaluate(

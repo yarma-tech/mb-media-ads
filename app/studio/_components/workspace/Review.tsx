@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 import { useConfirmation } from "./Confirmation";
 import { workspaceErrorMessage } from "@/lib/campaign-studio/workspace/messages";
 import { useState, useEffect, useRef } from "react";
@@ -376,11 +377,11 @@ export default function Review({
           Vidéos uniquement ×
         </button>
       )}
-      <select
+      <Select
         aria-label="Filtrer par campagne"
         value={campaignId}
-        onChange={(e) => {
-          navigation.update({ campagne: e.target.value });
+        onValueChange={(selectedValue) => {
+          navigation.update({ campagne: selectedValue });
           setVisited([]);
         }}
       >
@@ -390,7 +391,7 @@ export default function Review({
             {c.name}
           </option>
         ))}
-      </select>
+      </Select>
       <div className={r.tools}>
         {view === "validation" && (
           <details className={r.viewOptions}>
@@ -417,11 +418,11 @@ export default function Review({
               </div>
               <label>
                 Canal
-                <select
+                <Select
                   aria-label="Filtrer par canal"
                   value={channel}
-                  onChange={(e) => {
-                    navigation.update({ canal: e.target.value, groupe: "" });
+                  onValueChange={(selectedValue) => {
+                    navigation.update({ canal: selectedValue, groupe: "" });
                     setVisited([]);
                   }}
                 >
@@ -431,16 +432,16 @@ export default function Review({
                       {label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               {themes.length > 1 && (
                 <label>
                   Thématique
-                  <select
+                  <Select
                     aria-label="Filtrer par thème"
                     value={theme}
-                    onChange={(e) => {
-                      navigation.update({ theme: e.target.value, groupe: "" });
+                    onValueChange={(selectedValue) => {
+                      navigation.update({ theme: selectedValue, groupe: "" });
                       setVisited([]);
                     }}
                   >
@@ -448,7 +449,7 @@ export default function Review({
                     {themes.map((t) => (
                       <option key={t}>{t}</option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
               )}
             </div>

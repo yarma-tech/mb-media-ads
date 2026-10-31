@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Ad } from "@/lib/social-ads/types";
@@ -147,12 +148,12 @@ export default function MediaManifest({
         >
           <strong>{m.file.name}</strong>
           <p>{m.reason}</p>
-          <select
+          <Select
             aria-label={`Associer ${m.file.name}`}
             defaultValue=""
             disabled={busy}
-            onChange={async (e) => {
-              const key = e.target.value;
+            onValueChange={async (selectedValue) => {
+              const key = selectedValue;
               if (!key) return;
               setBusy(true);
               try {
@@ -174,7 +175,7 @@ export default function MediaManifest({
                 {s.reference} · {s.ratio}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       ))}
       <p role="status">{busy ? "Envoi des visuels…" : message}</p>

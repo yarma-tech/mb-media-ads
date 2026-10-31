@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import {
@@ -261,12 +262,12 @@ export default function ValidationPage() {
               <Icon name="heart" size={15} /> Carrousel
             </button>
           </div>
-          <select
+          <Select
             className={s.campaignFilter}
             aria-label="Filtrer par campagne"
             value={campaignId}
-            onChange={(e) => {
-              setCampaignId(e.target.value);
+            onValueChange={(selectedValue) => {
+              setCampaignId(selectedValue);
               setVisited([]);
             }}
           >
@@ -276,7 +277,7 @@ export default function ValidationPage() {
                 {c.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <StudioSearch />
       </div>

@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 import Link from "next/link";
 import { useState } from "react";
 import { BRANDS } from "@/lib/campaign-decks/config";
@@ -77,12 +78,12 @@ export default function OnAirPage() {
       <h1 className={s.visuallyHidden}>Campagnes on air</h1>
       <div className={s.workspaceToolbar}>
         <div className={s.displayFilters}>
-          <select
+          <Select
             className={s.campaignFilter}
             aria-label="Canal des campagnes on air"
             value={platform}
-            onChange={(event) =>
-              setPlatform(event.target.value as PlatformFilter)
+            onValueChange={(selectedValue) =>
+              setPlatform(selectedValue as PlatformFilter)
             }
           >
             <option value="all">Tous les canaux</option>
@@ -91,7 +92,7 @@ export default function OnAirPage() {
                 {label}
               </option>
             ))}
-          </select>
+          </Select>
           <span className={s.liveIndicator}>
             <span />
             {live.length} actives

@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -195,10 +196,11 @@ export default function StatsPage() {
       <div className={s.toolbar}>
         <label className={s.select}>
           <Icon name="campaign" size={17} />
-          <select
+          <Select
+            indicator={false}
             aria-label="Campagne"
             value={campaignId}
-            onChange={(e) => chooseCampaign(e.target.value)}
+            onValueChange={(selectedValue) => chooseCampaign(selectedValue)}
           >
             <option value="all">Toutes les campagnes</option>
             {STATISTICS_CAMPAIGNS.map((c) => (
@@ -206,22 +208,23 @@ export default function StatsPage() {
                 {c.name}
               </option>
             ))}
-          </select>
+          </Select>
           <Icon name="down" size={14} />
         </label>
         <label className={s.select}>
           <Icon name="calendar" size={17} />
-          <select
+          <Select
+            indicator={false}
             aria-label="Période"
             value={period}
-            onChange={(e) => {
-              setPeriod(e.target.value as StatisticsPeriod);
+            onValueChange={(selectedValue) => {
+              setPeriod(selectedValue as StatisticsPeriod);
               setDetail(null);
             }}
           >
             <option value="all">Toute la campagne</option>
             <option value="day">Aujourd’hui</option>
-          </select>
+          </Select>
           <Icon name="down" size={14} />
         </label>
         <label className={s.search}>

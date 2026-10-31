@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 import { useId, useRef, useState, type FormEvent } from "react";
 import type { Brand, Campaign } from "@/lib/campaign-studio/workspace/types";
 import { workspaceErrorMessage } from "@/lib/campaign-studio/workspace/messages";
@@ -144,9 +145,11 @@ export default function CampaignInfoForm({
           <div className={c.brandChoice}>
             <label>
               Marque
-              <select
+              <Select
                 value={draft.brandId ?? ""}
-                onChange={(e) => change("brandId", e.target.value || null)}
+                onValueChange={(selectedValue) =>
+                  change("brandId", selectedValue || null)
+                }
               >
                 <option value="">À choisir (optionnel)</option>
                 {data!.brands.map((brand) => (
@@ -154,7 +157,7 @@ export default function CampaignInfoForm({
                     {brand.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <button
               className={c.addBrand}

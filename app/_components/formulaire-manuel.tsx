@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 
 import { type ComponentType, useEffect, useRef, useState } from "react";
 import {
@@ -16,13 +17,21 @@ import {
 import { formatPeriode } from "@/lib/format";
 import type { Catalogue, ConfigManuelle, Recommandation } from "@/lib/types";
 import { tarif } from "../actions";
-import { IconArrowLeft, IconArrowRight, IconEye, IconShoppingBag } from "./icons";
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconEye,
+  IconShoppingBag,
+} from "./icons";
 import { ResultatCta } from "./result-cta";
 import { ResultatReco } from "./resultat-reco";
 
 type Errors = Partial<Record<string, string>>;
 
-const OBJECTIF_ICON: Record<ObjectifPrincipal, ComponentType<{ className?: string }>> = {
+const OBJECTIF_ICON: Record<
+  ObjectifPrincipal,
+  ComponentType<{ className?: string }>
+> = {
   notoriete: IconEye,
   conversion: IconShoppingBag,
 };
@@ -55,7 +64,8 @@ export function FormulaireManuel({ catalogue }: { catalogue: Catalogue }) {
     if (!cible) e.cible = "Requis";
     if (!dateDebut) e.dateDebut = "Requis";
     if (!dateFin) e.dateFin = "Requis";
-    if (dateDebut && dateFin && dateFin < dateDebut) e.dateFin = "La fin doit suivre le début";
+    if (dateDebut && dateFin && dateFin < dateDebut)
+      e.dateFin = "La fin doit suivre le début";
     return e;
   }
 
@@ -79,7 +89,9 @@ export function FormulaireManuel({ catalogue }: { catalogue: Catalogue }) {
       setLastConfig(config);
       setReco(await tarif(config));
     } catch {
-      setSubmitError("Impossible de calculer le tarif pour le moment. Réessayez.");
+      setSubmitError(
+        "Impossible de calculer le tarif pour le moment. Réessayez.",
+      );
     } finally {
       setLoading(false);
     }
@@ -100,10 +112,12 @@ export function FormulaireManuel({ catalogue }: { catalogue: Catalogue }) {
             <legend className="fieldset-legend">Votre placement</legend>
             <div className="field">
               <label htmlFor="m-plat">Plateforme</label>
-              <select
+              <Select
                 id="m-plat"
                 value={plateforme}
-                onChange={(e) => setPlateforme(e.target.value as Plateforme)}
+                onValueChange={(selectedValue) =>
+                  setPlateforme(selectedValue as Plateforme)
+                }
                 aria-invalid={!!errors.plateforme}
               >
                 <option value="">Sélectionner…</option>
@@ -112,33 +126,53 @@ export function FormulaireManuel({ catalogue }: { catalogue: Catalogue }) {
                     {p.nom}
                   </option>
                 ))}
-              </select>
-              {errors.plateforme ? <span className="field-error">{errors.plateforme}</span> : null}
+              </Select>
+              {errors.plateforme ? (
+                <span className="field-error">{errors.plateforme}</span>
+              ) : null}
             </div>
             <div className="grid-2">
               <div className="field">
                 <label htmlFor="m-type">Type de publicité</label>
-                <select id="m-type" value={typePub} onChange={(e) => setTypePub(e.target.value as TypePub)} aria-invalid={!!errors.typePub}>
+                <Select
+                  id="m-type"
+                  value={typePub}
+                  onValueChange={(selectedValue) =>
+                    setTypePub(selectedValue as TypePub)
+                  }
+                  aria-invalid={!!errors.typePub}
+                >
                   <option value="">Sélectionner…</option>
                   {TYPES_PUB.map((t) => (
                     <option key={t} value={t}>
                       {t}
                     </option>
                   ))}
-                </select>
-                {errors.typePub ? <span className="field-error">{errors.typePub}</span> : null}
+                </Select>
+                {errors.typePub ? (
+                  <span className="field-error">{errors.typePub}</span>
+                ) : null}
               </div>
               <div className="field">
                 <label htmlFor="m-cible">Cible</label>
-                <select id="m-cible" value={cible} onChange={(e) => setCible(e.target.value as Cible)} aria-invalid={!!errors.cible}>
+                <Select
+                  id="m-cible"
+                  value={cible}
+                  onValueChange={(selectedValue) =>
+                    setCible(selectedValue as Cible)
+                  }
+                  aria-invalid={!!errors.cible}
+                >
                   <option value="">Sélectionner…</option>
                   {CIBLES.map((c) => (
                     <option key={c} value={c}>
                       {CIBLE_LABEL[c]}
                     </option>
                   ))}
-                </select>
-                {errors.cible ? <span className="field-error">{errors.cible}</span> : null}
+                </Select>
+                {errors.cible ? (
+                  <span className="field-error">{errors.cible}</span>
+                ) : null}
               </div>
             </div>
           </fieldset>
@@ -149,7 +183,12 @@ export function FormulaireManuel({ catalogue }: { catalogue: Catalogue }) {
               {OBJECTIFS.map((o) => {
                 const Icon = OBJECTIF_ICON[o];
                 return (
-                  <button type="button" key={o} aria-pressed={objectif === o} onClick={() => setObjectif(o)}>
+                  <button
+                    type="button"
+                    key={o}
+                    aria-pressed={objectif === o}
+                    onClick={() => setObjectif(o)}
+                  >
                     <span className="seg-title">
                       <Icon /> {OBJECTIF_LABEL[o]}
                     </span>
@@ -165,18 +204,38 @@ export function FormulaireManuel({ catalogue }: { catalogue: Catalogue }) {
             <div className="grid-2">
               <div className="field">
                 <label htmlFor="m-d1">Date de début</label>
-                <input id="m-d1" type="date" value={dateDebut} onChange={(e) => setDateDebut(e.target.value)} aria-invalid={!!errors.dateDebut} />
-                {errors.dateDebut ? <span className="field-error">{errors.dateDebut}</span> : null}
+                <input
+                  id="m-d1"
+                  type="date"
+                  value={dateDebut}
+                  onChange={(e) => setDateDebut(e.target.value)}
+                  aria-invalid={!!errors.dateDebut}
+                />
+                {errors.dateDebut ? (
+                  <span className="field-error">{errors.dateDebut}</span>
+                ) : null}
               </div>
               <div className="field">
                 <label htmlFor="m-d2">Date de fin</label>
-                <input id="m-d2" type="date" value={dateFin} onChange={(e) => setDateFin(e.target.value)} aria-invalid={!!errors.dateFin} />
-                {errors.dateFin ? <span className="field-error">{errors.dateFin}</span> : null}
+                <input
+                  id="m-d2"
+                  type="date"
+                  value={dateFin}
+                  onChange={(e) => setDateFin(e.target.value)}
+                  aria-invalid={!!errors.dateFin}
+                />
+                {errors.dateFin ? (
+                  <span className="field-error">{errors.dateFin}</span>
+                ) : null}
               </div>
             </div>
           </fieldset>
 
-          <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+          <button
+            type="submit"
+            className="btn btn-primary btn-block"
+            disabled={loading}
+          >
             Voir mon tarif <IconArrowRight />
           </button>
           {submitError ? (
@@ -205,10 +264,16 @@ export function FormulaireManuel({ catalogue }: { catalogue: Catalogue }) {
                 <span className="ds-name">{plateforme}</span>
                 <span className="ds-meta">
                   {OBJECTIF_LABEL[objectif]}
-                  {dateDebut && dateFin ? ` · ${formatPeriode(dateDebut, dateFin)}` : ""}
+                  {dateDebut && dateFin
+                    ? ` · ${formatPeriode(dateDebut, dateFin)}`
+                    : ""}
                 </span>
               </div>
-              <button type="button" className="btn btn-ghost btn-sm" onClick={modifier}>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={modifier}
+              >
                 <IconArrowLeft /> Modifier
               </button>
             </div>
@@ -216,7 +281,10 @@ export function FormulaireManuel({ catalogue }: { catalogue: Catalogue }) {
             <ResultatReco reco={reco} />
 
             {reco.statut !== "infaisable" && lastConfig ? (
-              <ResultatCta payload={{ kind: "manuel", config: lastConfig }} budgetTotal={reco.budgetTotal} />
+              <ResultatCta
+                payload={{ kind: "manuel", config: lastConfig }}
+                budgetTotal={reco.budgetTotal}
+              />
             ) : null}
           </section>
         ) : null}

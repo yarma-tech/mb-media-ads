@@ -70,7 +70,7 @@
   gap: 12px;
 }
 .workbench button,
-.workbench select {
+.workbench :is(select, :where([data-studio-select])) {
   font-family: inherit;
 }
 .workbench button {
@@ -81,12 +81,12 @@
   opacity: 0.3;
 }
 .workbench button:focus-visible,
-.workbench select:focus-visible {
+.workbench :is(select, :where([data-studio-select])):focus-visible {
   outline: 3px solid #428bca;
   outline-offset: 3px;
 }
-.selectLabel select,
-.scenario select {
+.selectLabel :is(select, :where([data-studio-select])),
+.scenario :is(select, :where([data-studio-select])) {
   border: 0;
   background: transparent;
   color: #4a4e5d;
@@ -177,7 +177,7 @@
 .scenario {
   justify-self: start;
 }
-.scenario select {
+.scenario :is(select, :where([data-studio-select])) {
   font-size: 12px;
   max-width: 250px;
 }
@@ -690,7 +690,7 @@
   .selectLabel {
     min-width: 0;
   }
-  .selectLabel select {
+  .selectLabel :is(select, :where([data-studio-select])) {
     max-width: 145px;
     padding-left: 0;
     font-size: 12px;

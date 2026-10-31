@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 import { useRef, useState, useEffect } from "react";
 import { useWorkspace } from "./WorkspaceProvider";
 import Icon from "../Icon";
@@ -111,35 +112,35 @@ export default function ShareCampaign({
         {data.actor.role === "validator" && (
           <label className={s.label}>
             Type de lien
-            <select
+            <Select
               aria-label="Type de lien"
               value={mode}
-              onChange={(event) => {
-                setMode(event.target.value as "validation" | "presentation");
+              onValueChange={(selectedValue) => {
+                setMode(selectedValue as "validation" | "presentation");
                 setCopied(false);
                 setError("");
               }}
             >
               <option value="validation">Validation avec connexion</option>
               <option value="presentation">Présentation publique</option>
-            </select>
+            </Select>
           </label>
         )}
         {mode === "validation" || data.actor.role !== "validator" ? (
           <>
             <label className={s.label}>
               Annonces à partager
-              <select
+              <Select
                 aria-label="Annonces à partager"
                 value={scope}
-                onChange={(event) => {
-                  setScope(event.target.value as "video" | "all");
+                onValueChange={(selectedValue) => {
+                  setScope(selectedValue as "video" | "all");
                   setCopied(false);
                 }}
               >
                 <option value="video">Vidéos uniquement</option>
                 <option value="all">Toutes les annonces</option>
-              </select>
+              </Select>
             </label>
             <p className={s.help}>
               Connexion requise avec un compte Validateur pour approuver,

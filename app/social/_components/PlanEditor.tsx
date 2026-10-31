@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -63,17 +64,19 @@ export default function PlanEditor({
     <div className="sap-editor">
       <div className="sap-toolbar">
         <div className="sap-add">
-          <select
+          <Select
             aria-label="Plateforme nouvelle annonce"
             value={platform}
-            onChange={(e) => setPlatform(e.target.value as Plateforme)}
+            onValueChange={(selectedValue) =>
+              setPlatform(selectedValue as Plateforme)
+            }
           >
             {PLATEFORMES.map((p) => (
               <option key={p} value={p}>
                 {PLATEFORME_LABEL[p]}
               </option>
             ))}
-          </select>
+          </Select>
           <button
             className="btn btn-primary"
             disabled={pending}
@@ -240,10 +243,10 @@ function EditorCard({
         <div className="sap-field-row">
           <label className="sap-field">
             <span>Plateforme</span>
-            <select
+            <Select
               value={selection.plateforme}
-              onChange={(e) => {
-                const p = e.target.value as Plateforme;
+              onValueChange={(selectedValue) => {
+                const p = selectedValue as Plateforme;
                 setSelection(
                   legacyVariant(
                     p,
@@ -261,14 +264,14 @@ function EditorCard({
                   {PLATEFORME_LABEL[p]}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="sap-field">
             <span>Placement</span>
-            <select
+            <Select
               value={selection.placement}
-              onChange={(e) => {
-                const placement = e.target.value as Placement;
+              onValueChange={(selectedValue) => {
+                const placement = selectedValue as Placement;
                 const type_media = [
                   selection.type_media,
                   "video",
@@ -294,16 +297,16 @@ function EditorCard({
                   {p.replace(/_/g, " ")}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <label className="sap-field">
             <span>Média</span>
-            <select
+            <Select
               value={selection.type_media}
-              onChange={(e) =>
+              onValueChange={(selectedValue) =>
                 change({
                   ...selection,
-                  type_media: e.target.value as AdVariant["type_media"],
+                  type_media: selectedValue as AdVariant["type_media"],
                 })
               }
             >
@@ -316,23 +319,23 @@ function EditorCard({
                     {m}
                   </option>
                 ))}
-            </select>
+            </Select>
           </label>
           <label className="sap-field">
             <span>Ratio</span>
-            <select
+            <Select
               value={selection.ratio}
-              onChange={(e) =>
+              onValueChange={(selectedValue) =>
                 setSelection({
                   ...selection,
-                  ratio: e.target.value,
+                  ratio: selectedValue,
                 } as AdVariant)
               }
             >
               {allowedRatios(selection).map((r) => (
                 <option key={r}>{r}</option>
               ))}
-            </select>
+            </Select>
           </label>
         </div>
         <button

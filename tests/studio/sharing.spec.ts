@@ -1,3 +1,4 @@
+import { chooseOption, expectFieldValue } from "./select";
 import { test, expect, type Page } from "@playwright/test";
 import { CATALOG, CHANNELS } from "../../lib/campaign-studio/workspace/catalog";
 import {
@@ -122,13 +123,15 @@ test("validator creates, copies and revokes a campaign link", async ({
     })
     .click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await page
-    .getByLabel("Type de lien", { exact: true })
-    .selectOption("presentation");
+  await chooseOption(
+    page.getByLabel("Type de lien", { exact: true }),
+    "presentation",
+  );
   await page
     .getByRole("button", { name: "Créer le lien public", exact: true })
     .click();
-  await expect(page.getByLabel("Lien public", { exact: true })).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Lien public", { exact: true }),
     base + `/partage/${token}`,
   );
   await page

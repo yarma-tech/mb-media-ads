@@ -62,12 +62,12 @@
 }
 .app button,
 .app input,
-.app select,
+.app :is(select, :where([data-studio-select])),
 .app textarea {
   font: inherit;
 }
 .app button,
-.app select {
+.app :is(select, :where([data-studio-select])) {
   cursor: pointer;
 }
 .app a {
@@ -83,7 +83,7 @@
 }
 .app a:focus-visible,
 .app button:focus-visible,
-.app select:focus-visible,
+.app :is(select, :where([data-studio-select])):focus-visible,
 .app input:focus-visible,
 .app textarea:focus-visible,
 .app svg g:focus-visible {
@@ -716,7 +716,7 @@
   border-top: 1px solid var(--studio-line);
   border-bottom: 1px solid var(--studio-line);
 }
-.liveCardToolbar select {
+.liveCardToolbar :is(select, :where([data-studio-select])) {
   max-width: 55%;
   border: 0;
   background: transparent;
@@ -1072,7 +1072,7 @@
   background: var(--studio-bg);
   color: var(--studio-muted);
 }
-.statsFilters select {
+.statsFilters :is(select, :where([data-studio-select])) {
   min-width: 0;
   max-width: 290px;
   border: 0;
@@ -1143,7 +1143,7 @@
 .panelHeading > svg {
   color: var(--studio-muted);
 }
-.panelHeading select {
+.panelHeading :is(select, :where([data-studio-select])) {
   border: 1px solid var(--studio-line);
   background: var(--studio-bg);
   border-radius: 5px;
@@ -1681,7 +1681,7 @@
   .statsFilters label {
     padding-inline: 7px;
   }
-  .statsFilters select {
+  .statsFilters :is(select, :where([data-studio-select])) {
     font-size: 10px;
   }
   .statsFilters > span {
@@ -1714,7 +1714,7 @@
   .panelHeading h2 {
     font-size: 12px;
   }
-  .panelHeading select {
+  .panelHeading :is(select, :where([data-studio-select])) {
     font-size: 9px;
     padding: 5px;
   }
@@ -2545,7 +2545,7 @@
 .editorFields h2 {
   margin: 8px 0 24px;
 }
-.editorFields select {
+.editorFields :is(select, :where([data-studio-select])) {
   width: 100%;
   padding: 10px;
   border: 1px solid var(--studio-line);
@@ -2614,7 +2614,7 @@
   color: var(--studio-ink);
   font-weight: 600;
 }
-.displayFilters select {
+.displayFilters :is(select, :where([data-studio-select])) {
   color: var(--studio-muted);
   max-width: 230px;
 }
@@ -2696,7 +2696,7 @@
     justify-content: space-between;
     gap: 4px;
   }
-  .displayFilters select {
+  .displayFilters :is(select, :where([data-studio-select])) {
     max-width: 60%;
     font-size: 11px !important;
     padding: 8px;
@@ -3285,7 +3285,9 @@
   .workspaceToolbar.statsFilters label:first-child {
     width: 100%;
   }
-  .workspaceToolbar.statsFilters label:first-child select {
+  .workspaceToolbar.statsFilters
+    label:first-child
+    :is(select, :where([data-studio-select])) {
     flex: 1;
     max-width: none;
   }
@@ -3310,7 +3312,7 @@
 .acceptCircle {
   color: #176b3d !important;
 }
-.app :is(input, textarea, select):focus-visible {
+.app :is(input, textarea, :is(select, :where([data-studio-select]))):focus-visible {
   outline-width: 2px;
   outline-color: var(--studio-accent);
 }

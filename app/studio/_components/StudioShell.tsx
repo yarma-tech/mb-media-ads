@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -138,17 +139,19 @@ export default function StudioShell({
         >
           <Icon name="grid" />
         </button>
-        <select
+        <Select
           id="studio-brand"
           className={s.brandSelect}
           aria-label="Filtrer par marque"
           value={brand}
-          onChange={(e) => setBrand(e.target.value as BrandFilter)}
+          onValueChange={(selectedValue) =>
+            setBrand(selectedValue as BrandFilter)
+          }
         >
           <option value="all">Toutes les marques</option>
           <option value="cmsa">Collège du Mont-Sainte-Anne</option>
           <option value="cu">Collège Universel</option>
-        </select>
+        </Select>
         <div className={s.sidebarBottom}>
           <button
             type="button"

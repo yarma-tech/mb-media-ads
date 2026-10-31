@@ -1,3 +1,4 @@
+import { chooseOption, expectFieldValue } from "./select";
 import { readFileSync } from "node:fs";
 import { test, expect, type Page } from "@playwright/test";
 import { createMediaAds } from "../../lib/campaign-studio/workspace/media-batch";
@@ -512,8 +513,13 @@ async function openLibrary(page: Page, channelName = "Facebook") {
     exact: true,
   });
   await expect(nav).toBeVisible();
-  const tab = nav.getByRole("option", { name: channelName, exact: true });
-  if (!(await tab.count())) {
+  await nav.click();
+  const available = await page
+    .getByRole("listbox")
+    .getByRole("option", { name: channelName, exact: true })
+    .count();
+  await page.keyboard.press("Escape");
+  if (!available) {
     await openConfigurationSteps(page);
     await page
       .getByRole("navigation", { name: "Étapes de configuration", exact: true })
@@ -531,8 +537,9 @@ async function openLibrary(page: Page, channelName = "Facebook") {
       await channel.click();
     await page.getByRole("button", { name: "Continuer", exact: true }).click();
   }
-  await nav.selectOption({ label: channelName });
-  await expect(nav).toHaveValue(
+  await chooseOption(nav, { label: channelName });
+  await expectFieldValue(
+    nav,
     Object.entries(CHANNELS).find(([, label]) => label === channelName)![0],
   );
   const summary = page
@@ -548,7 +555,7 @@ async function openLibrary(page: Page, channelName = "Facebook") {
 
 async function openEditor(page: Page, id: string) {
   await page.getByRole("link", { name: "Validation", exact: true }).click();
-  await page.getByLabel("Filtrer par campagne").selectOption(id);
+  await chooseOption(page.getByLabel("Filtrer par campagne"), id);
   await expect(page.getByRole("article")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Modifier et valider", exact: true })
@@ -579,28 +586,28 @@ test("une correction survit à Échap, fermeture, clic extérieur et rechargemen
     await page
       .getByRole("button", { name: "Modifier et valider", exact: true })
       .click();
-    await expect(field).toHaveValue(text);
+    await expectFieldValue(field, text);
   }
   await page.keyboard.press("Escape");
   await page.reload();
   await page
     .getByRole("button", { name: "Modifier et valider", exact: true })
     .click();
-  await expect(field).toHaveValue(text);
+  await expectFieldValue(field, text);
   await page.keyboard.press("Escape");
   await page.getByRole("link", { name: "On air", exact: true }).click();
   await page.getByRole("link", { name: "Validation", exact: true }).click();
   await page
     .getByRole("button", { name: "Modifier et valider", exact: true })
     .click();
-  await expect(field).toHaveValue(text);
+  await expectFieldValue(field, text);
   await page.goBack();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.goForward();
   await page
     .getByRole("button", { name: "Modifier et valider", exact: true })
     .click();
-  await expect(field).toHaveValue(text);
+  await expectFieldValue(field, text);
 });
 
 test("campagne, canal, filtres et recherche survivent aux transitions et reload", async ({
@@ -608,11 +615,13 @@ test("campagne, canal, filtres et recherche survivent aux transitions et reload"
 }) => {
   const { campaigns } = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
-  await page
-    .getByRole("combobox", { name: "Canal de configuration", exact: true })
-    .selectOption("google");
+  await chooseOption(
+    page.getByRole("combobox", { name: "Canal de configuration", exact: true }),
+    "google",
+  );
   await page.getByRole("link", { name: "Validation", exact: true }).click();
-  await expect(page.getByLabel("Filtrer par campagne")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Filtrer par campagne"),
     campaigns[1].id,
   );
   await page.getByRole("button", { name: "Validées", exact: true }).click();
@@ -627,25 +636,30 @@ test("campagne, canal, filtres et recherche survivent aux transitions et reload"
   await expect(
     page.getByRole("button", { name: "Carrousel", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByLabel("Rechercher une annonce")).toHaveValue("Beta");
+  await expectFieldValue(page.getByLabel("Rechercher une annonce"), "Beta");
   await page.getByRole("link", { name: "On air", exact: true }).click();
-  await expect(page.getByLabel("Filtrer par campagne")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Filtrer par campagne"),
     campaigns[1].id,
   );
   await page.getByRole("link", { name: "Configuration", exact: true }).click();
-  await expect(page.getByLabel("Campagne à configurer")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Campagne à configurer"),
     campaigns[1].id,
   );
-  await expect(
+  await expectFieldValue(
     page.getByRole("combobox", { name: "Canal de configuration", exact: true }),
-  ).toHaveValue("google");
+    "google",
+  );
   await page.reload();
-  await expect(
+  await expectFieldValue(
     page.getByRole("combobox", { name: "Canal de configuration", exact: true }),
-  ).toHaveValue("google");
-  await page.getByLabel("Campagne à configurer").selectOption(campaigns[0].id);
+    "google",
+  );
+  await chooseOption(page.getByLabel("Campagne à configurer"), campaigns[0].id);
   await openPreview(page, true);
-  await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Nom de l’annonce active"),
     "Alpha annonce",
   );
   await openPreview(page, true);
@@ -697,7 +711,7 @@ for (const width of [1440, 390, 320]) {
     await field.focus();
     await field.press("End");
     await field.press("Enter");
-    await expect(field).toHaveValue(/\n/);
+    await expectFieldValue(field, /\n/);
     expect(f.commands.filter((c) => c.type === "edit")).toHaveLength(0);
     for (const key of ["Tab", "Shift+Tab"]) {
       for (let i = 0; i < 12; i++) {
@@ -753,11 +767,13 @@ test("contexte historique et campagne B ne réutilisent aucune ligne ni sélecti
 }) => {
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
-  await page
-    .getByRole("combobox", { name: "Canal de configuration", exact: true })
-    .selectOption("google");
+  await chooseOption(
+    page.getByRole("combobox", { name: "Canal de configuration", exact: true }),
+    "google",
+  );
   await openPreview(page, true);
-  await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Nom de l’annonce active"),
     "Beta annonce",
   );
   await page.getByLabel("Sélectionner toutes les annonces du canal").check();
@@ -766,11 +782,13 @@ test("contexte historique et campagne B ne réutilisent aucune ligne ni sélecti
     .getByRole("button", { name: "Appliquer un champ en batch" })
     .click();
   await page.getByLabel("Valeur à appliquer").fill("Brouillon batch B");
-  await page
-    .getByLabel("Campagne à configurer")
-    .selectOption(f.campaigns[0].id);
+  await chooseOption(
+    page.getByLabel("Campagne à configurer"),
+    f.campaigns[0].id,
+  );
   await openPreview(page, true);
-  await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Nom de l’annonce active"),
     "Alpha annonce",
   );
   await expect(page.getByLabel("Valeur à appliquer")).toHaveCount(0);
@@ -778,23 +796,26 @@ test("contexte historique et campagne B ne réutilisent aucune ligne ni sélecti
     page.getByLabel("Sélectionner toutes les annonces du canal"),
   ).not.toBeChecked();
   await page.goBack();
-  await expect(page.getByLabel("Campagne à configurer")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Campagne à configurer"),
     f.campaigns[1].id,
   );
   await openPreview(page, true);
-  await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Nom de l’annonce active"),
     "Beta annonce",
   );
   await page.goForward();
   await openPreview(page, true);
-  await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Nom de l’annonce active"),
     "Alpha annonce",
   );
   await page.getByRole("link", { name: "Validation", exact: true }).click();
-  await page.getByLabel("Filtrer par campagne").selectOption("all");
+  await chooseOption(page.getByLabel("Filtrer par campagne"), "all");
   await expect(page.getByRole("article")).toHaveCount(2);
   await page.getByRole("link", { name: "On air", exact: true }).click();
-  await expect(page.getByLabel("Filtrer par campagne")).toHaveValue("all");
+  await expectFieldValue(page.getByLabel("Filtrer par campagne"), "all");
   await page.goto(
     base + "/studio/configuration?campagne=ancienne-campagne-inconnue",
   );
@@ -834,18 +855,14 @@ test("échec de sauvegarde conserve correction, fermeture sûre si stockage indi
   await page
     .getByRole("button", { name: "Continuer l’édition", exact: true })
     .click();
-  await expect(field).toHaveValue(
-    "Correction à garder\nTitre deux\nTitre trois",
-  );
+  await expectFieldValue(field, "Correction à garder\nTitre deux\nTitre trois");
   expect(prompts).toBe(0);
   f.fail("edit");
   await page
     .getByRole("button", { name: "Enregistrer et valider", exact: true })
     .click();
   await expect(page.getByRole("dialog")).toBeVisible();
-  await expect(field).toHaveValue(
-    "Correction à garder\nTitre deux\nTitre trois",
-  );
+  await expectFieldValue(field, "Correction à garder\nTitre deux\nTitre trois");
   await expect(
     page.getByRole("dialog").getByText("Conflit de test", { exact: true }),
   ).toBeVisible();
@@ -862,9 +879,10 @@ test("formats et duplication ne se créent qu’une fois, nouvelle intention per
 }) => {
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
-  await page
-    .getByRole("combobox", { name: "Canal de configuration", exact: true })
-    .selectOption("google");
+  await chooseOption(
+    page.getByRole("combobox", { name: "Canal de configuration", exact: true }),
+    "google",
+  );
   await chooseFormats(page);
   await page.getByLabel(/Annonce responsive Search/).check();
   f.latency(800);
@@ -925,9 +943,10 @@ test("soumission avec sauvegarde préalable et demande de modification restent u
 }) => {
   const f = await fixture(page, "draft");
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
-  await page
-    .getByRole("combobox", { name: "Canal de configuration", exact: true })
-    .selectOption("google");
+  await chooseOption(
+    page.getByRole("combobox", { name: "Canal de configuration", exact: true }),
+    "google",
+  );
   const field = page.getByLabel("Titres · 30 caractères de Beta annonce");
   await expect(field).toBeEditable();
   f.latency(800);
@@ -956,7 +975,10 @@ test("soumission avec sauvegarde préalable et demande de modification restent u
 test("nouvelle version protégée sous latence", async ({ page }) => {
   const f = await fixture(page, "on_air");
   await page.getByRole("link", { name: "On air", exact: true }).click();
-  await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
+  await chooseOption(
+    page.getByLabel("Filtrer par campagne"),
+    f.campaigns[1].id,
+  );
   await page
     .getByRole("button", { name: "Ouvrir Beta annonce · Beta", exact: true })
     .click();
@@ -1082,7 +1104,10 @@ test("carrousel parcouru : reprendre sans modifier les statuts", async ({
 }) => {
   const f = await validatorFixture(page);
   await page.getByRole("link", { name: "Validation", exact: true }).click();
-  await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
+  await chooseOption(
+    page.getByLabel("Filtrer par campagne"),
+    f.campaigns[1].id,
+  );
   await expect(page.getByRole("article")).toHaveCount(1);
   await openReviewOptions(page);
   await page.getByRole("button", { name: "Carrousel", exact: true }).click();
@@ -1113,7 +1138,10 @@ test("recherche vide : reprise en un clic et focus dans la recherche", async ({
 }) => {
   const f = await fixture(page);
   await page.getByRole("link", { name: "Validation", exact: true }).click();
-  await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
+  await chooseOption(
+    page.getByLabel("Filtrer par campagne"),
+    f.campaigns[1].id,
+  );
   const search = page.getByLabel("Rechercher une annonce");
   await search.fill("introuvable-test");
   await expect(
@@ -1123,9 +1151,10 @@ test("recherche vide : reprise en un clic et focus dans la recherche", async ({
     .getByRole("button", { name: "Effacer la recherche", exact: true })
     .click();
   await expect(search).toBeFocused();
-  await expect(search).toHaveValue("");
+  await expectFieldValue(search, "");
   await expect(page.getByRole("article")).toHaveCount(1);
-  await expect(page.getByLabel("Filtrer par campagne")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Filtrer par campagne"),
     f.campaigns[1].id,
   );
 });
@@ -1167,7 +1196,7 @@ for (const width of [390, 320]) {
       name: "Canal de configuration",
       exact: true,
     });
-    await expect(google).toHaveValue("google");
+    await expectFieldValue(google, "google");
     await expect
       .poll(() =>
         google.evaluate((el) => {
@@ -1211,7 +1240,10 @@ test("reprendre au clavier ne valide jamais implicitement", async ({
 }) => {
   const f = await validatorFixture(page);
   await page.getByRole("link", { name: "Validation", exact: true }).click();
-  await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
+  await chooseOption(
+    page.getByLabel("Filtrer par campagne"),
+    f.campaigns[1].id,
+  );
   await expect(page.getByRole("article")).toHaveCount(1);
   await openReviewOptions(page);
   await page.getByRole("button", { name: "Carrousel", exact: true }).click();
@@ -1252,9 +1284,10 @@ test("marque neuve affectée directement à sa campagne", async ({ page }) => {
   await page
     .getByRole("button", { name: "Créer la marque", exact: true })
     .click();
-  await expect(
+  await expectFieldValue(
     page.getByRole("combobox", { name: "Marque", exact: true }),
-  ).toHaveValue("created-brand");
+    "created-brand",
+  );
   expect(f.commands.filter((c) => c.type === "create_brand")).toHaveLength(1);
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await expect
@@ -1322,9 +1355,10 @@ test("rechargement conserve le bail de son éditeur sans ouvrir un second édite
 }) => {
   const f = await fixture(page, "pending", false, true);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
-  await page
-    .getByRole("combobox", { name: "Canal de configuration", exact: true })
-    .selectOption("google");
+  await chooseOption(
+    page.getByRole("combobox", { name: "Canal de configuration", exact: true }),
+    "google",
+  );
   const field = page.getByLabel("Titres · 30 caractères de Beta annonce");
   await expect(field).toBeEditable();
   await page.reload();
@@ -1350,14 +1384,14 @@ test("commentaire : focus initial, Entrée et Échap restent sûrs", async ({
   await expect(field).toBeFocused();
   await page.keyboard.type("Commentaire synthétique");
   await field.press("Enter");
-  await expect(field).toHaveValue("Commentaire synthétique\n");
+  await expectFieldValue(field, "Commentaire synthétique\n");
   expect(f.commands.filter((c) => c.type === "decide")).toHaveLength(0);
   await field.press("Escape");
   await page
     .getByRole("dialog", { name: "Abandonner ce commentaire ?", exact: true })
     .getByRole("button", { name: "Garder le commentaire", exact: true })
     .click();
-  await expect(field).toHaveValue("Commentaire synthétique\n");
+  await expectFieldValue(field, "Commentaire synthétique\n");
   await field.fill("");
   await field.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -1461,7 +1495,10 @@ test("erreur de commentaire annoncée sans perdre la saisie", async ({
 }) => {
   const f = await validatorFixture(page);
   await page.getByRole("link", { name: "Validation", exact: true }).click();
-  await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
+  await chooseOption(
+    page.getByLabel("Filtrer par campagne"),
+    f.campaigns[1].id,
+  );
   await expect(page.getByRole("article")).toHaveCount(1);
   await page
     .getByRole("button", { name: "Demander une modification", exact: true })
@@ -1476,7 +1513,8 @@ test("erreur de commentaire annoncée sans perdre la saisie", async ({
   await expect(page.getByRole("dialog").getByRole("alert")).toContainText(
     "Conflit de test",
   );
-  await expect(page.getByLabel("Votre commentaire")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Votre commentaire"),
     "Commentaire conservé après erreur",
   );
 });
@@ -1530,7 +1568,7 @@ test("canal actif reste visible lors du passage desktop vers mobile", async ({
     name: "Canal de configuration",
     exact: true,
   });
-  await expect(channel).toHaveValue("google");
+  await expectFieldValue(channel, "google");
   await page.setViewportSize({ width: 320, height: 844 });
   await expect
     .poll(() =>
@@ -1638,7 +1676,10 @@ test("vérifier A ne masque pas l’erreur du transfert B", async ({ page }) => 
 test("carrousel : hiérarchie de titres continue", async ({ page }) => {
   const f = await validatorFixture(page);
   await page.getByRole("link", { name: "Validation", exact: true }).click();
-  await page.getByLabel("Filtrer par campagne").selectOption(f.campaigns[1].id);
+  await chooseOption(
+    page.getByLabel("Filtrer par campagne"),
+    f.campaigns[1].id,
+  );
   await expect(page.getByRole("article")).toHaveCount(1);
   await openReviewOptions(page);
   await page.getByRole("button", { name: "Carrousel", exact: true }).click();
@@ -1707,12 +1748,12 @@ test("panne réseau à l’enregistrement : message français, brouillon préser
     "Impossible de confirmer l’opération.",
   );
   await expect(dialog.getByRole("alert")).not.toContainText("Failed to fetch");
-  await expect(field).toHaveValue(copy);
+  await expectFieldValue(field, copy);
   await page.keyboard.press("Escape");
   await page
     .getByRole("button", { name: "Modifier et valider", exact: true })
     .click();
-  await expect(field).toHaveValue(copy);
+  await expectFieldValue(field, copy);
   expect(attempts).toBe(1);
 });
 
@@ -2078,9 +2119,10 @@ test("configuration en trois étapes : campagne, canaux, annonces", async ({
   await form
     .getByLabel("Nom de campagne", { exact: true })
     .fill("Campagne complétée");
-  await form
-    .getByRole("combobox", { name: "Marque", exact: true })
-    .selectOption("brand-test");
+  await chooseOption(
+    form.getByRole("combobox", { name: "Marque", exact: true }),
+    "brand-test",
+  );
   await form.locator("summary").click();
   await form
     .getByLabel("URL commune", { exact: true })
@@ -2111,25 +2153,30 @@ test("configuration en trois étapes : campagne, canaux, annonces", async ({
     }),
   ).toBeVisible();
   await steps.getByRole("button", { name: "1 Campagne", exact: true }).click();
-  await expect(form.getByLabel("Nom de campagne", { exact: true })).toHaveValue(
+  await expectFieldValue(
+    form.getByLabel("Nom de campagne", { exact: true }),
     "Campagne complétée",
   );
-  await expect(
+  await expectFieldValue(
     form.getByRole("combobox", { name: "Marque", exact: true }),
-  ).toHaveValue("brand-test");
-  await expect(form.getByLabel("URL commune", { exact: true })).toHaveValue(
+    "brand-test",
+  );
+  await expectFieldValue(
+    form.getByLabel("URL commune", { exact: true }),
     "https://example.test/admissions",
   );
-  await expect(form.getByLabel("Début", { exact: true })).toHaveValue(
+  await expectFieldValue(
+    form.getByLabel("Début", { exact: true }),
     "2027-01-01",
   );
   expect(
     f.campaigns.find((c) => c.name === "Campagne complétée")?.brandId,
   ).toBe("brand-test");
   await page.reload();
-  await expect(
+  await expectFieldValue(
     form.getByLabel("Fin · 23 h 59 Montréal", { exact: true }),
-  ).toHaveValue("2027-02-01");
+    "2027-02-01",
+  );
 });
 
 test("première étape : un échec conserve les champs et ne passe pas aux canaux", async ({
@@ -2151,7 +2198,8 @@ test("première étape : un échec conserve les champs et ne passe pas aux canau
       .getByRole("region", { name: "Nouvelle campagne", exact: true })
       .getByRole("alert"),
   ).toContainText("Enregistrement indisponible.");
-  await expect(form.getByLabel("Nom de campagne", { exact: true })).toHaveValue(
+  await expectFieldValue(
+    form.getByLabel("Nom de campagne", { exact: true }),
     "Nom conservé après erreur",
   );
   await expect(
@@ -2179,11 +2227,12 @@ test("une autre campagne vierge reprend à ses informations, pas à l’étape p
     .click();
   await page.getByRole("button", { name: "Continuer", exact: true }).click();
   await expect(page.getByRole("table")).toBeVisible();
-  await page.getByLabel("Campagne à configurer").selectOption(empty.id);
+  await chooseOption(page.getByLabel("Campagne à configurer"), empty.id);
   await expect(
     page.getByRole("form", { name: "Informations de campagne", exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel("Nom de campagne", { exact: true })).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Nom de campagne", { exact: true }),
     empty.name,
   );
   await expect(page.locator("input[type=file]")).toHaveCount(0);
@@ -2220,9 +2269,10 @@ test("direction D : accueil vide puis création atomique avec métadonnées", as
   await expect(
     page.getByRole("group", { name: "Choisir les canaux" }),
   ).toHaveCount(0);
-  await page
-    .getByRole("combobox", { name: "Marque", exact: true })
-    .selectOption("brand-test");
+  await chooseOption(
+    page.getByRole("combobox", { name: "Marque", exact: true }),
+    "brand-test",
+  );
   await page.locator("summary").filter({ hasText: "Dates et lien" }).click();
   await page
     .getByLabel("URL commune", { exact: true })
@@ -2286,14 +2336,14 @@ test("direction D : Tab traverse les lignes et conserve le texte saisi", async (
   ).toBeFocused();
   await page.keyboard.press("Shift+Tab");
   await expect(last).toBeFocused();
-  await expect(last).toHaveValue("admissions");
+  await expectFieldValue(last, "admissions");
   await expect
     .poll(
       () => f.campaigns.find((item) => item.id === campaign.id)?.ads[0].path2,
     )
     .toBe("admissions");
   await page.reload();
-  await expect(last).toHaveValue("admissions");
+  await expectFieldValue(last, "admissions");
 });
 
 test("direction D : Copier tout produit des blocs texte complets", async ({
@@ -2475,7 +2525,7 @@ test("direction D : validation affiche tout le groupe par défaut", async ({
   f.campaigns[1] = campaign;
   await page.reload();
   await page.getByRole("link", { name: "Validation", exact: true }).click();
-  await page.getByLabel("Filtrer par campagne").selectOption(campaign.id);
+  await chooseOption(page.getByLabel("Filtrer par campagne"), campaign.id);
   await expect(page.getByRole("article")).toHaveCount(2);
   await page.screenshot({
     path: "/tmp/studio-d-20261029/validation-desktop.png",
@@ -2510,7 +2560,7 @@ test("direction D : On air inclut les canaux prévus et compte les familles", as
   f.campaigns[1] = campaign;
   await page.reload();
   await page.getByRole("link", { name: "On air", exact: true }).click();
-  await page.getByLabel("Filtrer par campagne").selectOption(campaign.id);
+  await chooseOption(page.getByLabel("Filtrer par campagne"), campaign.id);
   const overview = page.getByRole("region", {
     name: "Vue d’ensemble On air",
     exact: true,
@@ -2872,10 +2922,12 @@ test("Google SEM : aperçu réaliste, tous les textes conservés dans l’édite
   await page
     .getByRole("button", { name: "Modifier et valider", exact: true })
     .click();
-  await expect(page.getByLabel("Titres · un par ligne")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Titres · un par ligne"),
     ad.headlines.join("\n"),
   );
-  await expect(page.getByLabel("Descriptions · une par ligne")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Descriptions · une par ligne"),
     ad.descriptions.join("\n"),
   );
 });
@@ -2970,9 +3022,10 @@ test("suppression campagne : échec conserve la campagne et permet une reprise v
     "Suppression indisponible",
   );
   expect(f.campaigns).toHaveLength(2);
-  await expect(
+  await expectFieldValue(
     dialog.getByLabel("Nom de campagne à confirmer", { exact: true }),
-  ).toHaveValue("Beta");
+    "Beta",
+  );
   expect(f.commands.filter((c) => c.type === "delete_campaign")).toHaveLength(
     1,
   );
@@ -3143,9 +3196,10 @@ test("tableau Google : le batch initial cible bien les titres affichés", async 
   await page
     .getByRole("button", { name: "Appliquer un champ en batch" })
     .click();
-  await expect(
+  await expectFieldValue(
     page.getByRole("combobox", { name: "Champ", exact: true }),
-  ).toHaveValue("headlines");
+    "headlines",
+  );
   await page
     .getByLabel("Valeur à appliquer")
     .fill("Premier titre\nDeuxième titre\nTroisième titre");
@@ -3212,7 +3266,7 @@ test("tableau : autre éditeur après suspension préserve la saisie et bloque l
   await expect(
     page.getByRole("button", { name: "Reprendre l’édition", exact: true }),
   ).toBeVisible();
-  await expect(field).toHaveValue("À conserver");
+  await expectFieldValue(field, "À conserver");
   expect(f.commands.filter((c) => c.type === "edit")).toHaveLength(0);
 });
 
@@ -3353,7 +3407,7 @@ test("tableau : révision distante changée demande une reprise explicite sans p
   await expect(page.getByRole("table").getByRole("alert")).toContainText(
     "a changé pendant votre absence",
   );
-  await expect(field).toHaveValue("Correction locale à conserver");
+  await expectFieldValue(field, "Correction locale à conserver");
   expect(f.commands.filter((c) => c.type === "edit")).toHaveLength(0);
   await retry.click();
   await expect
@@ -3373,9 +3427,9 @@ test("tableau : format, détails, média de ligne, historique et navigation aper
     base + "/studio/configuration?campagne=" + c.id + "&canal=facebook",
   );
   const format = page.getByLabel("Format de Beta annonce", { exact: true });
-  await format.selectOption("portrait");
+  await chooseOption(format, "portrait");
   await expect.poll(() => f.campaigns[1].ads[0].format).toBe("portrait");
-  await format.selectOption("square");
+  await chooseOption(format, "square");
   await expect.poll(() => f.campaigns[1].ads[0].format).toBe("square");
   await page
     .getByRole("button", { name: "Aperçu de Beta annonce", exact: true })
@@ -3393,9 +3447,9 @@ test("tableau : format, détails, média de ligne, historique et navigation aper
     .fill("Nom vérifié");
   await expect.poll(() => f.campaigns[1].ads[0].name).toBe("Nom vérifié");
   const media = page.getByLabel("Média de Nom vérifié", { exact: true });
-  await media.selectOption("");
+  await chooseOption(media, "");
   await expect.poll(() => f.campaigns[1].ads[0].mediaId).toBeNull();
-  await media.selectOption("ready-media");
+  await chooseOption(media, "ready-media");
   await expect.poll(() => f.campaigns[1].ads[0].mediaId).toBe("ready-media");
   await page
     .getByLabel("Joindre un média")
@@ -3410,18 +3464,20 @@ test("tableau : format, détails, média de ligne, historique et navigation aper
   await preview
     .getByRole("button", { name: "Annonce suivante", exact: true })
     .click();
-  await expect(
+  await expectFieldValue(
     page.getByLabel("Nom de l’annonce active", { exact: true }),
-  ).toHaveValue("Dernière annonce");
+    "Dernière annonce",
+  );
   await expect(
     preview.getByRole("button", { name: "Annonce suivante", exact: true }),
   ).toBeDisabled();
   await preview
     .getByRole("button", { name: "Annonce précédente", exact: true })
     .click();
-  await expect(
+  await expectFieldValue(
     page.getByLabel("Nom de l’annonce active", { exact: true }),
-  ).toHaveValue("Nom vérifié");
+    "Nom vérifié",
+  );
 });
 
 for (const width of [1440, 390]) {
@@ -3478,7 +3534,7 @@ for (const width of [1440, 390]) {
     await expect(counter).toHaveAttribute("data-remaining", "0");
     await field.press("b");
     await expect(counter).toHaveAttribute("data-remaining", "-1");
-    await expect(field).toHaveValue("a".repeat(150) + "b");
+    await expectFieldValue(field, "a".repeat(150) + "b");
     await expect(counter).toHaveCSS("color", "rgb(105, 64, 22)");
     await expect
       .poll(() => f.campaigns[1].ads[0].copy)
@@ -3513,9 +3569,10 @@ for (const width of [1440, 390]) {
     await page.keyboard.press("Shift+Tab");
     await expect(field).toBeFocused();
     await expectBadgeInScrollViewport(counter);
-    await page
-      .getByLabel("Format de Beta annonce", { exact: true })
-      .selectOption("story");
+    await chooseOption(
+      page.getByLabel("Format de Beta annonce", { exact: true }),
+      "story",
+    );
     await expect(counter).toHaveAttribute("data-limit", "125");
     await expect(counter).toHaveAttribute("data-remaining", "-26");
     expect((await cell.boundingBox())!.height).toBe(initialHeight);
@@ -3558,7 +3615,7 @@ test("compteurs tableau Google : budget par variante, pas par somme de la cellul
   await expect(
     path.locator("..").locator("[data-character-countdown]"),
   ).toHaveAttribute("data-remaining", "-1");
-  await expect(path).toHaveValue("abcdefghijklmnop");
+  await expectFieldValue(path, "abcdefghijklmnop");
 });
 
 test.describe("Contrôles tactiles", () => {
@@ -4641,9 +4698,10 @@ test("préparateur partage un lien de validation authentifiée propre et filtré
     campagne: f.campaigns[1].id,
     statut: "pending",
   });
-  await dialog
-    .getByLabel("Annonces à partager", { exact: true })
-    .selectOption("video");
+  await chooseOption(
+    dialog.getByLabel("Annonces à partager", { exact: true }),
+    "video",
+  );
   await dialog
     .getByRole("button", { name: "Copier le lien", exact: true })
     .click();
@@ -5064,7 +5122,7 @@ test("TikTok : repère de légende à 100, saisie libre au-delà et aucun faux p
   const counter = text.locator("..").locator("[data-character-countdown]");
   await expect(counter).toHaveAttribute("data-limit", "100");
   await expect(counter).toHaveAttribute("data-remaining", "-1");
-  await expect(text).toHaveValue("a".repeat(101));
+  await expectFieldValue(text, "a".repeat(101));
   for (const label of ["Titre", "CTA"])
     await expect(
       page
@@ -5321,7 +5379,7 @@ for (const width of [320, 390, 430, 1440]) {
       name: "Canal de configuration",
       exact: true,
     });
-    await expect(channel).toHaveValue("facebook");
+    await expectFieldValue(channel, "facebook");
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -5362,8 +5420,8 @@ for (const width of [320, 390, 430, 1440]) {
     await dialog
       .getByRole("button", { name: "Fermer l’import", exact: true })
       .click();
-    await channel.selectOption("google");
-    await expect(channel).toHaveValue("google");
+    await chooseOption(channel, "google");
+    await expectFieldValue(channel, "google");
     await expect(page).toHaveURL(/canal=google/);
     expect(
       await page.evaluate(
@@ -5381,3 +5439,164 @@ for (const width of [320, 390, 430, 1440]) {
     ).toBeVisible();
   });
 }
+
+test("sélecteurs mobile : menu du canal dessiné par le site", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft", true);
+  f.campaigns[1].channels = [
+    "facebook",
+    "instagram",
+    "youtube",
+    "tiktok",
+    "google",
+    "display",
+  ];
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(
+    base +
+      `/studio/configuration?campagne=${f.campaigns[1].id}&canal=facebook&etape=editor`,
+  );
+  await page
+    .getByRole("combobox", { name: "Canal de configuration", exact: true })
+    .click();
+  const menu = page.getByRole("listbox");
+  await expect(menu).toBeVisible();
+  await expect(menu).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(
+    menu.getByRole("option", { name: "Facebook", exact: true }),
+  ).toBeVisible();
+  const box = (await menu.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(390);
+  await menu.getByRole("option", { name: "Instagram", exact: true }).click();
+  await expect(page).toHaveURL(/canal=instagram/);
+});
+
+test("sélecteurs : format au clavier sans casser la tabulation du tableau", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft", true);
+  await page.goto(
+    base +
+      `/studio/configuration?campagne=${f.campaigns[1].id}&canal=facebook&etape=editor`,
+  );
+  const format = page.getByRole("combobox", {
+    name: "Format de Beta annonce",
+    exact: true,
+  });
+  const theme = page.getByLabel("Thématique de Beta annonce", { exact: true });
+  await format.focus();
+  await page.keyboard.press("Tab");
+  await expect(theme).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(format).toBeFocused();
+  await page.keyboard.press("Enter");
+  const menu = page.getByRole("listbox");
+  await expect(menu).toBeVisible();
+  await expect(
+    menu.getByRole("option", { name: "Fil carré", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(menu).not.toBeVisible();
+  await expect(format).toBeFocused();
+  await expectFieldValue(format, "portrait");
+  await expect.poll(() => f.campaigns[1].ads[0].format).toBe("portrait");
+});
+
+test("sélecteurs : menus dans la fenêtre de partage et Échap préserve la fenêtre", async ({
+  page,
+}, info) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await validatorFixture(page, "pending", true);
+  await page
+    .getByRole("button", { name: "Partager la campagne Beta", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Partager la campagne",
+    exact: true,
+  });
+  await expect(
+    dialog.getByRole("button", { name: "Copier le lien", exact: true }),
+  ).toHaveCSS("color", "rgb(255, 255, 255)");
+  await chooseOption(
+    dialog.getByRole("combobox", { name: "Type de lien", exact: true }),
+    "presentation",
+  );
+  await expect(
+    dialog.getByRole("button", { name: "Créer le lien public", exact: true }),
+  ).toBeVisible();
+  await chooseOption(
+    dialog.getByRole("combobox", { name: "Type de lien", exact: true }),
+    "validation",
+  );
+  await dialog
+    .getByRole("combobox", { name: "Annonces à partager", exact: true })
+    .click();
+  const menu = page.getByRole("listbox");
+  await expect(menu).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await menu.evaluate((el) =>
+    Promise.all(el.getAnimations().map((animation) => animation.finished)),
+  );
+  await page.screenshot({ path: info.outputPath("select-partage-mobile.png") });
+  await page.keyboard.press("Escape");
+  await expect(menu).not.toBeVisible();
+  await expect(dialog).toBeVisible();
+  await chooseOption(
+    dialog.getByRole("combobox", { name: "Annonces à partager", exact: true }),
+    "video",
+  );
+  await expectFieldValue(
+    dialog.getByRole("combobox", { name: "Annonces à partager", exact: true }),
+    "video",
+  );
+});
+
+test("sélecteurs : noms longs, choix vide et champs obligatoires", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft");
+  f.campaigns[1].name =
+    "Une campagne avec un nom très long pour vérifier les menus et le fil d’Ariane sur mobile";
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto(
+    base + `/studio/configuration?campagne=${f.campaigns[1].id}&etape=details`,
+  );
+  const brand = page.getByRole("combobox", { name: "Marque", exact: true });
+  await chooseOption(brand, "brand-test");
+  await chooseOption(brand, "");
+  await expectFieldValue(brand, "");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  const campaign = page.getByRole("combobox", {
+    name: "Campagne à configurer",
+    exact: true,
+  });
+  await campaign.click();
+  const box = (await page.getByRole("listbox").boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(320);
+  await page.keyboard.press("Escape");
+  await page.goto(base + "/inscription");
+  const sector = page.getByRole("combobox", {
+    name: "Secteur d’activité",
+    exact: true,
+  });
+  await sector.click();
+  await page.getByRole("listbox").getByRole("option").nth(1).click();
+  const submittedValue = await sector.getAttribute("data-value");
+  expect(
+    await page
+      .locator("form")
+      .evaluate((el) => new FormData(el as HTMLFormElement).get("secteur")),
+  ).toBe(submittedValue);
+  expect(
+    await page
+      .locator('select[name="typeEntreprise"]')
+      .evaluate((el) => (el as HTMLSelectElement).validity.valueMissing),
+  ).toBe(true);
+});

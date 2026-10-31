@@ -13,7 +13,7 @@
   min-height: 48px;
   flex-wrap: wrap;
 }
-.surface .toolbar > select {
+.surface .toolbar > :is(select, :where([data-studio-select])) {
   height: 48px;
   min-width: 280px;
   max-width: 360px;
@@ -144,7 +144,7 @@
   gap: 5px;
   font-size: 13px;
 }
-.optionsPanel select {
+.optionsPanel :is(select, :where([data-studio-select])) {
   width: 100%;
 }
 .modeOptions {
@@ -524,7 +524,7 @@
 .liveToolbar .toolbar {
   display: contents;
 }
-.liveToolbar .toolbar > select {
+.liveToolbar .toolbar > :is(select, :where([data-studio-select])) {
   grid-column: 1;
   grid-row: 1;
   justify-self: start;
@@ -732,7 +732,7 @@
   .surface .toolbar {
     gap: 14px;
   }
-  .surface .toolbar > select {
+  .surface .toolbar > :is(select, :where([data-studio-select])) {
     min-width: 240px;
   }
   .googleDeck .reviewCard {
@@ -747,7 +747,7 @@
   .deckGrid:not(.googleDeck) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .surface .toolbar > select {
+  .surface .toolbar > :is(select, :where([data-studio-select])) {
     min-width: 0;
     max-width: 100%;
     flex: 1;
@@ -821,7 +821,7 @@
   .surface .toolbar .segment {
     width: 100%;
   }
-  .surface .toolbar > select {
+  .surface .toolbar > :is(select, :where([data-studio-select])) {
     width: calc(100% - 102px);
     font-size: 14px;
   }
@@ -829,18 +829,22 @@
   .surface .search[data-expanded="true"] {
     width: 170px;
   }
-  .surface .toolbar:has(.search:focus-within) > select {
+  .surface
+    .toolbar:has(.search:focus-within)
+    > :is(select, :where([data-studio-select])) {
     width: 100%;
     flex-basis: 100%;
   }
-  .surface .toolbar:has(.search[data-expanded="true"]) > select {
+  .surface
+    .toolbar:has(.search[data-expanded="true"])
+    > :is(select, :where([data-studio-select])) {
     width: 100%;
     flex-basis: 100%;
   }
   .liveToolbar {
     gap: 12px;
   }
-  .liveToolbar .toolbar > select {
+  .liveToolbar .toolbar > :is(select, :where([data-studio-select])) {
     width: 100%;
     font-size: 14px;
   }

@@ -54,7 +54,7 @@
 .table td:focus-within {
   box-shadow: none;
 }
-.table :is(textarea, select) {
+.table :is(textarea, :is(select, :where([data-studio-select]))) {
   display: block;
   width: 100%;
   height: 48px;
@@ -75,6 +75,9 @@
   white-space: pre;
   overflow: auto;
   scrollbar-width: none;
+}
+.table [data-studio-select] {
+  display: flex;
 }
 .table textarea:read-only {
   cursor: default;
@@ -324,7 +327,7 @@
   font-size: 12px;
 }
 .details input,
-.details select {
+.details :is(select, :where([data-studio-select])) {
   width: 100%;
   min-width: 0;
 }

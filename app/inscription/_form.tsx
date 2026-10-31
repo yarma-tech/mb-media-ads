@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 
 import Link from "next/link";
 import { useActionState } from "react";
@@ -9,7 +10,11 @@ import { SECTEURS, TYPES_ENTREPRISE } from "@/lib/enums";
 function Submit() {
   const { pending } = useFormStatus();
   return (
-    <button className="btn btn-primary btn-block" type="submit" disabled={pending}>
+    <button
+      className="btn btn-primary btn-block"
+      type="submit"
+      disabled={pending}
+    >
       {pending ? "Création…" : "Créer mon compte"}
     </button>
   );
@@ -34,18 +39,28 @@ export function SignUpForm() {
   return (
     <form action={action} className="panel">
       {state.error ? (
-        <div className="notice notice-danger" style={{ marginBottom: 18 }} role="alert">
+        <div
+          className="notice notice-danger"
+          style={{ marginBottom: 18 }}
+          role="alert"
+        >
           {state.error}
         </div>
       ) : null}
       <div className="field">
         <label htmlFor="nomEntreprise">Nom de l’entreprise</label>
-        <input id="nomEntreprise" name="nomEntreprise" type="text" autoComplete="organization" required />
+        <input
+          id="nomEntreprise"
+          name="nomEntreprise"
+          type="text"
+          autoComplete="organization"
+          required
+        />
       </div>
       <div className="grid-2">
         <div className="field">
           <label htmlFor="secteur">Secteur d’activité</label>
-          <select id="secteur" name="secteur" defaultValue="" required>
+          <Select id="secteur" name="secteur" defaultValue="" required>
             <option value="" disabled>
               Choisir…
             </option>
@@ -54,11 +69,16 @@ export function SignUpForm() {
                 {s}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div className="field">
           <label htmlFor="typeEntreprise">Type de structure</label>
-          <select id="typeEntreprise" name="typeEntreprise" defaultValue="" required>
+          <Select
+            id="typeEntreprise"
+            name="typeEntreprise"
+            defaultValue=""
+            required
+          >
             <option value="" disabled>
               Choisir…
             </option>
@@ -67,16 +87,29 @@ export function SignUpForm() {
                 {t}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
       <div className="field">
         <label htmlFor="email">Email</label>
-        <input id="email" name="email" type="email" autoComplete="email" required />
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+        />
       </div>
       <div className="field">
         <label htmlFor="password">Mot de passe</label>
-        <input id="password" name="password" type="password" autoComplete="new-password" minLength={8} required />
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          minLength={8}
+          required
+        />
         <span className="hint">8 caractères minimum.</span>
       </div>
       <Submit />

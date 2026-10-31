@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 import {
   Fragment,
   useEffect,
@@ -99,7 +100,7 @@ export default function TableSession(p: Props) {
       (key === "format"
         ? 120
         : key === "theme"
-          ? 85
+          ? 100
           : key === "copy" || key === "headlines" || key === "descriptions"
             ? 210
             : key === "url"
@@ -622,21 +623,23 @@ function AdRow(
           />
         </td>
         <td>
-          <select
+          <Select
             data-cell="format"
             data-ad={a.id}
             aria-label={"Format de " + a.name}
             aria-readonly={protectedRow}
             disabled={protectedRow || (isActive && editor.status === "locked")}
             value={current.format}
-            onChange={(e) => editor.change({ format: e.target.value })}
+            onValueChange={(selectedValue) =>
+              editor.change({ format: selectedValue })
+            }
           >
             {CATALOG[a.channel].map((f) => (
               <option key={f.id} value={f.id}>
                 {f.label}
               </option>
             ))}
-          </select>
+          </Select>
         </td>
         {p.columns.map((k) => {
           const guidance = textGuidance(current, k);
@@ -834,12 +837,12 @@ function AdRow(
             {a.channel !== "google" && (
               <label>
                 Média
-                <select
+                <Select
                   aria-label={"Média de " + a.name}
                   disabled={!editable}
                   value={editor.draft.mediaId ?? ""}
-                  onChange={(e) =>
-                    editor.change({ mediaId: e.target.value || null })
+                  onValueChange={(selectedValue) =>
+                    editor.change({ mediaId: selectedValue || null })
                   }
                 >
                   <option value="">À associer</option>
@@ -857,7 +860,7 @@ function AdRow(
                         {m.name}
                       </option>
                     ))}
-                </select>
+                </Select>
               </label>
             )}
             {a.channel !== "google" && (

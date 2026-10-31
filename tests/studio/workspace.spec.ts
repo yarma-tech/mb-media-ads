@@ -1,3 +1,4 @@
+import { chooseOption, expectFieldValue } from "./select";
 import { test, expect } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 const base = process.env.STUDIO_TEST_BASE_URL ?? "http://127.0.0.1:3002";
@@ -30,9 +31,10 @@ test("configuration SEM et validation connectées", async ({ page }) => {
   await page
     .getByRole("button", { name: "Créer la marque", exact: true })
     .click();
-  await page
-    .getByRole("combobox", { name: "Marque", exact: true })
-    .selectOption({ label: "Marque recette" });
+  await chooseOption(
+    page.getByRole("combobox", { name: "Marque", exact: true }),
+    { label: "Marque recette" },
+  );
   await page.locator("summary").filter({ hasText: "Dates et lien" }).click();
   await page.getByLabel("URL commune").fill("https://example.com/admissions");
   await page.getByLabel("URL commune").blur();
@@ -63,9 +65,9 @@ test("configuration SEM et validation connectées", async ({ page }) => {
     page.getByRole("cell", { name: "À valider", exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: "Validation", exact: true }).click();
-  await page
-    .getByLabel("Filtrer par campagne")
-    .selectOption({ label: campaignName });
+  await chooseOption(page.getByLabel("Filtrer par campagne"), {
+    label: campaignName,
+  });
   await expect(
     page.getByRole("button", { name: "Approuver", exact: true }),
   ).toBeVisible();
@@ -82,7 +84,8 @@ test("configuration SEM et validation connectées", async ({ page }) => {
   await expect(page.getByLabel("Titres · un par ligne")).toBeDisabled();
   await page.getByRole("button", { name: "Reprendre l’édition" }).click();
   await expect(page.getByLabel("Titres · un par ligne")).toBeEditable();
-  await expect(page.getByLabel("Titres · un par ligne")).toHaveValue(
+  await expectFieldValue(
+    page.getByLabel("Titres · un par ligne"),
     "Titre corrigé\nTitre deux\nTitre trois",
   );
   await page.clock.resume();
@@ -105,9 +108,9 @@ test("configuration SEM et validation connectées", async ({ page }) => {
     .getByRole("button", { name: "Passer On air", exact: true })
     .click();
   await page.getByRole("link", { name: "On air", exact: true }).click();
-  await page
-    .getByLabel("Filtrer par campagne")
-    .selectOption({ label: campaignName });
+  await chooseOption(page.getByLabel("Filtrer par campagne"), {
+    label: campaignName,
+  });
   await page
     .getByRole("button", { name: new RegExp("Ouvrir Nouvelle annonce") })
     .click();
@@ -315,7 +318,5 @@ test("connexion commune entre Studio et Social Ads", async ({ page }) => {
   await page
     .getByRole("button", { name: "Générer le lien de validation", exact: true })
     .click();
-  await expect(page.getByLabel("Lien de validation")).toHaveValue(
-    /\/preview\//,
-  );
+  await expectFieldValue(page.getByLabel("Lien de validation"), /\/preview\//);
 });

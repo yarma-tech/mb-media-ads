@@ -1,0 +1,107 @@
+.trigger.trigger {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #dce4df;
+  border-radius: 12px;
+  background: #fff;
+  color: #153c30;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.trigger.trigger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.trigger.trigger[data-state="open"] {
+  background-color: #f0f5f1;
+}
+.value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.arrow {
+  display: inline-flex;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+.menu {
+  z-index: 60;
+  min-width: var(--radix-select-trigger-width);
+  max-width: calc(100vw - 24px);
+  max-height: min(360px, var(--radix-select-content-available-height));
+  overflow: hidden;
+  padding: 6px;
+  border: 1px solid #e0e7e2;
+  border-radius: 16px;
+  background: #fff;
+  color: #153c30;
+  box-shadow: 0 12px 40px #153c3020;
+  font:
+    14px/1.4 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  animation: appear 120ms ease-out;
+  transform-origin: var(--radix-select-content-transform-origin);
+}
+.viewport {
+  max-height: inherit;
+}
+.option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 36px 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  outline: none;
+  user-select: none;
+}
+.option[data-current] {
+  background: #edf3ef;
+  font-weight: 500;
+}
+.option[data-highlighted] {
+  background: #e3ede7;
+}
+.option[data-disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.check {
+  position: absolute;
+  right: 12px;
+  color: #245c43;
+}
+.scroll {
+  display: grid;
+  place-items: center;
+  height: 22px;
+  color: #536b5d;
+}
+@keyframes appear {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu {
+    animation: none;
+  }
+}

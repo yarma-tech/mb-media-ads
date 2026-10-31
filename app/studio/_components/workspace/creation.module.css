@@ -247,7 +247,7 @@
   color: #26372d;
 }
 .fields input,
-.fields select,
+.fields :is(select, :where([data-studio-select])),
 .brandCreator input {
   width: 100%;
   box-sizing: border-box;
@@ -262,7 +262,7 @@
   font-size: 15px;
 }
 .fields input:focus,
-.fields select:focus,
+.fields :is(select, :where([data-studio-select])):focus,
 .brandCreator input:focus {
   outline: 2px solid #a9c3b6;
   outline-offset: 2px;

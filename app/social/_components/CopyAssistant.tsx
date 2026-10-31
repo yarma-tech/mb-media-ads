@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 
 // Panneau « Rédaction assistée » : appelle /api/social/copy et propose des
 // variations que l'on applique à l'annonce en un clic.
@@ -8,7 +9,13 @@ import type { AdVariant } from "@/lib/social-ads/specs";
 import type { Format, Plateforme } from "@/lib/social-ads/types";
 import { PLATEFORME_LABEL } from "@/lib/social-ads/types";
 
-const OBJECTIFS = ["Notoriété", "Trafic", "Conversion", "Génération de leads", "Engagement"];
+const OBJECTIFS = [
+  "Notoriété",
+  "Trafic",
+  "Conversion",
+  "Génération de leads",
+  "Engagement",
+];
 
 export default function CopyAssistant({
   plateforme,
@@ -39,7 +46,16 @@ export default function CopyAssistant({
       const res = await fetch("/api/social/copy", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plateforme, format, variant, objectif, ton, marque, brief, nbVariations: 3 }),
+        body: JSON.stringify({
+          plateforme,
+          format,
+          variant,
+          objectif,
+          ton,
+          marque,
+          brief,
+          nbVariations: 3,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Erreur de génération.");
@@ -53,7 +69,11 @@ export default function CopyAssistant({
 
   if (!open) {
     return (
-      <button type="button" className="btn btn-ghost sap-ai-toggle" onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        className="btn btn-ghost sap-ai-toggle"
+        onClick={() => setOpen(true)}
+      >
         ✨ Rédiger avec l’IA
       </button>
     );
@@ -63,22 +83,33 @@ export default function CopyAssistant({
     <div className="sap-ai">
       <div className="sap-ai-head">
         <strong>✨ Rédaction assistée - {PLATEFORME_LABEL[plateforme]}</strong>
-        <button type="button" className="navlink" onClick={() => setOpen(false)}>
+        <button
+          type="button"
+          className="navlink"
+          onClick={() => setOpen(false)}
+        >
           Fermer
         </button>
       </div>
       <div className="sap-field-row">
         <label className="sap-field">
           <span>Objectif</span>
-          <select value={objectif} onChange={(e) => setObjectif(e.target.value)}>
+          <Select
+            value={objectif}
+            onValueChange={(selectedValue) => setObjectif(selectedValue)}
+          >
             {OBJECTIFS.map((o) => (
               <option key={o}>{o}</option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="sap-field">
           <span>Ton (optionnel)</span>
-          <input value={ton} onChange={(e) => setTon(e.target.value)} placeholder="dynamique, premium…" />
+          <input
+            value={ton}
+            onChange={(e) => setTon(e.target.value)}
+            placeholder="dynamique, premium…"
+          />
         </label>
       </div>
       <label className="sap-field">
@@ -90,7 +121,12 @@ export default function CopyAssistant({
           placeholder="Ex. Lancement d'une nouvelle gamme de baskets éco-conçues, -20% la première semaine, cible 18-30 ans."
         />
       </label>
-      <button type="button" className="btn btn-primary" disabled={loading || !brief.trim()} onClick={generer}>
+      <button
+        type="button"
+        className="btn btn-primary"
+        disabled={loading || !brief.trim()}
+        onClick={generer}
+      >
         {loading ? "Génération…" : "Générer 3 variations"}
       </button>
       {erreur ? <p className="sap-error">{erreur}</p> : null}
@@ -101,10 +137,18 @@ export default function CopyAssistant({
             <div key={i} className="sap-variation">
               <div className="sap-variation-txt">
                 <p className="sap-variation-main">{v.texte_principal}</p>
-                {v.titre ? <p className="sap-variation-title">{v.titre}</p> : null}
-                {v.hashtags.length ? <p className="sap-variation-tags">{v.hashtags.join(" ")}</p> : null}
+                {v.titre ? (
+                  <p className="sap-variation-title">{v.titre}</p>
+                ) : null}
+                {v.hashtags.length ? (
+                  <p className="sap-variation-tags">{v.hashtags.join(" ")}</p>
+                ) : null}
               </div>
-              <button type="button" className="btn btn-ghost" onClick={() => onApply(v)}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => onApply(v)}
+              >
                 Appliquer
               </button>
             </div>

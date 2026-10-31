@@ -1,4 +1,5 @@
 "use client";
+import Select from "@/app/_components/Select";
 import { useState, useRef, useEffect } from "react";
 import CreateCampaign from "./CreateCampaign";
 import CampaignInfoForm from "./CampaignInfoForm";
@@ -456,11 +457,12 @@ function ChannelEditor({
         <div className={w.creationChannelRow}>
           <div className={w.creationChannel}>
             <ChannelIcon channel={channel} />
-            <select
+            <Select
+              indicator={false}
               aria-label="Canal de configuration"
               value={channel}
-              onChange={(event) => {
-                setChannel(event.target.value as Channel);
+              onValueChange={(selectedValue) => {
+                setChannel(selectedValue as Channel);
                 setFormats([]);
                 setSelected([]);
                 setActiveId("");
@@ -472,7 +474,7 @@ function ChannelEditor({
                   {CHANNELS[id]}
                 </option>
               ))}
-            </select>
+            </Select>
             <span className={w.creationChannelCount}>{rows.length}</span>
             <Icon name="down" size={14} />
           </div>
@@ -739,7 +741,10 @@ function ChannelEditor({
         >
           <label>
             Champ
-            <select value={field} onChange={(e) => setField(e.target.value)}>
+            <Select
+              value={field}
+              onValueChange={(selectedValue) => setField(selectedValue)}
+            >
               {(channel === "google"
                 ? ["headlines", "descriptions", "url"]
                 : channel === "display"
@@ -760,7 +765,7 @@ function ChannelEditor({
                   }
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           <textarea
             aria-label="Valeur à appliquer"

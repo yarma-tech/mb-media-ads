@@ -16,12 +16,12 @@
 .login * {
   box-sizing: border-box;
 }
-.app :is(button, input, select, textarea),
+.app :is(button, input, :is(select, :where([data-studio-select])), textarea),
 .login :is(button, input) {
   font: inherit;
   color: inherit;
 }
-.app :is(button, select),
+.app :is(button, :is(select, :where([data-studio-select]))),
 .login button {
   cursor: pointer;
 }
@@ -36,7 +36,7 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
-.app :is(input, select, textarea),
+.app :is(input, :is(select, :where([data-studio-select])), textarea),
 .login input {
   border: 1px solid #cecece;
   border-radius: 7px;
@@ -51,7 +51,14 @@
 .app textarea {
   resize: vertical;
 }
-.app :is(button, input, select, textarea, a):focus-visible,
+.app
+  :is(
+    button,
+    input,
+    :is(select, :where([data-studio-select])),
+    textarea,
+    a
+  ):focus-visible,
 .login :is(input, button):focus-visible {
   outline: 2px solid var(--accent, #142b21);
   outline-offset: 3px;
@@ -432,7 +439,7 @@
   border-color: #b8cccc;
   background: #fff;
 }
-.editTable select {
+.editTable :is(select, :where([data-studio-select])) {
   max-width: 230px;
 }
 .editTable td small {
@@ -1341,7 +1348,7 @@ fieldset.validationActions {
 }
 
 .campaignFields input,
-.campaignFields select,
+.campaignFields :is(select, :where([data-studio-select])),
 .campaignStart > button {
   min-height: 44px;
 }
@@ -2002,7 +2009,7 @@ button[aria-pressed="true"] .channelCheck {
    trigger iOS input zoom; preserve larger inherited text and manual page zoom. */
 @media (max-width: 700px), (hover: none) and (pointer: coarse) {
   .app
-    :is(input, select, textarea):not(
+    :is(input, :is(select, :where([data-studio-select])), textarea):not(
       [type="checkbox"],
       [type="radio"],
       [type="file"],
@@ -2151,7 +2158,7 @@ button[aria-pressed="true"] .channelCheck {
   width: 24px;
   height: 24px;
 }
-.app .creationChannel select {
+.app .creationChannel :is(select, :where([data-studio-select])) {
   appearance: none;
   border: 0;
   background: transparent;

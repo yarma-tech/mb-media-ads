@@ -454,7 +454,33 @@ async function beginCampaign(page: Page, name: string) {
     .click();
   await page.getByLabel("Nom de campagne", { exact: true }).fill(name);
 }
+async function openTableTools(page: Page) {
+  const summary = page.getByLabel("Autres outils", { exact: true });
+  if (
+    !(await summary.evaluate(
+      (el) => (el.parentElement as HTMLDetailsElement).open,
+    ))
+  )
+    await summary.click();
+}
+async function openConfigurationSteps(page: Page) {
+  const compact = page.locator("summary").filter({ hasText: "Étape 3 sur 3" });
+  await expect(compact).toBeVisible();
+  if (
+    !(await compact.evaluate(
+      (el) => (el.parentElement as HTMLDetailsElement).open,
+    ))
+  )
+    await compact.click();
+}
+async function chooseFormats(page: Page) {
+  await openTableTools(page);
+  await page
+    .getByRole("button", { name: "Choisir des formats", exact: true })
+    .click();
+}
 async function openPreview(page: Page, details = false) {
+  await openTableTools(page);
   const toggle = page.getByRole("button", { name: "Aperçu", exact: true });
   if ((await toggle.getAttribute("aria-pressed")) !== "true")
     await toggle.click();
@@ -481,13 +507,14 @@ async function openReviewOptions(page: Page) {
     await summary.click();
 }
 async function openLibrary(page: Page, channelName = "Facebook") {
-  const nav = page.getByRole("navigation", {
+  const nav = page.getByRole("combobox", {
     name: "Canal de configuration",
     exact: true,
   });
   await expect(nav).toBeVisible();
-  const tab = nav.getByRole("button", { name: new RegExp(channelName) });
+  const tab = nav.getByRole("option", { name: channelName, exact: true });
   if (!(await tab.count())) {
+    await openConfigurationSteps(page);
     await page
       .getByRole("navigation", { name: "Étapes de configuration", exact: true })
       .getByRole("button", { name: "2 Canaux", exact: true })
@@ -504,8 +531,10 @@ async function openLibrary(page: Page, channelName = "Facebook") {
       await channel.click();
     await page.getByRole("button", { name: "Continuer", exact: true }).click();
   }
-  await tab.click();
-  await expect(tab).toHaveAttribute("aria-pressed", "true");
+  await nav.selectOption({ label: channelName });
+  await expect(nav).toHaveValue(
+    Object.entries(CHANNELS).find(([, label]) => label === channelName)![0],
+  );
   const summary = page
     .locator("summary")
     .filter({ hasText: "Bibliothèque des médias" });
@@ -579,7 +608,9 @@ test("campagne, canal, filtres et recherche survivent aux transitions et reload"
 }) => {
   const { campaigns } = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
-  await page.getByRole("button", { name: /Google SEM/ }).click();
+  await page
+    .getByRole("combobox", { name: "Canal de configuration", exact: true })
+    .selectOption("google");
   await page.getByRole("link", { name: "Validation", exact: true }).click();
   await expect(page.getByLabel("Filtrer par campagne")).toHaveValue(
     campaigns[1].id,
@@ -606,12 +637,12 @@ test("campagne, canal, filtres et recherche survivent aux transitions et reload"
     campaigns[1].id,
   );
   await expect(
-    page.getByRole("button", { name: /Google SEM/ }),
-  ).toHaveAttribute("aria-pressed", "true");
+    page.getByRole("combobox", { name: "Canal de configuration", exact: true }),
+  ).toHaveValue("google");
   await page.reload();
   await expect(
-    page.getByRole("button", { name: /Google SEM/ }),
-  ).toHaveAttribute("aria-pressed", "true");
+    page.getByRole("combobox", { name: "Canal de configuration", exact: true }),
+  ).toHaveValue("google");
   await page.getByLabel("Campagne à configurer").selectOption(campaigns[0].id);
   await openPreview(page, true);
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
@@ -722,12 +753,15 @@ test("contexte historique et campagne B ne réutilisent aucune ligne ni sélecti
 }) => {
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
-  await page.getByRole("button", { name: /Google SEM/ }).click();
+  await page
+    .getByRole("combobox", { name: "Canal de configuration", exact: true })
+    .selectOption("google");
   await openPreview(page, true);
   await expect(page.getByLabel("Nom de l’annonce active")).toHaveValue(
     "Beta annonce",
   );
   await page.getByLabel("Sélectionner toutes les annonces du canal").check();
+  await openTableTools(page);
   await page
     .getByRole("button", { name: "Appliquer un champ en batch" })
     .click();
@@ -828,11 +862,10 @@ test("formats et duplication ne se créent qu’une fois, nouvelle intention per
 }) => {
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
-  await page.getByRole("button", { name: /Google SEM/ }).click();
   await page
-    .locator("summary")
-    .filter({ hasText: "Choisir des formats" })
-    .click();
+    .getByRole("combobox", { name: "Canal de configuration", exact: true })
+    .selectOption("google");
+  await chooseFormats(page);
   await page.getByLabel(/Annonce responsive Search/).check();
   f.latency(800);
   await page
@@ -892,7 +925,9 @@ test("soumission avec sauvegarde préalable et demande de modification restent u
 }) => {
   const f = await fixture(page, "draft");
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
-  await page.getByRole("button", { name: /Google SEM/ }).click();
+  await page
+    .getByRole("combobox", { name: "Canal de configuration", exact: true })
+    .selectOption("google");
   const field = page.getByLabel("Titres · 30 caractères de Beta annonce");
   await expect(field).toBeEditable();
   f.latency(800);
@@ -1128,8 +1163,11 @@ for (const width of [390, 320]) {
         f.campaigns[1].id +
         "&canal=google",
     );
-    const google = page.getByRole("button", { name: /Google SEM/ });
-    await expect(google).toHaveAttribute("aria-pressed", "true");
+    const google = page.getByRole("combobox", {
+      name: "Canal de configuration",
+      exact: true,
+    });
+    await expect(google).toHaveValue("google");
     await expect
       .poll(() =>
         google.evaluate((el) => {
@@ -1200,6 +1238,7 @@ test("reprendre au clavier ne valide jamais implicitement", async ({
 test("marque neuve affectée directement à sa campagne", async ({ page }) => {
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
+  await openConfigurationSteps(page);
   await page
     .getByRole("navigation", { name: "Étapes de configuration", exact: true })
     .getByRole("button", { name: "1 Campagne", exact: true })
@@ -1283,7 +1322,9 @@ test("rechargement conserve le bail de son éditeur sans ouvrir un second édite
 }) => {
   const f = await fixture(page, "pending", false, true);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
-  await page.getByRole("button", { name: /Google SEM/ }).click();
+  await page
+    .getByRole("combobox", { name: "Canal de configuration", exact: true })
+    .selectOption("google");
   const field = page.getByLabel("Titres · 30 caractères de Beta annonce");
   await expect(field).toBeEditable();
   await page.reload();
@@ -1485,8 +1526,11 @@ test("canal actif reste visible lors du passage desktop vers mobile", async ({
       f.campaigns[1].id +
       "&canal=google",
   );
-  const channel = page.getByRole("button", { name: /Google SEM/ });
-  await expect(channel).toHaveAttribute("aria-pressed", "true");
+  const channel = page.getByRole("combobox", {
+    name: "Canal de configuration",
+    exact: true,
+  });
+  await expect(channel).toHaveValue("google");
   await page.setViewportSize({ width: 320, height: 844 });
   await expect
     .poll(() =>
@@ -1861,10 +1905,7 @@ test("lot : un canal incompatible ne bloque pas les annonces compatibles", async
   expect(
     f.campaigns.find((c) => c.name === "Lot mixte")?.ads.map((a) => a.channel),
   ).toEqual(["facebook"]);
-  await page
-    .locator("summary")
-    .filter({ hasText: "Choisir des formats" })
-    .click();
+  await chooseFormats(page);
   await page
     .getByRole("button", { name: "Ajouter des médias en lot", exact: true })
     .click();
@@ -2131,6 +2172,7 @@ test("une autre campagne vierge reprend à ses informations, pas à l’étape p
   f.campaigns.push(empty);
   await page.reload();
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
+  await openConfigurationSteps(page);
   await page
     .getByRole("navigation", { name: "Étapes de configuration", exact: true })
     .getByRole("button", { name: "2 Canaux", exact: true })
@@ -2284,6 +2326,7 @@ test("direction D : Copier tout produit des blocs texte complets", async ({
       },
     });
   });
+  await openTableTools(page);
   await page.getByRole("button", { name: "Copier tout", exact: true }).click();
   const copied = await page.evaluate(
     () => (window as unknown as { copiedText: string }).copiedText,
@@ -2609,10 +2652,10 @@ test("fidélité maquettes : captures bureau avec campagne complète", async ({
   await capture("05-tableau");
   const tableBox = await page.getByRole("table").boundingBox();
   const tabsBox = await page
-    .getByRole("navigation", { name: "Canal de configuration" })
+    .getByRole("combobox", { name: "Canal de configuration" })
     .boundingBox();
-  const copyBox = await page
-    .getByRole("button", { name: "Copier tout", exact: true })
+  const actionBox = await page
+    .getByRole("button", { name: "Importer des annonces", exact: true })
     .boundingBox();
   await openPreview(page);
   await capture("06-apercu");
@@ -2791,14 +2834,14 @@ test("fidélité maquettes : captures bureau avec campagne complète", async ({
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(base + "/studio");
   await capture("00-aucune-campagne");
-  // Structural visual contracts from the approved D4 mockup (1440 px desktop).
+  // Structural contracts retained by direction C on desktop (1440 px).
   expect(
     tableBox!.y,
     "Le tableau doit débuter sous la barre unique, sans étage vide",
   ).toBeLessThan(245);
   expect(
     Math.abs(
-      tabsBox!.y + tabsBox!.height / 2 - (copyBox!.y + copyBox!.height / 2),
+      tabsBox!.y + tabsBox!.height / 2 - (actionBox!.y + actionBox!.height / 2),
     ),
     "Canaux et outils sur une seule ligne",
   ).toBeLessThan(8);
@@ -3096,6 +3139,7 @@ test("tableau Google : le batch initial cible bien les titres affichés", async 
       "&canal=google",
   );
   await page.getByLabel("Sélectionner toutes les annonces du canal").check();
+  await openTableTools(page);
   await page
     .getByRole("button", { name: "Appliquer un champ en batch" })
     .click();
@@ -3184,6 +3228,7 @@ test("tableau mobile : outils, aperçu visible, envoi incomplet et déplacement 
   await page.goto(
     base + "/studio/configuration?campagne=" + c.id + "&canal=facebook",
   );
+  await openTableTools(page);
   await page
     .getByRole("button", { name: "Appliquer un champ en batch" })
     .click();
@@ -3199,14 +3244,11 @@ test("tableau mobile : outils, aperçu visible, envoi incomplet et déplacement 
   await expect
     .poll(() => f.campaigns[1].ads.every((a) => a.copy === "Message commun"))
     .toBe(true);
-  await page
-    .locator("summary")
-    .filter({ hasText: "Choisir des formats" })
-    .click();
+  await chooseFormats(page);
   await expect(
     page.locator("details[open]").filter({ hasText: "Choisir des formats" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Aperçu", exact: true }).click();
+  await openPreview(page);
   const preview = page.getByRole("complementary", {
     name: "Aperçu de l’annonce",
     exact: true,
@@ -3795,7 +3837,7 @@ test("statut tableau : compléter le dernier champ rend prête avant et après s
     .poll(() => f.campaigns[1].ads[0].copy)
     .toBe("Texte final de l’annonce");
   await page
-    .getByRole("heading", { name: "Compléter les annonces", exact: true })
+    .getByRole("heading", { name: "Création d’annonces", exact: true })
     .click();
   await page.reload();
   await expect(
@@ -4677,11 +4719,22 @@ test("tableau V1 : statut en pilule et aucun contour dans le login", async ({
   await field.focus();
   await expect(field).toHaveCSS("outline-style", "none");
   expect(
-    await page
-      .locator("thead th")
-      .evaluateAll((cells) =>
-        cells.every((cell) => cell.scrollWidth <= cell.clientWidth + 1),
-      ),
+    await page.locator("thead th").evaluateAll((cells) =>
+      cells.every((cell) => {
+        const bounds = cell.getBoundingClientRect();
+        // Resize handles straddle column edges; measure the label itself.
+        return Array.from(cell.childNodes)
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .every((node) => {
+            const range = document.createRange();
+            range.selectNodeContents(node);
+            return Array.from(range.getClientRects()).every(
+              (rect) =>
+                rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1,
+            );
+          });
+      }),
+    ),
   ).toBe(true);
   await page.screenshot({
     path: "/tmp/studio-editor-pills-desktop.png",
@@ -4761,6 +4814,7 @@ test("tableau V1 : supprimer une annonce puis une sélection sans supprimer les 
   await page
     .getByRole("checkbox", { name: "Sélectionner Troisième", exact: true })
     .check();
+  await openTableTools(page);
   await page
     .getByRole("button", { name: "Supprimer la sélection", exact: true })
     .click();
@@ -5155,6 +5209,7 @@ test("remplacement en lot : confirmation du Studio, annuler ne modifie aucune va
       "&canal=facebook&etape=editor",
   );
   await page.getByLabel("Sélectionner toutes les annonces du canal").check();
+  await openTableTools(page);
   await page
     .getByRole("button", { name: "Appliquer un champ en batch", exact: true })
     .click();
@@ -5230,3 +5285,99 @@ for (const width of [320, 390, 430])
       fullPage: true,
     });
   });
+
+for (const width of [320, 390, 430, 1440]) {
+  test(`création C ${width}px : hiérarchie compacte et outils accessibles`, async ({
+    page,
+  }, info) => {
+    const f = await fixture(page, "draft", true);
+    const campaign = f.campaigns[1];
+    campaign.channels = ["facebook", "instagram", "google"];
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(
+      base +
+        `/studio/configuration?campagne=${campaign.id}&canal=facebook&etape=editor`,
+    );
+    await expect(
+      page.getByRole("heading", { name: "Création d’annonces", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("navigation", {
+        name: "Étapes de configuration",
+        exact: true,
+      }),
+    ).not.toBeVisible();
+    const add = page.getByRole("button", {
+      name: "Ajouter une ligne vierge",
+      exact: true,
+    });
+    const importer = page.getByRole("button", {
+      name: "Importer des annonces",
+      exact: true,
+    });
+    await expect(add).toBeVisible();
+    await expect(importer).toBeVisible();
+    const channel = page.getByRole("combobox", {
+      name: "Canal de configuration",
+      exact: true,
+    });
+    await expect(channel).toHaveValue("facebook");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    for (const target of [add, importer, channel]) {
+      const box = (await target.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width).toBeLessThanOrEqual(width);
+      expect(
+        await target.evaluate((el) => el.scrollWidth <= el.clientWidth),
+      ).toBe(true);
+    }
+    await page.screenshot({ path: info.outputPath("creation-c.png") });
+    await add.click();
+    await expect.poll(() => f.campaigns[1].ads.length).toBe(2);
+    expect(f.campaigns[1].ads[1].copy).toBe("");
+    const tools = page.getByLabel("Autres outils", { exact: true });
+    await tools.click();
+    await expect(
+      page.getByRole("button", { name: "Copier tout", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Supprimer la sélection", exact: true }),
+    ).toBeVisible();
+    await tools.press("Escape");
+    await expect(
+      page.getByRole("button", { name: "Copier tout", exact: true }),
+    ).not.toBeVisible();
+    await importer.click();
+    const dialog = page.getByRole("dialog", {
+      name: "Importer des annonces",
+      exact: true,
+    });
+    await expect(
+      dialog.getByRole("button", { name: "Gabarit Excel", exact: true }),
+    ).toBeVisible();
+    await dialog
+      .getByRole("button", { name: "Fermer l’import", exact: true })
+      .click();
+    await channel.selectOption("google");
+    await expect(channel).toHaveValue("google");
+    await expect(page).toHaveURL(/canal=google/);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page
+      .getByRole("button", {
+        name: `Partager la campagne ${campaign.name}`,
+        exact: true,
+      })
+      .click();
+    await expect(
+      page.getByRole("dialog", { name: "Partager la campagne", exact: true }),
+    ).toBeVisible();
+  });
+}

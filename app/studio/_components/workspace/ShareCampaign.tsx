@@ -91,7 +91,7 @@ export default function ShareCampaign({
         aria-label={`Partager la campagne ${name}`}
         onClick={() => setOpen(true)}
       >
-        <Icon name="external" size={18} />
+        <Icon name="link" size={18} />
         {labeled && <span>Demander une validation</span>}
       </button>
       <dialog

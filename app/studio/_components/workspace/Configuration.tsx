@@ -10,6 +10,7 @@ import DeleteAds from "./DeleteAds";
 import ImportAds from "./ImportAds";
 import Icon from "../Icon";
 import { useConfirmation } from "./Confirmation";
+import { isComplete } from "@/lib/campaign-studio/workspace/workflow";
 import { copyAdsText } from "@/lib/campaign-studio/workspace/presentation";
 import { useWorkspaceNavigation } from "./WorkspaceNavigation";
 import type {
@@ -92,8 +93,15 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
   }
   const [importing, setImporting] = useState(false);
   const step = useRef<HTMLElement>(null);
+  const compactSteps = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     step.current?.querySelector<HTMLHeadingElement>("h2")?.focus();
+    const dismiss = (event: PointerEvent) => {
+      const menu = compactSteps.current;
+      if (menu && !menu.contains(event.target as Node)) menu.open = false;
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
   }, [stage]);
   const channel = (
     allChannels.includes(params.get("canal") as Channel)
@@ -285,11 +293,27 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
   if (!visible.includes(channel)) visible.unshift(channel);
   return (
     <>
-      {steps}
-      <div className={w.editorHeading}>
-        <h2 className={w.editorTitle}>Compléter les annonces</h2>
-        <ShareCampaign campaignId={c.id} name={c.name} labeled />
-      </div>
+      <header className={w.creationHeader}>
+        <details
+          ref={compactSteps}
+          className={w.editorStages}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.currentTarget.open = false;
+              event.currentTarget.querySelector("summary")?.focus();
+            }
+          }}
+        >
+          <summary>
+            Étape 3 sur 3 <Icon name="down" size={12} />
+          </summary>
+          {steps}
+        </details>
+        <div className={w.creationTitle}>
+          <h2>Création d’annonces</h2>
+          <ShareCampaign campaignId={c.id} name={c.name} />
+        </div>
+      </header>
       <ChannelEditor
         key={channel}
         campaign={c}
@@ -374,31 +398,22 @@ function ChannelEditor({
   const [previewOpen, setPreviewOpen] = useState(false);
   const focusTarget = useRef<CellTarget | null>(null);
   const readRowsRef = useRef<null | (() => Ad[])>(null);
-  const channelTabs = useRef<HTMLElement>(null);
   const formatPicker = useRef<HTMLDetailsElement>(null);
+  const moreTools = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
-    const nav = channelTabs.current;
-    const active = nav?.querySelector<HTMLButtonElement>(
-      '[aria-pressed="true"]',
-    );
-    if (!nav || !active) return;
-    const reveal = () => {
-      const bounds = nav.getBoundingClientRect();
-      const tab = active.getBoundingClientRect();
-      if (tab.left < bounds.left || tab.right > bounds.right) {
-        nav.scrollLeft +=
-          tab.left < bounds.left
-            ? tab.left - bounds.left - 4
-            : tab.right - bounds.right + 4;
-      }
+    const dismiss = (event: PointerEvent) => {
+      const menu = moreTools.current;
+      if (menu && !menu.contains(event.target as Node)) menu.open = false;
     };
-    reveal();
-    const observer = new ResizeObserver(reveal);
-    observer.observe(nav);
-    observer.observe(active);
-    return () => observer.disconnect();
-  }, [channel]);
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, []);
   const rows = c.ads.filter((a) => a.channel === channel);
+  const readyCount = rows.filter(
+    (ad) =>
+      ["draft", "changes_requested"].includes(ad.status) &&
+      !isComplete(ad, c).length,
+  ).length;
   const active = rows.find((a) => a.id === activeId) ?? rows[0];
   const activeReady =
     active &&
@@ -437,145 +452,179 @@ function ChannelEditor({
   }
   return (
     <>
-      <div className={w.editorToolbar}>
-        <nav
-          ref={channelTabs}
-          className={w.channelTabs}
-          aria-label="Canal de configuration"
-        >
-          {Object.entries(CHANNELS)
-            .filter(([id]) => visibleChannels.includes(id as Channel))
-            .map(([id, label]) => (
+      <div className={w.creationToolbar}>
+        <div className={w.creationChannelRow}>
+          <div className={w.creationChannel}>
+            <ChannelIcon channel={channel} />
+            <select
+              aria-label="Canal de configuration"
+              value={channel}
+              onChange={(event) => {
+                setChannel(event.target.value as Channel);
+                setFormats([]);
+                setSelected([]);
+                setActiveId("");
+                setBatch(false);
+              }}
+            >
+              {visibleChannels.map((id) => (
+                <option key={id} value={id}>
+                  {CHANNELS[id]}
+                </option>
+              ))}
+            </select>
+            <span className={w.creationChannelCount}>{rows.length}</span>
+            <Icon name="down" size={14} />
+          </div>
+          <span className={w.creationReady} aria-live="polite">
+            {readyCount} prête{readyCount > 1 ? "s" : ""} / {rows.length}
+          </span>
+        </div>
+        <div className={w.creationActions}>
+          <button
+            className={w.primary}
+            aria-label="Ajouter une ligne vierge"
+            title="Ajouter une ligne vierge"
+            disabled={c.status === "finished" || pending("add_blank", c.id)}
+            onClick={async () => {
+              try {
+                await flushRef.current?.();
+                const result = await command({
+                  type: "add_blank",
+                  channel,
+                  format: active?.format ?? CATALOG[channel][0].id,
+                });
+                const created = (result.campaign as Campaign).ads.at(-1);
+                if (created) setActiveId(created.id);
+              } catch {
+                /* Preserve the current row if saving or creation fails. */
+              }
+            }}
+          >
+            <Icon name="plus" />
+            <span>Ligne vierge</span>
+          </button>
+          <ImportAds
+            campaign={c}
+            channel={channel}
+            flush={() => flushRef.current?.()}
+            labeled
+          />
+          <details
+            ref={moreTools}
+            className={w.creationMore}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.currentTarget.open = false;
+                event.currentTarget.querySelector("summary")?.focus();
+                event.stopPropagation();
+              }
+            }}
+          >
+            <summary aria-label="Autres outils" title="Autres outils">
+              <Icon name="more" />
+            </summary>
+            <div
+              className={w.creationMenu}
+              aria-label="Outils du tableau"
+              onClick={(event) => {
+                if ((event.target as HTMLElement).closest("button"))
+                  event.currentTarget.closest("details")!.open = false;
+              }}
+            >
               <button
-                key={id}
-                aria-pressed={channel === id}
+                aria-label="Copier tout"
+                title="Copier tout"
                 onClick={() => {
-                  setChannel(id as Channel);
-                  setFormats([]);
-                  setSelected([]);
-                  setActiveId("");
-                  setBatch(false);
-                  setField(
-                    id === "google"
-                      ? "headlines"
-                      : id === "display"
-                        ? "url"
-                        : "copy",
-                  );
+                  if (!rows.length)
+                    return notify("Aucune annonce à copier dans ce canal.");
+                  void navigator.clipboard
+                    .writeText(copyAdsText(c, readRowsRef.current?.() ?? rows))
+                    .then(() => notify("Tableau copié."))
+                    .catch(() =>
+                      notify(
+                        "Copie indisponible. Autorisez le presse-papiers de ce navigateur.",
+                      ),
+                    );
                 }}
               >
-                <ChannelIcon channel={id as Channel} />
-                {label}
-                <small>
-                  {c.ads.filter((a) => a.channel === id).length || ""}
-                </small>
+                <Icon name="copy" />
+                <span>Copier tout</span>
               </button>
-            ))}
-        </nav>
-        <div className={w.editorTools}>
+              <button
+                aria-label="Appliquer un champ en batch"
+                title="Appliquer à la sélection"
+                disabled={c.status === "finished" || submission === "sending"}
+                aria-expanded={batch}
+                onClick={() => {
+                  if (!selected.length)
+                    notify(
+                      "Sélectionnez les lignes auxquelles appliquer ce texte.",
+                    );
+                  setBatch((v) => !v);
+                }}
+              >
+                <Icon name="batch" />
+                <span>Appliquer</span>
+              </button>
+              <button
+                aria-label="Aperçu"
+                title="Aperçu"
+                aria-pressed={previewOpen}
+                onClick={() => {
+                  if (!active)
+                    return notify(
+                      "Ajoutez une annonce pour afficher son aperçu.",
+                    );
+                  setPreviewOpen((v) => !v);
+                }}
+              >
+                <Icon name="eye" />
+                <span>Aperçu</span>
+              </button>
+              <DeleteAds
+                campaign={c}
+                ids={selected}
+                label="Supprimer la sélection"
+                text="Supprimer"
+                flush={() => flushRef.current?.()}
+                onDeleted={() => setSelected([])}
+              />
+              {selected.length > 0 && (
+                <button
+                  aria-label={
+                    submission === "sending" ? "Envoi…" : "Envoyer la sélection"
+                  }
+                  title="Envoyer la sélection"
+                  className={w.primary}
+                  disabled={
+                    !selected.length ||
+                    c.status === "finished" ||
+                    submission === "sending"
+                  }
+                  onClick={() => void submit(selected).catch(() => {})}
+                >
+                  <Icon name="send" />
+                  <span>Envoyer</span>
+                </button>
+              )}
+              <button
+                aria-label="Choisir des formats"
+                disabled={c.status === "finished"}
+                onClick={(event) => {
+                  if (formatPicker.current) formatPicker.current.open = true;
+                  event.currentTarget.closest("details")!.open = false;
+                }}
+              >
+                <Icon name="grid" />
+                <span>Formats</span>
+              </button>
+            </div>
+          </details>
           <span className={w.srOnly}>
             {rows.length} annonce{rows.length > 1 ? "s" : ""} ·{" "}
             {selected.length} sélectionnée{selected.length > 1 ? "s" : ""}
           </span>
-          <div className={w.inline}>
-            <button
-              aria-label="Copier tout"
-              title="Copier tout"
-              onClick={() => {
-                if (!rows.length)
-                  return notify("Aucune annonce à copier dans ce canal.");
-                void navigator.clipboard
-                  .writeText(copyAdsText(c, readRowsRef.current?.() ?? rows))
-                  .then(() => notify("Tableau copié."))
-                  .catch(() =>
-                    notify(
-                      "Copie indisponible. Autorisez le presse-papiers de ce navigateur.",
-                    ),
-                  );
-              }}
-            >
-              <Icon name="copy" />
-            </button>
-            <button
-              aria-label="Appliquer un champ en batch"
-              title="Appliquer à la sélection"
-              disabled={c.status === "finished" || submission === "sending"}
-              aria-expanded={batch}
-              onClick={() => {
-                if (!selected.length)
-                  notify(
-                    "Sélectionnez les lignes auxquelles appliquer ce texte.",
-                  );
-                setBatch((v) => !v);
-              }}
-            >
-              <Icon name="batch" />
-            </button>
-            <button
-              aria-label="Ajouter une ligne vierge"
-              title="Ajouter une ligne vierge"
-              disabled={c.status === "finished" || pending("add_blank", c.id)}
-              onClick={async () => {
-                try {
-                  await flushRef.current?.();
-                  const result = await command({
-                    type: "add_blank",
-                    channel,
-                    format: active?.format ?? CATALOG[channel][0].id,
-                  });
-                  const created = (result.campaign as Campaign).ads.at(-1);
-                  if (created) setActiveId(created.id);
-                } catch {
-                  /* The provider preserves the current line and announces the error. */
-                }
-              }}
-            >
-              <Icon name="plus" />
-            </button>
-            <button
-              aria-label="Aperçu"
-              title="Aperçu"
-              aria-pressed={previewOpen}
-              onClick={() => {
-                if (!active)
-                  return notify(
-                    "Ajoutez une annonce pour afficher son aperçu.",
-                  );
-                setPreviewOpen((v) => !v);
-              }}
-            >
-              <Icon name="eye" />
-            </button>
-            <ImportAds
-              campaign={c}
-              channel={channel}
-              flush={() => flushRef.current?.()}
-            />
-            <DeleteAds
-              campaign={c}
-              ids={selected}
-              label="Supprimer la sélection"
-              flush={() => flushRef.current?.()}
-              onDeleted={() => setSelected([])}
-            />
-            {selected.length > 0 && (
-              <button
-                aria-label={
-                  submission === "sending" ? "Envoi…" : "Envoyer la sélection"
-                }
-                title="Envoyer la sélection"
-                className={w.primary}
-                disabled={
-                  !selected.length ||
-                  c.status === "finished" ||
-                  submission === "sending"
-                }
-                onClick={() => void submit(selected).catch(() => {})}
-              >
-                <Icon name="send" />
-              </button>
-            )}
-          </div>
         </div>
       </div>
       {c.status === "finished" ? (
@@ -587,7 +636,7 @@ function ChannelEditor({
         <details
           ref={formatPicker}
           open={!rows.length}
-          className={w.formatPicker}
+          className={`${w.formatPicker} ${w.creationFormats}`}
         >
           <summary>Choisir des formats ou ajouter des annonces</summary>
           <button

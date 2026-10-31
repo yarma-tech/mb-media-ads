@@ -24,10 +24,12 @@ export default function ImportAds({
   campaign,
   channel,
   flush,
+  labeled = false,
 }: {
   campaign: Campaign;
   channel: Channel;
   flush: () => Promise<unknown> | undefined;
+  labeled?: boolean;
 }) {
   const { run, notify } = useWorkspace();
   const dialog = useRef<HTMLDialogElement>(null),
@@ -140,6 +142,7 @@ export default function ImportAds({
         }}
       >
         <Icon name="upload" />
+        {labeled && <span>Importer</span>}
       </button>
       <dialog
         ref={dialog}

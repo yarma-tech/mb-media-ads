@@ -9,12 +9,14 @@ export default function DeleteAds({
   label,
   flush,
   onDeleted,
+  text,
 }: {
   campaign: Campaign;
   ids: string[];
   label: string;
   flush: () => Promise<unknown> | undefined;
   onDeleted?: () => void;
+  text?: string;
 }) {
   const { run, pending, notify } = useWorkspace();
   const confirm = useConfirmation();
@@ -63,6 +65,7 @@ export default function DeleteAds({
       }}
     >
       <Icon name="trash" size={17} />
+      {text && <span>{text}</span>}
     </button>
   );
 }

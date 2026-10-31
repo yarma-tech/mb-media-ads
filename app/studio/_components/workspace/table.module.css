@@ -24,7 +24,8 @@
   text-align: left;
   padding: 12px 10px;
   background: #f6f7f9;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
   color: #637080;
   border-bottom: 1px solid #e4e8ed;
   border-right: 1px solid #e9edf1;

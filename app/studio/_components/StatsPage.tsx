@@ -467,17 +467,7 @@ export default function StatsPage() {
             </tbody>
           </table>
         </div>
-        <small className={s.rankingNote}>
-          Classement par admissions, puis prospects · même période
-        </small>
       </section>
-      <div className={s.footer}>
-        <span>
-          <Icon name="clock" size={13} />
-          Simulation du 30 octobre 2026 à 08:00 · Montréal
-        </span>
-        <span>Montants en dollars canadiens · dépenses média</span>
-      </div>
       <p className={s.note}>
         Démonstration. Tous les chiffres sont fictifs ; aucune régie ni aucun
         CRM n’est connecté ici.

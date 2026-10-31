@@ -92,6 +92,14 @@ export const CommandSchema = z.discriminatedUnion("type", [
     website: z.string().max(2048),
     logo: z.string().max(2048),
   }),
+  z
+    .object({
+      type: z.literal("add_blank"),
+      ...target,
+      channel: ChannelSchema,
+      format: z.string().min(1).max(50),
+    })
+    .strict(),
   z.object({
     type: z.literal("add"),
     ...target,

@@ -535,6 +535,10 @@ export async function execute(raw: unknown, actor: Actor) {
       if (result.campaign !== c) await commit(c, result.campaign, actor);
       return result;
     }
+    case "add_blank":
+      next = addAd(c, command.channel, command.format, actor, now);
+      next.ads.at(-1)!.cta = "";
+      break;
     case "add":
       for (const format of command.formats) {
         next = addAd(next, command.channel, format, actor, now);

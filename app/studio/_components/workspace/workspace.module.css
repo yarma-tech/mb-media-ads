@@ -1771,7 +1771,8 @@ button[aria-pressed="true"] .channelCheck {
   background: #eaf0ec;
 }
 .formatPicker:not([open]) {
-  display: none;
+  display: block;
+  margin: 12px 0 18px;
 }
 .formatPicker[open] {
   margin: 18px 0;
@@ -2024,4 +2025,40 @@ button[aria-pressed="true"] .channelCheck {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+}
+
+.libraryDisclosure > summary {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  margin: 30px auto 20px;
+  padding: 12px 24px;
+  background: #edf3ef;
+  border: 0;
+  border-radius: 16px;
+  color: #082b21;
+  font-size: 15px;
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
+}
+.libraryDisclosure > summary::-webkit-details-marker {
+  display: none;
+}
+.libraryDisclosure > summary::after {
+  display: none;
+}
+.libraryDisclosure > summary svg {
+  transition: transform 220ms ease-out;
+}
+.libraryDisclosure[open] > summary svg {
+  transform: rotate(45deg);
+}
+@media (prefers-reduced-motion: reduce) {
+  .libraryDisclosure > summary svg {
+    transition: none;
+  }
 }

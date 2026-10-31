@@ -129,3 +129,40 @@ describe("suppression des annonces", () => {
     expect(() => deleteAds(c, ["absent"], actor, now)).toThrow("introuvable");
   });
 });
+
+it("le gabarit Display n'exige aucun texte, titre ou CTA", () => {
+  const headers = importHeaders("display");
+  expect(headers).toEqual(["Format", "Nom", "Thématique", "URL"]);
+  const [row] = parseImportRows("display", [
+    headers,
+    ["rectangle", "Bannière", "Notoriété", "https://example.test"],
+  ]);
+  expect(row).toMatchObject({
+    format: "rectangle",
+    name: "Bannière",
+    theme: "Notoriété",
+    url: "https://example.test",
+  });
+  expect(row).not.toHaveProperty("copy");
+  expect(row).not.toHaveProperty("headline");
+  expect(row).not.toHaveProperty("cta");
+});
+
+it("l'action ligne vierge ne permet pas de copier des champs ou un média", () => {
+  const command = {
+    type: "add_blank",
+    revision: 0,
+    campaignId: crypto.randomUUID(),
+    channel: "facebook",
+    format: "square",
+  };
+  expect(CommandSchema.safeParse(command).success).toBe(true);
+  expect(
+    CommandSchema.safeParse({ ...command, mediaId: crypto.randomUUID() })
+      .success,
+  ).toBe(false);
+  expect(
+    CommandSchema.safeParse({ ...command, copy: "Ne doit pas être repris" })
+      .success,
+  ).toBe(false);
+});

@@ -439,3 +439,37 @@
 .pathColumn {
   width: 80px;
 }
+
+.table th {
+  position: relative;
+}
+.columnResize {
+  position: absolute;
+  right: -5px;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  z-index: 2;
+  cursor: col-resize;
+  touch-action: none;
+}
+.columnResize:hover,
+.columnResize:focus-visible {
+  background: #082b211c;
+  outline: none;
+}
+.columnResize::after {
+  content: "";
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 5px;
+  width: 2px;
+  border-radius: 2px;
+  background: #a5b4ac;
+  opacity: 0;
+}
+.columnResize:hover::after,
+.columnResize:focus-visible::after {
+  opacity: 1;
+}

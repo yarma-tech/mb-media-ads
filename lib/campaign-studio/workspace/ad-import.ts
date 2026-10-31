@@ -14,7 +14,9 @@ export function importHeaders(channel: Channel): string[] {
         "Chemin 1",
         "Chemin 2",
       ]
-    : ["Format", "Nom", "Thématique", "Texte", "Titre", "CTA", "URL"];
+    : channel === "display"
+      ? ["Format", "Nom", "Thématique", "URL"]
+      : ["Format", "Nom", "Thématique", "Texte", "Titre", "CTA", "URL"];
 }
 // RFC 4180-style quoting, including escaped quotes and newlines. Both common
 // French (semicolon) and international (comma) templates are accepted.
@@ -107,12 +109,14 @@ export function parseImportRows(
             path1: values["Chemin 1"],
             path2: values["Chemin 2"],
           }
-        : {
-            ...common,
-            copy: values.Texte,
-            headline: values.Titre,
-            cta: values.CTA,
-          };
+        : channel === "display"
+          ? common
+          : {
+              ...common,
+              copy: values.Texte,
+              headline: values.Titre,
+              cta: values.CTA,
+            };
     if (row.url && !/^https?:\/\//i.test(row.url))
       throw new Error(`Ligne ${line} : URL HTTP(S) requise.`);
     const parsed = ImportAdSchema.safeParse(row);

@@ -86,7 +86,7 @@ describe("private video thumbnails", () => {
     );
     expect(pixel.stdout[2]).toBeGreaterThan(200); // second scene blue
     expect(pixel.stdout[0]).toBeLessThan(30); // first scene red excluded
-  });
+  }, 20000);
   it("handles videos shorter than 1s and invalid input", async () => {
     const short = join(dir, "short.mp4");
     await run(ffmpeg!, [

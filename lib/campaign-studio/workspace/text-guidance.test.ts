@@ -34,6 +34,12 @@ describe("repères de longueur dans le tableau", () => {
       ).toBeNull();
     expect(
       textGuidance({ channel: "tiktok", format: "vertical" }, "copy"),
+    ).toMatchObject({ limit: 100, kind: "recommendation" });
+    expect(
+      textGuidance({ channel: "tiktok", format: "vertical" }, "headline"),
+    ).toBeNull();
+    expect(
+      textGuidance({ channel: "tiktok", format: "vertical" }, "cta"),
     ).toBeNull();
     expect(
       textGuidance({ channel: "display", format: "rectangle" }, "headline"),

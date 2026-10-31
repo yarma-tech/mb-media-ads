@@ -404,7 +404,11 @@ function ChannelEditor({
     (active.status !== "approved" || unlocked.includes(active.id)) &&
     c.status === "active";
   const [field, setField] = useState(
-      channel === "google" ? "headlines" : "copy",
+      channel === "google"
+        ? "headlines"
+        : channel === "display"
+          ? "url"
+          : "copy",
     ),
     [batchValue, setBatchValue] = useState(""),
     [replace, setReplace] = useState(false);
@@ -449,7 +453,13 @@ function ChannelEditor({
                   setSelected([]);
                   setActiveId("");
                   setBatch(false);
-                  setField(id === "google" ? "headlines" : "copy");
+                  setField(
+                    id === "google"
+                      ? "headlines"
+                      : id === "display"
+                        ? "url"
+                        : "copy",
+                  );
                 }}
               >
                 <ChannelIcon channel={id as Channel} />
@@ -500,16 +510,22 @@ function ChannelEditor({
               <Icon name="batch" />
             </button>
             <button
-              aria-label="Ajouter des annonces"
-              title="Ajouter des annonces"
-              disabled={c.status === "finished"}
-              onClick={() => {
-                if (!formatPicker.current) return;
-                formatPicker.current.open = true;
-                formatPicker.current.scrollIntoView({
-                  block: "nearest",
-                  behavior: "smooth",
-                });
+              aria-label="Ajouter une ligne vierge"
+              title="Ajouter une ligne vierge"
+              disabled={c.status === "finished" || pending("add_blank", c.id)}
+              onClick={async () => {
+                try {
+                  await flushRef.current?.();
+                  const result = await command({
+                    type: "add_blank",
+                    channel,
+                    format: active?.format ?? CATALOG[channel][0].id,
+                  });
+                  const created = (result.campaign as Campaign).ads.at(-1);
+                  if (created) setActiveId(created.id);
+                } catch {
+                  /* The provider preserves the current line and announces the error. */
+                }
               }}
             >
               <Icon name="plus" />
@@ -672,11 +688,14 @@ function ChannelEditor({
             <select value={field} onChange={(e) => setField(e.target.value)}>
               {(channel === "google"
                 ? ["headlines", "descriptions", "url"]
-                : ["copy", "headline", "cta", "url"]
+                : channel === "display"
+                  ? ["theme", "url"]
+                  : ["copy", "headline", "cta", "url"]
               ).map((f) => (
                 <option key={f} value={f}>
                   {
                     {
+                      theme: "Thématique",
                       copy: "Texte",
                       headline: "Titre",
                       cta: "CTA",
@@ -748,8 +767,12 @@ function ChannelEditor({
       )}
       {channel !== "google" && c.status === "active" && (
         <details className={w.libraryDisclosure}>
-          <summary>Bibliothèque des médias</summary>
+          <summary>
+            <Icon name="plus" />
+            Bibliothèque des médias
+          </summary>
           <MediaLibrary
+            variant="library"
             campaign={c}
             channel={channel}
             onCreate={async (media: Media, formats: string[]) => {

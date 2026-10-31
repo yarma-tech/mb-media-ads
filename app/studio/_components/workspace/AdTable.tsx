@@ -87,8 +87,83 @@ export default function TableSession(p: Props) {
   const columns = (
     p.active.channel === "google"
       ? ["theme", "headlines", "descriptions", "url", "path1", "path2"]
-      : ["theme", "copy", "headline", "cta", "url"]
+      : p.active.channel === "display"
+        ? ["theme", "url"]
+        : ["theme", "copy", "headline", "cta", "url"]
   ) as (keyof AdFields)[];
+  const [widths, setWidths] = useState<Record<string, number>>({});
+  const resize = useRef<{ key: string; x: number; width: number } | null>(null);
+  function width(key: string) {
+    return (
+      widths[key] ??
+      (key === "format"
+        ? 120
+        : key === "theme"
+          ? 85
+          : key === "copy" || key === "headlines" || key === "descriptions"
+            ? 210
+            : key === "url"
+              ? 190
+              : key === "cta"
+                ? 120
+                : 140)
+    );
+  }
+  function setWidth(key: string, value: number) {
+    setWidths((old) => ({
+      ...old,
+      [key]: Math.round(Math.max(80, Math.min(1200, value))),
+    }));
+  }
+  function resizer(key: string, label: string) {
+    return (
+      <span
+        className={t.columnResize}
+        role="separator"
+        aria-label={`Ajuster la largeur de ${label}`}
+        aria-orientation="vertical"
+        aria-valuemin={80}
+        aria-valuemax={1200}
+        aria-valuenow={width(key)}
+        tabIndex={0}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          resize.current = { key, x: e.clientX, width: width(key) };
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e) => {
+          const current = resize.current;
+          if (current?.key === key)
+            setWidth(key, current.width + e.clientX - current.x);
+        }}
+        onPointerUp={() => {
+          resize.current = null;
+        }}
+        onPointerCancel={() => {
+          resize.current = null;
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+            e.preventDefault();
+            e.stopPropagation();
+            setWidth(
+              key,
+              width(key) +
+                (e.key === "ArrowRight" ? 1 : -1) * (e.shiftKey ? 100 : 20),
+            );
+          }
+        }}
+        onDoubleClick={() =>
+          setWidths((old) => {
+            const next = { ...old };
+            delete next[key];
+            return next;
+          })
+        }
+      />
+    );
+  }
   useEffect(() => {
     readRowsRef.current = () => p.rows.map((a) => drafts[a.id] ?? a);
     return () => {
@@ -188,16 +263,36 @@ export default function TableSession(p: Props) {
           <table
             ref={table}
             className={t.table}
+            style={{
+              width:
+                32 +
+                36 +
+                112 +
+                144 +
+                width("format") +
+                columns.reduce((sum, key) => sum + width(key), 0),
+              minWidth:
+                32 +
+                36 +
+                112 +
+                144 +
+                width("format") +
+                columns.reduce((sum, key) => sum + width(key), 0),
+            }}
             aria-label="Tableau des annonces"
             onKeyDown={(e) => void key(e)}
           >
             <colgroup>
               <col className={t.handleColumn} />
               <col className={t.selectColumn} />
-              <col className={t.formatColumn} />
+              <col
+                className={t.formatColumn}
+                style={{ width: width("format") }}
+              />
               {columns.map((column) => (
                 <col
                   key={column}
+                  style={{ width: width(column) }}
                   className={
                     column === "theme"
                       ? t.themeColumn
@@ -234,9 +329,12 @@ export default function TableSession(p: Props) {
                     }
                   />
                 </th>
-                <th>Format</th>
+                <th aria-label="Format">Format{resizer("format", "Format")}</th>
                 {columns.map((k) => (
-                  <th key={k}>{names[k]}</th>
+                  <th key={k} aria-label={names[k]}>
+                    {names[k]}
+                    {resizer(k, names[k])}
+                  </th>
                 ))}
                 <th>Statut</th>
                 <th aria-label="Actions" />

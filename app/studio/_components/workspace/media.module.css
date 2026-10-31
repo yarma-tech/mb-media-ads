@@ -314,3 +314,69 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.assetGrid.assetGrid {
+  grid-template-columns: repeat(auto-fill, minmax(160px, 220px));
+  gap: 26px 20px;
+  align-items: start;
+}
+.assetGrid.assetGrid > article {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.assetGrid.assetGrid .assetFrame {
+  width: 100%;
+  height: auto;
+  max-height: 260px;
+  background: transparent;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+.assetFrame img,
+.assetFrame video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.assetGrid.assetGrid b {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 500;
+}
+.assetGrid.assetGrid small {
+  font-size: 11px;
+  margin-top: 3px;
+}
+.assetGrid.assetGrid .assetSelect {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+  color: #082b21;
+  box-shadow: 0 2px 12px #082b2126;
+}
+.assetGrid.assetGrid .assetSelect[aria-pressed="true"] {
+  background: #082b21;
+  color: #fff;
+}
+@media (max-width: 600px) {
+  .assetGrid.assetGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px 14px;
+  }
+}

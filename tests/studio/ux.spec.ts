@@ -361,9 +361,15 @@ async function fixture(
           c = batch.campaign;
           result.created = batch.created;
         }
+        if (cmd.type === "add_blank") {
+          c = addAd(c, cmd.channel, cmd.format, actor, now);
+          c.ads.at(-1)!.cta = "";
+        }
         if (cmd.type === "add")
-          for (const format of cmd.formats)
+          for (const format of cmd.formats) {
             c = addAd(c, cmd.channel, format, actor, now);
+            if (cmd.mediaId) c.ads.at(-1)!.mediaId = cmd.mediaId;
+          }
         if (cmd.type === "version") c = newVersion(c, cmd.adId, actor, now);
         if (cmd.type === "duplicate") c = duplicateAd(c, cmd.adId, actor, now);
         if (cmd.type === "submit") {
@@ -817,7 +823,8 @@ test("formats et duplication ne se créent qu’une fois, nouvelle intention per
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
   await page.getByRole("button", { name: /Google SEM/ }).click();
   await page
-    .getByRole("button", { name: "Ajouter des annonces", exact: true })
+    .locator("summary")
+    .filter({ hasText: "Choisir des formats" })
     .click();
   await page.getByLabel(/Annonce responsive Search/).check();
   f.latency(800);
@@ -944,7 +951,10 @@ test("média prêt sans URL reste conforme pendant préparation de l’aperçu",
     library.getByText("Préparation de l’aperçu…", { exact: true }),
   ).toBeVisible();
   await expect(
-    library.getByRole("checkbox", { name: "Fil carré", exact: true }),
+    library.getByRole("button", {
+      name: "Sélectionner test-ready.jpg",
+      exact: true,
+    }),
   ).toBeEnabled();
   await openPreview(page);
   const preview = page.locator("aside").filter({
@@ -1842,7 +1852,8 @@ test("lot : un canal incompatible ne bloque pas les annonces compatibles", async
     f.campaigns.find((c) => c.name === "Lot mixte")?.ads.map((a) => a.channel),
   ).toEqual(["facebook"]);
   await page
-    .getByRole("button", { name: "Ajouter des annonces", exact: true })
+    .locator("summary")
+    .filter({ hasText: "Choisir des formats" })
     .click();
   await page
     .getByRole("button", { name: "Ajouter des médias en lot", exact: true })
@@ -3179,7 +3190,8 @@ test("tableau mobile : outils, aperçu visible, envoi incomplet et déplacement 
     .poll(() => f.campaigns[1].ads.every((a) => a.copy === "Message commun"))
     .toBe(true);
   await page
-    .getByRole("button", { name: "Ajouter des annonces", exact: true })
+    .locator("summary")
+    .filter({ hasText: "Choisir des formats" })
     .click();
   await expect(
     page.locator("details[open]").filter({ hasText: "Choisir des formats" }),
@@ -4831,4 +4843,195 @@ test("tableau V1 : gabarits CSV et Excel, erreurs explicites et import de brouil
     .click();
   await expect(page.locator("tr[data-ad-row]")).toHaveCount(3);
   expect(f.campaigns[1].ads[2].headlines).toEqual(["Titre CSV"]);
+});
+
+test("création vierge distincte de dupliquer, colonnes ajustables et bibliothèque compacte", async ({
+  page,
+}, info) => {
+  const f = await fixture(page, "draft", true);
+  f.setMediaUrl("ready-media", base + "/deck-demo/cu-generique-square.jpg");
+  Object.assign(f.campaigns[1].ads[0], {
+    copy: "Texte source",
+    headline: "Titre source",
+    theme: "Notoriété",
+    cta: "Découvrir",
+    url: "https://example.test/source",
+  });
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=facebook&etape=editor",
+  );
+  await page
+    .getByRole("button", { name: "Ajouter une ligne vierge", exact: true })
+    .click();
+  await expect.poll(() => f.campaigns[1].ads.length).toBe(2);
+  const fresh = f.campaigns[1].ads.at(-1)!;
+  expect(fresh).toMatchObject({
+    copy: "",
+    headline: "",
+    cta: "",
+    url: "",
+    mediaId: null,
+    status: "draft",
+  });
+  expect(fresh.theme ?? "").toBe("");
+  await page
+    .getByRole("button", { name: "Dupliquer Beta annonce", exact: true })
+    .click();
+  await expect.poll(() => f.campaigns[1].ads.length).toBe(3);
+  expect(f.campaigns[1].ads[1]).toMatchObject({
+    copy: "Texte source",
+    headline: "Titre source",
+    theme: "Notoriété",
+    cta: "Découvrir",
+    mediaId: "ready-media",
+  });
+  const handle = page.getByRole("separator", {
+    name: "Ajuster la largeur de Texte",
+    exact: true,
+  });
+  const col = page.getByRole("columnheader", { name: "Texte", exact: true });
+  const before = (await col.boundingBox())!.width;
+  const box = (await handle.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 180, box.y + box.height / 2, {
+    steps: 8,
+  });
+  await page.mouse.up();
+  expect((await col.boundingBox())!.width).toBeGreaterThan(before + 150);
+  await page.getByText("Bibliothèque des médias", { exact: true }).click();
+  const select = page.getByRole("button", {
+    name: "Sélectionner test-ready.jpg",
+    exact: true,
+  });
+  await expect(select).toBeVisible();
+  await select.click();
+  await expect(select).toHaveAttribute("aria-pressed", "true");
+  const card = page.locator('[data-library-media="ready-media"]');
+  expect((await card.boundingBox())!.width).toBeLessThanOrEqual(240);
+  await expect(
+    card.getByRole("group", { name: "Placements compatibles" }),
+  ).toHaveCount(0);
+  await expect(card).toContainText("1080 × 1080");
+  await expect(
+    card.getByRole("img", { name: "test-ready.jpg", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Créer l’annonce sélectionnée", exact: true })
+    .click();
+  await expect.poll(() => f.campaigns[1].ads.length).toBe(4);
+  expect(f.campaigns[1].ads.at(-1)!.mediaId).toBe("ready-media");
+  await page.screenshot({
+    path: info.outputPath("configuration-media-compact.png"),
+    fullPage: true,
+  });
+});
+
+test("display composé : seuls format, thématique et lien sont éditables", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft", true);
+  Object.assign(f.campaigns[1].ads[0], {
+    channel: "display",
+    format: "rectangle",
+    copy: "Texte incorporé",
+    headline: "Titre incorporé",
+  });
+  Object.assign(f.campaigns[1].media[0], {
+    channel: "display",
+    width: 300,
+    height: 250,
+  });
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=display&etape=editor",
+  );
+  const table = page.getByRole("table", { name: "Tableau des annonces" });
+  for (const name of ["Texte", "Titre", "CTA"])
+    await expect(
+      table.getByRole("columnheader", { name, exact: true }),
+    ).toHaveCount(0);
+  for (const name of ["Format", "Thématique", "Lien"])
+    await expect(
+      table.getByRole("columnheader", { name, exact: true }),
+    ).toBeVisible();
+});
+
+test("TikTok : repère de légende à 100, saisie libre au-delà et aucun faux plafond titre/CTA", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft", true);
+  Object.assign(f.campaigns[1].ads[0], {
+    channel: "tiktok",
+    format: "vertical",
+  });
+  Object.assign(f.campaigns[1].media[0], {
+    channel: "tiktok",
+    mime: "video/mp4",
+    width: 1080,
+    height: 1920,
+    duration: 8,
+  });
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=tiktok&etape=editor",
+  );
+  const text = page.getByLabel("Texte de Beta annonce", { exact: true });
+  await text.fill("a".repeat(101));
+  const counter = text.locator("..").locator("[data-character-countdown]");
+  await expect(counter).toHaveAttribute("data-limit", "100");
+  await expect(counter).toHaveAttribute("data-remaining", "-1");
+  await expect(text).toHaveValue("a".repeat(101));
+  for (const label of ["Titre", "CTA"])
+    await expect(
+      page
+        .getByLabel(label + " de Beta annonce", { exact: true })
+        .locator("..")
+        .locator("[data-character-countdown]"),
+    ).toHaveCount(0);
+});
+
+test("configuration mobile : bibliothèque visible, sélection compacte et colonnes ajustables au clavier", async ({
+  page,
+}, info) => {
+  const f = await fixture(page, "draft", true);
+  f.setMediaUrl("ready-media", base + "/deck-demo/cu-generique-square.jpg");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=facebook&etape=editor",
+  );
+  const resize = page.getByRole("separator", {
+    name: "Ajuster la largeur de Texte",
+    exact: true,
+  });
+  await resize.focus();
+  const value = Number(await resize.getAttribute("aria-valuenow"));
+  await page.keyboard.press("ArrowRight");
+  await expect(resize).toHaveAttribute("aria-valuenow", String(value + 20));
+  await page.getByText("Bibliothèque des médias", { exact: true }).click();
+  const select = page.getByRole("button", {
+    name: "Sélectionner test-ready.jpg",
+    exact: true,
+  });
+  await select.click();
+  await expect(select).toHaveAttribute("aria-pressed", "true");
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: info.outputPath("bibliotheque-mobile.png"),
+    fullPage: true,
+  });
 });

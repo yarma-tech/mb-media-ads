@@ -23,6 +23,7 @@ import { mediaAdPlan } from "@/lib/campaign-studio/workspace/media-batch";
 import { uploadFile } from "./upload";
 import { VideoPreview } from "./Preview";
 export default function MediaLibrary({
+  variant = "setup",
   campaign,
   channel,
   onCreate,
@@ -33,6 +34,7 @@ export default function MediaLibrary({
   onBusyChange,
   onTextStart,
 }: {
+  variant?: "setup" | "library";
   campaign: Campaign;
   channel: Channel;
   onCreate: (media: Media, formats: string[]) => Promise<void>;
@@ -59,8 +61,19 @@ export default function MediaLibrary({
   const [fileErrors, setFileErrors] = useState<
     { name: string; mediaId: string | null; message: string }[]
   >([]);
+  const [choices, setChoices] = useState<Record<string, string[]>>({});
   const targets = channels ?? [channel];
   const placements = mediaAdPlan(campaign, targets);
+  const selectedMedia = campaign.media.filter(
+    (m) =>
+      m.state === "ready" &&
+      targets.some((t) => mediaChannels(m).includes(t)) &&
+      choices[m.id]?.length,
+  );
+  const selectedPlacements = selectedMedia.reduce(
+    (sum, m) => sum + choices[m.id].length,
+    0,
+  );
   type Activity =
     | { type: "idle" }
     | { type: "creating" }
@@ -77,9 +90,25 @@ export default function MediaLibrary({
     onBusyChange?.(activity.type !== "idle");
   }, [activity.type, onBusyChange]);
   async function createAll() {
-    if (activityRef.current.type !== "idle" || !placements.length) return;
+    if (
+      activityRef.current.type !== "idle" ||
+      !(variant === "library" ? selectedPlacements : placements.length)
+    )
+      return;
     setActivity({ type: "creating" });
     try {
+      if (variant === "library") {
+        for (const media of selectedMedia) {
+          await onCreate(media, choices[media.id]);
+          setChoices((current) => {
+            const next = { ...current };
+            delete next[media.id];
+            return next;
+          });
+        }
+        notify(`${selectedPlacements} annonce(s) créée(s).`);
+        return;
+      }
       const result = await run({
         type: "add_media_batch",
         campaignId: campaign.id,
@@ -96,7 +125,6 @@ export default function MediaLibrary({
       setActivity({ type: "idle" });
     }
   }
-  const [choices, setChoices] = useState<Record<string, string[]>>({});
   const input = useRef<HTMLInputElement>(null);
   const pending = useRef<Upload | null>(null);
   const [transfer, setTransfer] = useState<
@@ -381,7 +409,7 @@ export default function MediaLibrary({
         <button
           className={w.primary}
           disabled={
-            !placements.length ||
+            !(variant === "library" ? selectedPlacements : placements.length) ||
             !!queue ||
             creating ||
             commandPending("add_media_batch", campaign.id)
@@ -390,14 +418,22 @@ export default function MediaLibrary({
         >
           {creating
             ? "Création…"
-            : placements.length
-              ? placements.length === 1
-                ? "Créer l’annonce"
-                : `Créer les ${placements.length} annonces`
-              : "Créer toutes les annonces"}
+            : variant === "library"
+              ? selectedPlacements
+                ? selectedPlacements === 1
+                  ? "Créer l’annonce sélectionnée"
+                  : `Créer les ${selectedPlacements} annonces sélectionnées`
+                : "Créer la sélection"
+              : placements.length
+                ? placements.length === 1
+                  ? "Créer l’annonce"
+                  : `Créer les ${placements.length} annonces`
+                : "Créer toutes les annonces"}
           {batchMode && <Icon name="arrow" size={24} />}
         </button>
-        <span className={batchMode ? w.srOnly : undefined}>
+        <span
+          className={batchMode || variant === "library" ? w.srOnly : undefined}
+        >
           {placements.length
             ? "Tous les formats compatibles, sans sélection fichier par fichier."
             : campaign.media.some(
@@ -409,7 +445,9 @@ export default function MediaLibrary({
               : "Les formats compatibles seront reconnus après le dépôt."}
         </span>
       </div>
-      <div className={w.mediaList}>
+      <div
+        className={`${w.mediaList} ${variant === "library" ? mstyles.assetGrid : ""}`}
+      >
         {campaign.media
           .filter((m) =>
             targets.some((target) => mediaChannels(m).includes(target)),
@@ -421,8 +459,20 @@ export default function MediaLibrary({
               ((transfer.stage === "verifying" && transfer.mediaId === m.id) ||
                 commandPending("verify_media", campaign.id, m.id));
             return (
-              <article key={m.id}>
-                <div className={w.mediaThumb}>
+              <article key={m.id} data-library-media={m.id}>
+                <div
+                  className={`${w.mediaThumb} ${variant === "library" ? mstyles.assetFrame : ""}`}
+                  style={
+                    variant === "library"
+                      ? {
+                          aspectRatio:
+                            m.width && m.height
+                              ? `${m.width}/${m.height}`
+                              : "1",
+                        }
+                      : undefined
+                  }
+                >
                   {data?.mediaUrls[m.id] ? (
                     m.mime.startsWith("video/") ? (
                       <VideoPreview
@@ -446,15 +496,39 @@ export default function MediaLibrary({
                     </span>
                   )}
                 </div>
+                {variant === "library" && m.state === "ready" && (
+                  <button
+                    type="button"
+                    className={mstyles.assetSelect}
+                    aria-label={`Sélectionner ${m.name}`}
+                    aria-pressed={!!choices[m.id]?.length}
+                    disabled={!formats.length || activity.type !== "idle"}
+                    onClick={() =>
+                      setChoices((current) => ({
+                        ...current,
+                        [m.id]: current[m.id]?.length
+                          ? []
+                          : formats.map((f) => f.id),
+                      }))
+                    }
+                  >
+                    <Icon
+                      name={choices[m.id]?.length ? "check" : "plus"}
+                      size={17}
+                    />
+                  </button>
+                )}
                 {m.state === "ready" && !data?.mediaUrls[m.id] && (
                   <button onClick={() => void reloadPreview(m)}>
                     Recharger l’aperçu
                   </button>
                 )}
-                <b>{m.name}</b>
+                <b title={m.name}>{m.name}</b>
                 <small>
                   {m.width && m.height ? `${m.width} × ${m.height} px` : ""}
-                  {!batchMode && ` · ${(m.bytes / 1000000).toFixed(1)} Mo`}
+                  {!batchMode &&
+                    variant !== "library" &&
+                    ` · ${(m.bytes / 1000000).toFixed(1)} Mo`}
                 </small>
                 {m.state === "invalid" && (
                   <p className={w.error}>{m.errors.join(" ")}</p>
@@ -464,7 +538,7 @@ export default function MediaLibrary({
                     Vérifier le transfert
                   </button>
                 )}
-                {m.state === "ready" && (
+                {m.state === "ready" && variant !== "library" && (
                   <>
                     {batchMode ? (
                       <div className={mstyles.recognized}>

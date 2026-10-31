@@ -51,6 +51,12 @@ export function textGuidance(
           counting: "google",
         };
   }
+  if (ad.channel === "tiktok" && ad.format === "vertical" && field === "copy")
+    return recommendation(
+      100,
+      "repère de légende TikTok In-Feed (4 lignes), pas un plafond universel",
+      "https://ads.tiktok.com/resources/help/article/tiktok-reservation-in-feed-ads-reach-frequency?lang=en",
+    );
   if (field !== "copy" && field !== "headline") return null;
   const copy = field === "copy";
   if (ad.channel === "facebook") {
@@ -123,7 +129,7 @@ export function textGuidance(
         demandGen,
       );
   }
-  // No verified character budget for TikTok, artwork-only Display or internal fields.
+  // No independent TikTok headline or free-form CTA limit; Display is artwork-only.
   return null;
 }
 

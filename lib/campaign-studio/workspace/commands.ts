@@ -96,6 +96,7 @@ export const CommandSchema = z.discriminatedUnion("type", [
     .object({
       type: z.literal("add_blank"),
       ...target,
+      afterId: uuid.optional(),
       channel: ChannelSchema,
       format: z.string().min(1).max(50),
     })

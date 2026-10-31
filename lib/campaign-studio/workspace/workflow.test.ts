@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createCampaign,
   addAd,
+  addBlankAd,
   editAd,
   submitAds,
   decideAd,
@@ -184,4 +185,42 @@ describe("workflow partagé de préparation et validation", () => {
       isComplete({ ...ad(c), headlines: ["x".repeat(31), "b", "c"] }, c).length,
     ).toBeGreaterThan(0);
   });
+});
+
+it("le plus d’une annonce diffusée ajoute une famille vierge juste dessous sans modifier l’original", () => {
+  let c = createCampaign("Recette", preparer, now);
+  c = addAd(c, "google", "search", preparer, now);
+  Object.assign(c.ads[0], {
+    status: "on_air",
+    name: "Source",
+    copy: "Ancien texte",
+    headlines: ["A", "B", "C"],
+    descriptions: ["A", "B"],
+    cta: "Découvrir",
+    url: "https://example.test",
+    theme: "Thème",
+  });
+  c = addAd(c, "google", "search", preparer, now);
+  const before = structuredClone(c),
+    source = c.ads[0];
+  const next = addBlankAd(c, "google", "search", preparer, now, source.id);
+  expect(c).toEqual(before);
+  expect(next.ads[0]).toEqual(source);
+  expect(next.ads[2]).toEqual(c.ads[1]);
+  expect(next.ads[1]).toMatchObject({
+    copy: "",
+    headline: "",
+    headlines: [],
+    descriptions: [],
+    cta: "",
+    url: "",
+    mediaId: null,
+    status: "draft",
+    version: 1,
+  });
+  expect(next.ads[1].familyId).not.toBe(source.familyId);
+  expect(next.ads[1].theme ?? "").toBe("");
+  expect(() =>
+    addBlankAd(c, "google", "search", preparer, now, "absente"),
+  ).toThrow("introuvable");
 });

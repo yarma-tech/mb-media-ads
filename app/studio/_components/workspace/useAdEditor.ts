@@ -1,4 +1,5 @@
 "use client";
+import { useConfirmation } from "./Confirmation";
 import { workspaceErrorMessage } from "@/lib/campaign-studio/workspace/messages";
 import { useState, useRef, useEffect, useCallback } from "react";
 import type {
@@ -58,6 +59,7 @@ export function useAdEditor(
   source: "configuration" | "validation",
   unlocked: boolean,
 ) {
+  const confirm = useConfirmation();
   const { run, refresh, data } = useWorkspace();
   const [draft, setDraft] = useState(() => fields(ad)),
     [saved, setSaved] = useState(() => JSON.stringify(fields(ad))),
@@ -357,11 +359,16 @@ export function useAdEditor(
     save,
     retry,
     dirty: JSON.stringify(draft) !== saved,
-    canClose: () =>
+    canClose: async () =>
       !Object.keys(diff(baseline.current, latest.current)).length ||
       cached.current ||
-      window.confirm(
-        "La copie locale est indisponible. Fermer et abandonner vos corrections ?",
-      ),
+      confirm({
+        title: "Abandonner vos corrections ?",
+        description:
+          "La copie locale est indisponible. Vos corrections non enregistrées seront perdues si vous fermez cette fenêtre.",
+        confirmLabel: "Abandonner",
+        cancelLabel: "Continuer l’édition",
+        intent: "danger",
+      }),
   };
 }

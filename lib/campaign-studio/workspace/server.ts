@@ -4,6 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { CommandSchema, type Command } from "./commands";
 import {
   addAd,
+  addBlankAd,
   deleteAds,
   importAds,
   duplicateAd,
@@ -536,8 +537,14 @@ export async function execute(raw: unknown, actor: Actor) {
       return result;
     }
     case "add_blank":
-      next = addAd(c, command.channel, command.format, actor, now);
-      next.ads.at(-1)!.cta = "";
+      next = addBlankAd(
+        c,
+        command.channel,
+        command.format,
+        actor,
+        now,
+        command.afterId,
+      );
       break;
     case "add":
       for (const format of command.formats) {

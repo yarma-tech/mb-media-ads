@@ -107,6 +107,27 @@ export function addAd(
   };
   return { ...c, revision: c.revision + 1, ads: [...c.ads, ad] };
 }
+/** A fresh family and empty content, optionally inserted after a visible row. */
+export function addBlankAd(
+  c: Campaign,
+  channel: Channel,
+  format: string,
+  actor: Actor,
+  now: string,
+  afterId?: string,
+): Campaign {
+  const position = afterId
+    ? c.ads.findIndex((ad) => ad.id === afterId)
+    : c.ads.length - 1;
+  if (afterId && position < 0)
+    throw new Error("Annonce d’origine introuvable.");
+  const next = addAd(c, channel, format, actor, now);
+  const fresh = next.ads.at(-1)!;
+  fresh.cta = "";
+  const ads = next.ads.slice(0, -1);
+  ads.splice(position + 1, 0, fresh);
+  return { ...next, ads };
+}
 export function isComplete(ad: Ad, c: Campaign): string[] {
   const errors: string[] = [];
   if (!c.brandId) errors.push("Choisir une marque");

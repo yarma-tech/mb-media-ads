@@ -713,16 +713,28 @@ function AdRow(
             )}
             {frozen && c.status !== "finished" ? (
               <button
-                title="Créer une nouvelle version"
-                aria-label={"Créer une nouvelle version de " + a.name}
-                disabled={pending("version", c.id, a.id)}
-                onClick={() =>
-                  void run({
-                    type: "version",
-                    campaignId: c.id,
-                    adId: a.id,
-                  }).catch(() => {})
-                }
+                title="Ajouter une ligne vierge"
+                aria-label={"Ajouter une ligne vierge après " + a.name}
+                disabled={pending("add_blank", c.id)}
+                onClick={async () => {
+                  try {
+                    await p.flushRef.current?.();
+                    const result = await run({
+                      type: "add_blank",
+                      campaignId: c.id,
+                      channel: a.channel,
+                      format: a.format,
+                      afterId: a.id,
+                    });
+                    const fresh = (result.campaign as Campaign).ads.find(
+                      (ad) => !c.ads.some((old) => old.id === ad.id),
+                    );
+                    if (fresh) p.setActive(fresh.id);
+                    notify("Ligne vierge ajoutée.");
+                  } catch {
+                    /* Preserve the source row; the provider announces failures. */
+                  }
+                }}
               >
                 <Icon name="plus" size={16} />
               </button>

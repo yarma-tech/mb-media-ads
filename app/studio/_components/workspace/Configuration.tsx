@@ -9,6 +9,7 @@ import ShareCampaign from "./ShareCampaign";
 import DeleteAds from "./DeleteAds";
 import ImportAds from "./ImportAds";
 import Icon from "../Icon";
+import { useConfirmation } from "./Confirmation";
 import { copyAdsText } from "@/lib/campaign-studio/workspace/presentation";
 import { useWorkspaceNavigation } from "./WorkspaceNavigation";
 import type {
@@ -364,6 +365,7 @@ function ChannelEditor({
   onAddMedia: () => void;
 }) {
   const { run, notify, pending } = useWorkspace();
+  const confirm = useConfirmation();
   const [formats, setFormats] = useState<string[]>([]),
     [selected, setSelected] = useState<string[]>([]),
     [activeId, setActiveId] = useState(""),
@@ -655,9 +657,12 @@ function ChannelEditor({
               return notify("Sélectionnez au moins une ligne.");
             if (
               replace &&
-              !confirm(
-                `Remplacer les valeurs existantes de ${selected.length} annonce(s) ? Les annonces approuvées, verrouillées ou figées seront ignorées.`,
-              )
+              !(await confirm({
+                title: "Remplacer les valeurs existantes ?",
+                description: `Les valeurs de ${selected.length} annonce(s) seront remplacées. Les annonces approuvées, verrouillées ou figées seront ignorées.`,
+                confirmLabel: "Remplacer",
+                intent: "danger",
+              }))
             )
               return;
             const fields: Partial<AdFields> =
@@ -741,11 +746,14 @@ function ChannelEditor({
           selected={selected}
           setSelected={setSelected}
           setActive={setActiveId}
-          onUnlock={(id) => {
+          onUnlock={async (id) => {
             if (
-              confirm(
-                "Modifier cette annonce annulera son approbation. Elle devra être validée à nouveau.",
-              )
+              await confirm({
+                title: "Déverrouiller l’annonce ?",
+                description:
+                  "Modifier cette annonce annulera son approbation. Elle devra être validée à nouveau.",
+                confirmLabel: "Déverrouiller",
+              })
             ) {
               setActiveId(id);
               setUnlocked([...unlocked, id]);

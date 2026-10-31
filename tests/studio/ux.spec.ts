@@ -5,6 +5,7 @@ import { CATALOG, CHANNELS } from "../../lib/campaign-studio/workspace/catalog";
 import {
   createCampaign,
   addAd,
+  addBlankAd,
   duplicateAd,
   moveAd,
   deleteAds,
@@ -361,10 +362,8 @@ async function fixture(
           c = batch.campaign;
           result.created = batch.created;
         }
-        if (cmd.type === "add_blank") {
-          c = addAd(c, cmd.channel, cmd.format, actor, now);
-          c.ads.at(-1)!.cta = "";
-        }
+        if (cmd.type === "add_blank")
+          c = addBlankAd(c, cmd.channel, cmd.format, actor, now, cmd.afterId);
         if (cmd.type === "add")
           for (const format of cmd.formats) {
             c = addAd(c, cmd.channel, format, actor, now);
@@ -792,11 +791,19 @@ test("échec de sauvegarde conserve correction, fermeture sûre si stockage indi
     await d.dismiss();
   });
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(
+    page.getByRole("dialog", {
+      name: "Abandonner vos corrections ?",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Continuer l’édition", exact: true })
+    .click();
   await expect(field).toHaveValue(
     "Correction à garder\nTitre deux\nTitre trois",
   );
-  expect(prompts).toBe(1);
+  expect(prompts).toBe(0);
   f.fail("edit");
   await page
     .getByRole("button", { name: "Enregistrer et valider", exact: true })
@@ -1304,8 +1311,11 @@ test("commentaire : focus initial, Entrée et Échap restent sûrs", async ({
   await field.press("Enter");
   await expect(field).toHaveValue("Commentaire synthétique\n");
   expect(f.commands.filter((c) => c.type === "decide")).toHaveLength(0);
-  page.once("dialog", (d) => d.dismiss());
   await field.press("Escape");
+  await page
+    .getByRole("dialog", { name: "Abandonner ce commentaire ?", exact: true })
+    .getByRole("button", { name: "Garder le commentaire", exact: true })
+    .click();
   await expect(field).toHaveValue("Commentaire synthétique\n");
   await field.fill("");
   await field.press("Escape");
@@ -3256,9 +3266,12 @@ test("tableau : déverrouiller directement une autre ligne approuvée", async ({
   await page.goto(
     base + "/studio/configuration?campagne=" + c.id + "&canal=google",
   );
-  page.once("dialog", (dialog) => dialog.accept());
   await page
     .getByRole("button", { name: "Déverrouiller Autre annonce", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Déverrouiller l’annonce ?", exact: true })
+    .getByRole("button", { name: "Déverrouiller", exact: true })
     .click();
   const field = page.getByLabel("Thématique de Autre annonce", { exact: true });
   await expect(field).toBeEditable();
@@ -4726,14 +4739,20 @@ test("tableau V1 : supprimer une annonce puis une sélection sans supprimer les 
   await page.goto(
     base + "/studio/configuration?campagne=" + c.id + "&canal=facebook",
   );
-  page.once("dialog", (d) => d.dismiss());
   await page
     .getByRole("button", { name: "Supprimer Beta annonce", exact: true })
     .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Annuler", exact: true })
+    .click();
   await expect(page.locator("tr[data-ad-row]")).toHaveCount(3);
-  page.once("dialog", (d) => d.accept());
   await page
     .getByRole("button", { name: "Supprimer Beta annonce", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Supprimer", exact: true })
     .click();
   await expect(page.locator("tr[data-ad-row]")).toHaveCount(2);
   await page
@@ -4742,9 +4761,12 @@ test("tableau V1 : supprimer une annonce puis une sélection sans supprimer les 
   await page
     .getByRole("checkbox", { name: "Sélectionner Troisième", exact: true })
     .check();
-  page.once("dialog", (d) => d.accept());
   await page
     .getByRole("button", { name: "Supprimer la sélection", exact: true })
+    .click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Supprimer", exact: true })
     .click();
   await expect(page.locator("tr[data-ad-row]")).toHaveCount(0);
   expect(f.campaigns[1].media).toHaveLength(1);
@@ -5034,4 +5056,128 @@ test("configuration mobile : bibliothèque visible, sélection compacte et colon
     path: info.outputPath("bibliotheque-mobile.png"),
     fullPage: true,
   });
+});
+
+for (const status of ["on_air", "stopped"] as const)
+  test(`le plus de ligne ${status} crée une ligne vierge, sans copier ni versionner`, async ({
+    page,
+  }) => {
+    const f = await fixture(page, status);
+    const campaign = addAd(f.campaigns[1], "google", "search", actor, now);
+    campaign.ads[1].name = "Dernière annonce";
+    f.campaigns[1] = campaign;
+    const source = structuredClone(campaign.ads[0]);
+    await page.goto(
+      base +
+        "/studio/configuration?campagne=" +
+        campaign.id +
+        "&canal=google&etape=editor",
+    );
+    const row = page.locator(`[data-ad-row="${source.id}"]`);
+    await row
+      .locator("button")
+      .filter({ has: page.locator('svg path[d="M12 5v14M5 12h14"]') })
+      .click();
+    await expect.poll(() => f.campaigns[1].ads.length).toBe(3);
+    const fresh = f.campaigns[1].ads.find(
+      (a) => !campaign.ads.some((old) => old.id === a.id),
+    )!;
+    expect(f.campaigns[1].ads[1].id).toBe(fresh.id);
+    expect(fresh).toMatchObject({
+      headlines: [],
+      descriptions: [],
+      copy: "",
+      headline: "",
+      cta: "",
+      url: "",
+      mediaId: null,
+      status: "draft",
+      version: 1,
+    });
+    expect(fresh.familyId).not.toBe(source.familyId);
+    expect(f.campaigns[1].ads[0]).toEqual(source);
+    expect(f.commands.filter((c) => c.type === "version")).toHaveLength(0);
+  });
+
+for (const width of [1440, 390])
+  test(`confirmation de suppression au design du Studio à ${width}px, annulation sûre`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    const f = await fixture(page, "draft", true);
+    const native: string[] = [];
+    page.on("dialog", async (d) => {
+      native.push(d.type());
+      await d.dismiss();
+    });
+    await page.goto(
+      base +
+        "/studio/configuration?campagne=" +
+        f.campaigns[1].id +
+        "&canal=facebook&etape=editor",
+    );
+    const trigger = page.getByRole("button", {
+      name: "Supprimer Beta annonce",
+      exact: true,
+    });
+    await trigger.click();
+    const modal = page.getByRole("dialog", {
+      name: "Supprimer l’annonce ?",
+      exact: true,
+    });
+    await expect(modal).toBeVisible();
+    expect(native).toEqual([]);
+    await expect(
+      modal.getByRole("button", { name: "Annuler", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(modal).toHaveCount(0);
+    expect(f.campaigns[1].ads).toHaveLength(1);
+    await trigger.click();
+    await page.screenshot({
+      path: info.outputPath("confirmation-studio.png"),
+      fullPage: true,
+    });
+    await modal.getByRole("button", { name: "Supprimer", exact: true }).click();
+    await expect.poll(() => f.campaigns[1].ads.length).toBe(0);
+    expect(f.campaigns[1].media).toHaveLength(1);
+  });
+
+test("remplacement en lot : confirmation du Studio, annuler ne modifie aucune valeur", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft", true);
+  f.campaigns[1].ads[0].copy = "Texte initial";
+  await page.goto(
+    base +
+      "/studio/configuration?campagne=" +
+      f.campaigns[1].id +
+      "&canal=facebook&etape=editor",
+  );
+  await page.getByLabel("Sélectionner toutes les annonces du canal").check();
+  await page
+    .getByRole("button", { name: "Appliquer un champ en batch", exact: true })
+    .click();
+  await page.getByLabel("Valeur à appliquer").fill("Texte remplacé");
+  await page
+    .getByLabel(
+      "Remplacer les valeurs existantes (sinon champs vides uniquement)",
+    )
+    .check();
+  const apply = page.getByRole("button", {
+    name: "Appliquer à 1 ligne(s)",
+    exact: true,
+  });
+  await apply.click();
+  const modal = page.getByRole("dialog", {
+    name: "Remplacer les valeurs existantes ?",
+    exact: true,
+  });
+  await expect(modal).toBeVisible();
+  await modal.getByRole("button", { name: "Annuler", exact: true }).click();
+  expect(f.campaigns[1].ads[0].copy).toBe("Texte initial");
+  expect(f.commands.filter((c) => c.type === "batch")).toHaveLength(0);
+  await apply.click();
+  await modal.getByRole("button", { name: "Remplacer", exact: true }).click();
+  await expect.poll(() => f.campaigns[1].ads[0].copy).toBe("Texte remplacé");
 });

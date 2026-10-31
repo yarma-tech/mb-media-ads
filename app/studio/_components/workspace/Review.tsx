@@ -1,4 +1,5 @@
 "use client";
+import { useConfirmation } from "./Confirmation";
 import { workspaceErrorMessage } from "@/lib/campaign-studio/workspace/messages";
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -761,8 +762,8 @@ function EditModal({
   onClose: () => void;
 }) {
   const editor = useAdEditor(c, ad, true, "validation", true);
-  const close = () => {
-    if (editor.status !== "saving" && editor.canClose()) onClose();
+  const close = async () => {
+    if (editor.status !== "saving" && (await editor.canClose())) onClose();
   };
   const dialog = useDialog(close);
   return (
@@ -931,14 +932,23 @@ function CommentModal({
   beforeRequest: () => Promise<void>;
 }) {
   const { run } = useWorkspace();
+  const confirm = useConfirmation();
   const sendingRef = useRef(false);
   const [text, setText] = useState(""),
     [sending, setSending] = useState(false),
     [error, setError] = useState("");
-  const close = () => {
+  const close = async () => {
     if (
       !sendingRef.current &&
-      (!text.trim() || confirm("Abandonner ce commentaire ?"))
+      (!text.trim() ||
+        (await confirm({
+          title: "Abandonner ce commentaire ?",
+          description:
+            "Votre commentaire n’a pas été envoyé. Il sera perdu si vous fermez cette fenêtre.",
+          confirmLabel: "Abandonner",
+          cancelLabel: "Garder le commentaire",
+          intent: "danger",
+        })))
     )
       onClose();
   };

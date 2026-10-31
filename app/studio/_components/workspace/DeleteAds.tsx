@@ -2,6 +2,7 @@
 import type { Campaign } from "@/lib/campaign-studio/workspace/types";
 import { useWorkspace } from "./WorkspaceProvider";
 import Icon from "../Icon";
+import { useConfirmation } from "./Confirmation";
 export default function DeleteAds({
   campaign,
   ids,
@@ -16,6 +17,7 @@ export default function DeleteAds({
   onDeleted?: () => void;
 }) {
   const { run, pending, notify } = useWorkspace();
+  const confirm = useConfirmation();
   const frozen =
     campaign.status !== "active" ||
     ids.some((id) =>
@@ -36,9 +38,16 @@ export default function DeleteAds({
       onClick={async (e) => {
         e.stopPropagation();
         if (
-          !window.confirm(
-            `Supprimer définitivement ${ids.length} annonce(s) ? Les médias seront conservés dans la bibliothèque.`,
-          )
+          !(await confirm({
+            title:
+              ids.length === 1
+                ? "Supprimer l’annonce ?"
+                : `Supprimer ces ${ids.length} annonces ?`,
+            description:
+              "Cette suppression est définitive. Les médias seront conservés dans la bibliothèque.",
+            confirmLabel: "Supprimer",
+            intent: "danger",
+          }))
         )
           return;
         try {

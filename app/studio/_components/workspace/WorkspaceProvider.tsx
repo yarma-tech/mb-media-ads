@@ -1,4 +1,5 @@
 "use client";
+import { ConfirmationProvider } from "./Confirmation";
 import { PreviewDataProvider } from "./PreviewDataContext";
 import { createBrowserClient } from "@supabase/ssr";
 import { workspaceErrorMessage } from "@/lib/campaign-studio/workspace/messages";
@@ -287,7 +288,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         },
       }}
     >
-      <PreviewDataProvider data={data}>{children}</PreviewDataProvider>
+      <ConfirmationProvider>
+        <PreviewDataProvider data={data}>{children}</PreviewDataProvider>
+      </ConfirmationProvider>
     </ctx.Provider>
   );
 }

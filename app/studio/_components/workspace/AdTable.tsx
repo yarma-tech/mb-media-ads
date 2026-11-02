@@ -223,20 +223,6 @@ export default function TableSession(p: Props) {
   };
   for (const ad of effective)
     counts[readyIds.has(ad.id) ? "ready" : ad.status]++;
-  const statusSummary = [
-    counts.ready &&
-      `${counts.ready} prête${counts.ready > 1 ? "s" : ""} à envoyer`,
-    counts.draft && `${counts.draft} à compléter`,
-    counts.changes_requested && `${counts.changes_requested} à modifier`,
-    counts.pending && `${counts.pending} à valider`,
-    counts.approved &&
-      `${counts.approved} validée${counts.approved > 1 ? "s" : ""}`,
-    counts.on_air && `${counts.on_air} en ligne`,
-    counts.stopped &&
-      `${counts.stopped} arrêtée${counts.stopped > 1 ? "s" : ""}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
   return (
     <div
       className={`${t.layout} ${p.previewOpen ? t.withPreview : ""}`}
@@ -365,12 +351,8 @@ export default function TableSession(p: Props) {
           </table>
         </div>
         <div className={t.footer}>
-          <span aria-live="polite" aria-atomic="true">
-            {p.rows.length} annonce{p.rows.length > 1 ? "s" : ""}
-            {statusSummary && ` · ${statusSummary}`}
-          </span>
           <button
-            className={w.primary}
+            className={`${w.primary} ${t.submitReady}`}
             disabled={p.submitting || p.c.status === "finished"}
             data-unavailable={!ready.length || undefined}
             onClick={() => {

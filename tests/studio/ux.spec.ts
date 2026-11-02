@@ -465,14 +465,12 @@ async function openTableTools(page: Page) {
     await summary.click();
 }
 async function openConfigurationSteps(page: Page) {
-  const compact = page.locator("summary").filter({ hasText: "Étape 3 sur 3" });
-  await expect(compact).toBeVisible();
-  if (
-    !(await compact.evaluate(
-      (el) => (el.parentElement as HTMLDetailsElement).open,
-    ))
-  )
-    await compact.click();
+  await expect(
+    page.getByRole("navigation", {
+      name: "Étapes de configuration",
+      exact: true,
+    }),
+  ).toBeVisible();
 }
 async function chooseFormats(page: Page) {
   await openTableTools(page);
@@ -2887,8 +2885,8 @@ test("fidélité maquettes : captures bureau avec campagne complète", async ({
   // Structural contracts retained by direction C on desktop (1440 px).
   expect(
     tableBox!.y,
-    "Le tableau doit débuter sous la barre unique, sans étage vide",
-  ).toBeLessThan(245);
+    "Le tableau reste proche des outils sous la frise visible",
+  ).toBeLessThan(380);
   expect(
     Math.abs(
       tabsBox!.y + tabsBox!.height / 2 - (actionBox!.y + actionBox!.height / 2),
@@ -3885,8 +3883,11 @@ test("statut tableau : compléter le dernier champ rend prête avant et après s
       page.getByRole("cell", { name: "Prête", exact: true }),
     ).toBeVisible();
     await expect(
-      page.getByText(/1 annonce · 1 prête à envoyer/, { exact: false }),
-    ).toBeVisible();
+      page.getByRole("button", {
+        name: "Envoyer les annonces prêtes",
+        exact: true,
+      }),
+    ).not.toHaveAttribute("data-unavailable", "true");
   } finally {
     release();
   }
@@ -3907,8 +3908,11 @@ test("statut tableau : compléter le dernier champ rend prête avant et après s
     page.getByRole("cell", { name: "À valider", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText(/1 annonce · 1 à valider/, { exact: false }),
-  ).toBeVisible();
+    page.getByRole("button", {
+      name: "Envoyer les annonces prêtes",
+      exact: true,
+    }),
+  ).toHaveAttribute("data-unavailable", "true");
 });
 
 test("statut tableau : annonces complètes déjà envoyées sont comptées à valider", async ({
@@ -3934,9 +3938,12 @@ test("statut tableau : annonces complètes déjà envoyées sont comptées à va
     page.getByRole("cell", { name: "À valider", exact: true }),
   ).toHaveCount(3);
   await expect(
-    page.getByText(/3 annonces · 3 à valider/, { exact: false }),
-  ).toBeVisible();
-  await expect(page.getByText(/0 prête/, { exact: false })).toHaveCount(0);
+    page.getByRole("button", {
+      name: "Envoyer les annonces prêtes",
+      exact: true,
+    }),
+  ).toHaveAttribute("data-unavailable", "true");
+  await expect(page.getByText("0 prête / 3", { exact: true })).toBeVisible();
   await page.screenshot({
     path: testInfo.outputPath("mobile-annonces-a-valider.png"),
     fullPage: true,
@@ -3970,8 +3977,11 @@ test("statut tableau : correction prête reste à renvoyer et annonce pending re
     page.getByRole("cell", { name: "À modifier", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText(/1 annonce · 1 prête à envoyer/, { exact: false }),
-  ).toBeVisible();
+    page.getByRole("button", {
+      name: "Envoyer les annonces prêtes",
+      exact: true,
+    }),
+  ).not.toHaveAttribute("data-unavailable", "true");
   await page
     .getByRole("button", { name: "Envoyer les annonces prêtes", exact: true })
     .click();
@@ -3988,8 +3998,11 @@ test("statut tableau : correction prête reste à renvoyer et annonce pending re
     page.getByRole("cell", { name: "À valider", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText(/1 annonce · 1 à valider/, { exact: false }),
-  ).toBeVisible();
+    page.getByRole("button", {
+      name: "Envoyer les annonces prêtes",
+      exact: true,
+    }),
+  ).toHaveAttribute("data-unavailable", "true");
 });
 
 test("statut tableau : résumé mixte sépare prête, incomplète et déjà envoyée", async ({
@@ -4009,12 +4022,14 @@ test("statut tableau : résumé mixte sépare prête, incomplète et déjà envo
   await page.goto(
     base + "/studio/configuration?campagne=" + c.id + "&canal=google",
   );
+  for (const name of ["Prête", "À compléter", "À valider"])
+    await expect(page.getByRole("cell", { name, exact: true })).toBeVisible();
   await expect(
-    page.getByText(
-      "3 annonces · 1 prête à envoyer · 1 à compléter · 1 à valider",
-      { exact: true },
-    ),
-  ).toBeVisible();
+    page
+      .getByRole("button", { name: "Envoyer les annonces prêtes", exact: true })
+      .locator("..")
+      .locator(":scope > span"),
+  ).toHaveCount(0);
   await page.screenshot({
     path: testInfo.outputPath("desktop-statuts-mixtes.png"),
     fullPage: true,
@@ -5364,7 +5379,7 @@ for (const width of [320, 390, 430, 1440]) {
         name: "Étapes de configuration",
         exact: true,
       }),
-    ).not.toBeVisible();
+    ).toBeVisible();
     const add = page.getByRole("button", {
       name: "Ajouter une ligne vierge",
       exact: true,
@@ -5653,5 +5668,79 @@ for (const width of [390, 1440]) {
     await dialog.getByRole("button", { name: "Fermer", exact: true }).click();
     await link.click();
     await expect(page).toHaveURL(/\/studio\/configuration\?/);
+  });
+}
+
+test("configuration : bouton d’envoi sans contour et texte blanc au survol", async ({
+  page,
+}) => {
+  const f = await fixture(page, "on_air");
+  await page.goto(
+    base + `/studio/configuration?campagne=${f.campaigns[1].id}&etape=editor`,
+  );
+  const send = page.getByRole("button", {
+    name: "Envoyer les annonces prêtes",
+    exact: true,
+  });
+  await send.hover();
+  await expect(send).toHaveCSS("color", "rgb(255, 255, 255)");
+  await expect(send).toHaveCSS("border-top-width", "0px");
+  await expect(send.locator("..").locator(":scope > span")).toHaveCount(0);
+});
+
+for (const width of [320, 390, 1440]) {
+  test(`configuration ${width}px : frise visible centrée et partage après importer`, async ({
+    page,
+  }, info) => {
+    const f = await fixture(page, "draft", true);
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto(
+      base +
+        `/studio/configuration?campagne=${f.campaigns[1].id}&canal=facebook&etape=editor`,
+    );
+    const steps = page.getByRole("navigation", {
+      name: "Étapes de configuration",
+      exact: true,
+    });
+    await expect(steps).toBeVisible();
+    const bar = (await steps.boundingBox())!;
+    const region = (await page
+      .getByRole("region", { name: "Espace de travail du studio", exact: true })
+      .boundingBox())!;
+    const title = (await page
+      .getByRole("heading", { name: "Création d’annonces", exact: true })
+      .boundingBox())!;
+    expect(bar.y + bar.height).toBeLessThanOrEqual(title.y);
+    expect(
+      Math.abs(bar.x + bar.width / 2 - region.x - region.width / 2),
+    ).toBeLessThan(3);
+    const importer = page.getByRole("button", {
+      name: "Importer des annonces",
+      exact: true,
+    });
+    const share = page.getByRole("button", {
+      name: "Partager la campagne Beta",
+      exact: true,
+    });
+    const imported = (await importer.boundingBox())!,
+      shared = (await share.boundingBox())!;
+    expect(shared.x).toBeGreaterThanOrEqual(imported.x + imported.width);
+    expect(
+      Math.abs(shared.y + shared.height / 2 - imported.y - imported.height / 2),
+    ).toBeLessThan(3);
+    await expect(importer).toHaveCSS("border-top-width", "0px");
+    await expect(share).toHaveCSS("border-top-width", "0px");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath("configuration-frise-visible.png"),
+    });
+    await share.click();
+    await expect(
+      page.getByRole("dialog", { name: "Partager la campagne", exact: true }),
+    ).toBeVisible();
   });
 }

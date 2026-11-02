@@ -94,15 +94,8 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
   }
   const [importing, setImporting] = useState(false);
   const step = useRef<HTMLElement>(null);
-  const compactSteps = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     step.current?.querySelector<HTMLHeadingElement>("h2")?.focus();
-    const dismiss = (event: PointerEvent) => {
-      const menu = compactSteps.current;
-      if (menu && !menu.contains(event.target as Node)) menu.open = false;
-    };
-    document.addEventListener("pointerdown", dismiss);
-    return () => document.removeEventListener("pointerdown", dismiss);
   }, [stage]);
   const channel = (
     allChannels.includes(params.get("canal") as Channel)
@@ -294,25 +287,10 @@ function CampaignEditor({ campaign: c }: { campaign: Campaign }) {
   if (!visible.includes(channel)) visible.unshift(channel);
   return (
     <>
+      {steps}
       <header className={w.creationHeader}>
-        <details
-          ref={compactSteps}
-          className={w.editorStages}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.currentTarget.open = false;
-              event.currentTarget.querySelector("summary")?.focus();
-            }
-          }}
-        >
-          <summary>
-            Étape 3 sur 3 <Icon name="down" size={12} />
-          </summary>
-          {steps}
-        </details>
         <div className={w.creationTitle}>
           <h2>Création d’annonces</h2>
-          <ShareCampaign campaignId={c.id} name={c.name} />
         </div>
       </header>
       <ChannelEditor
@@ -512,6 +490,7 @@ function ChannelEditor({
             flush={() => flushRef.current?.()}
             labeled
           />
+          <ShareCampaign campaignId={c.id} name={c.name} />
           <details
             ref={moreTools}
             className={w.creationMore}

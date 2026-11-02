@@ -2074,38 +2074,8 @@ button[aria-pressed="true"] .channelCheck {
 .creationHeader {
   margin: 8px 0 28px;
 }
-.editorStages {
-  position: relative;
-  width: fit-content;
-  margin-bottom: 8px;
-}
-.editorStages > summary {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  list-style: none;
-  cursor: pointer;
-  color: #66776e;
-  font-size: 12px;
-}
-:is(.editorStages, .creationMore) > summary::-webkit-details-marker {
+.creationMore > summary::-webkit-details-marker {
   display: none;
-}
-.editorStages .campaignSteps {
-  position: absolute;
-  inset: 28px auto auto 0;
-  width: 310px;
-  max-width: calc(100vw - 48px);
-  padding: 16px;
-  margin: 0;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: 0 12px 40px #153c3015;
-  z-index: 12;
-}
-.editorStages .campaignSteps ol {
-  gap: 14px;
 }
 .creationTitle {
   display: flex;
@@ -2118,15 +2088,6 @@ button[aria-pressed="true"] .channelCheck {
   line-height: 1.2;
   letter-spacing: -1px;
   font-weight: 650;
-}
-.creationTitle > button {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  border-radius: 14px;
-  background: #f5f8f6;
 }
 .creationToolbar,
 .creationChannelRow,
@@ -2199,6 +2160,7 @@ button[aria-pressed="true"] .channelCheck {
   font-size: 14px;
   font-weight: 500;
   white-space: nowrap;
+  border: 0;
   border-radius: 14px;
   background: #eaf1ed;
 }
@@ -2301,5 +2263,34 @@ button[aria-pressed="true"] .channelCheck {
   }
   .creationReady {
     font-size: 12px;
+  }
+}
+
+/* Steps stay in normal flow on every configuration stage. */
+.main .campaignSteps {
+  position: relative;
+  inset: auto;
+  width: min(400px, 100%);
+  max-width: 400px;
+  margin: 12px auto 28px;
+}
+.creationActions > button:has(> svg:only-child) {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+}
+@media (max-width: 360px) {
+  .creationActions {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) 44px 44px;
+    gap: 6px;
+  }
+  .app .creationActions > button {
+    padding-inline: 6px;
+    gap: 4px;
+  }
+  .creationActions > .primary span {
+    white-space: normal;
+    line-height: 1.2;
   }
 }

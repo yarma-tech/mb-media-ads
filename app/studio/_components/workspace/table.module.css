@@ -250,10 +250,10 @@
 }
 .footer {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 16px;
-  margin-top: 56px;
+  margin-top: 32px;
   color: #637080;
   font-size: 13px;
   flex-wrap: wrap;
@@ -426,7 +426,7 @@
 .table button[data-unavailable] {
   color: #65766d;
 }
-.footer button[data-unavailable] {
+.footer .submitReady[data-unavailable] {
   background: #eaf0ec;
   color: #334a40;
 }
@@ -476,4 +476,12 @@
 .columnResize:hover::after,
 .columnResize:focus-visible::after {
   opacity: 1;
+}
+
+.footer .submitReady {
+  border: 0;
+}
+.footer .submitReady:hover:not(:disabled) {
+  background: #154236;
+  color: #fff;
 }

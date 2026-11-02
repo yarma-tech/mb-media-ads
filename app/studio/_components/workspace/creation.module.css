@@ -102,19 +102,20 @@
   font-weight: 250;
 }
 .campaignTile {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
   padding: 26px;
 }
-.tileIcon {
-  width: 43px;
-  height: 43px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #ebeeec;
-  margin-bottom: 30px;
+.campaignIdentity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
 }
 .campaignTile strong {
   font-size: 19px;
@@ -128,12 +129,23 @@
   margin-top: 7px;
 }
 .badge {
-  margin-top: auto;
+  position: absolute;
+  top: 16px;
+  right: 16px;
   border-radius: 20px;
   padding: 6px 12px;
   color: #48534d;
   background: #e9edeb;
   font-size: 11px;
+}
+.badge[data-status="on_air"] {
+  background: #e3f4e8;
+  color: #216640;
+}
+.shareCampaign {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
 }
 .pending {
   display: inline-flex;
@@ -537,11 +549,12 @@
 }
 .campaignCard .campaignTile {
   height: 100%;
+  padding: 64px 24px;
 }
 .landing .deleteCampaign {
   position: absolute;
-  top: 22px;
-  right: 18px;
+  bottom: 18px;
+  left: 18px;
   display: grid;
   place-items: center;
   width: 40px;

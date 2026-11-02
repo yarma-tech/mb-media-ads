@@ -5600,3 +5600,58 @@ test("sélecteurs : noms longs, choix vide et champs obligatoires", async ({
       .evaluate((el) => (el as HTMLSelectElement).validity.valueMissing),
   ).toBe(true);
 });
+
+for (const width of [390, 1440]) {
+  test(`tuile campagne ${width}px : identité centrée, diffusion verte et partage en bas`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await fixture(page, "on_air");
+    const link = page.getByRole("link").filter({ hasText: "Beta" });
+    const card = link.locator("..");
+    await expect(link.locator("svg")).toHaveCount(0);
+    const bounds = (await link.boundingBox())!;
+    const title = (await link.locator("strong").boundingBox())!;
+    const brand = (await link
+      .getByText("Marque test", { exact: true })
+      .boundingBox())!;
+    expect(
+      Math.abs(title.x + title.width / 2 - bounds.x - bounds.width / 2),
+    ).toBeLessThan(2);
+    expect(
+      Math.abs(
+        (title.y + brand.y + brand.height) / 2 - bounds.y - bounds.height / 2,
+      ),
+    ).toBeLessThan(3);
+    const status = link.getByText("En diffusion", { exact: true });
+    await expect(status).toHaveCSS("background-color", "rgb(227, 244, 232)");
+    await expect(status).toHaveCSS("color", "rgb(33, 102, 64)");
+    const badge = (await status.boundingBox())!;
+    expect(badge.x + badge.width / 2).toBeGreaterThan(
+      bounds.x + bounds.width / 2,
+    );
+    expect(badge.y).toBeLessThan(bounds.y + bounds.height / 3);
+    const share = card.getByRole("button", {
+      name: "Partager la campagne Beta",
+      exact: true,
+    });
+    const button = (await share.boundingBox())!;
+    expect(button.x + button.width / 2).toBeGreaterThan(
+      bounds.x + bounds.width / 2,
+    );
+    expect(button.y + button.height / 2).toBeGreaterThan(
+      bounds.y + (bounds.height * 2) / 3,
+    );
+    await page.screenshot({ path: info.outputPath("campagnes-centrees.png") });
+    await share.click();
+    const dialog = page.getByRole("dialog", {
+      name: "Partager la campagne",
+      exact: true,
+    });
+    await expect(dialog).toBeVisible();
+    await expect(page).toHaveURL(/\/studio$/);
+    await dialog.getByRole("button", { name: "Fermer", exact: true }).click();
+    await link.click();
+    await expect(page).toHaveURL(/\/studio\/configuration\?/);
+  });
+}

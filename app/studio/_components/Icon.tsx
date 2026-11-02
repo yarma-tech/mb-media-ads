@@ -29,6 +29,7 @@ const paths = {
   logout: "M9 3H4v18h5M10 12h11m-4-4 4 4-4 4",
   external: "M13 3h8v8M21 3 10 14M9 3H3v18h18v-6",
   link: "M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-2 2M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l2-2",
+  share: "M12 15V3m-4 4 4-4 4 4M7 10H4v11h16V10h-3",
   download: "M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5",
   reset: "M3 3v6h6M3 9a9 9 0 1 1 0 6",
   menu: "M4 6h16M4 12h16M4 18h16",

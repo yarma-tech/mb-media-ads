@@ -124,16 +124,20 @@ export default function CampaignLanding() {
                   canal: "",
                 })}
               >
-                <span className={c.tileIcon}>
-                  <Icon name="document" size={24} />
+                <span className={c.campaignIdentity}>
+                  <strong>{campaign.name}</strong>
+                  <span className={c.brandName}>
+                    {brand?.name ?? "Marque à compléter"}
+                  </span>
                 </span>
-                <strong>{campaign.name}</strong>
-                <span className={c.brandName}>
-                  {brand?.name ?? "Marque à compléter"}
+                <span
+                  className={c.badge}
+                  data-status={label === "En diffusion" ? "on_air" : undefined}
+                >
+                  {label}
                 </span>
-                <span className={c.badge}>{label}</span>
               </Link>
-              <div style={{ position: "absolute", top: 16, right: 60 }}>
+              <div className={c.shareCampaign}>
                 <ShareCampaign campaignId={campaign.id} name={campaign.name} />
               </div>
               {data!.actor.kind === "human" &&

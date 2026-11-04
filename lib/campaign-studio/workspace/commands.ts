@@ -91,6 +91,7 @@ export const CommandSchema = z.discriminatedUnion("type", [
     name: z.string().trim().min(1).max(200),
     website: z.string().max(2048),
     logo: z.string().max(2048),
+    logoUpload: z.string().max(750000).optional(),
   }),
   z
     .object({

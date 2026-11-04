@@ -355,6 +355,58 @@
   margin: 0;
   font-size: 17px;
 }
+.logoField {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.logoImport {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.logoImport img,
+.logoPlaceholder {
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: white;
+}
+.logoPlaceholder {
+  display: grid;
+  place-items: center;
+  color: #39735d;
+}
+.logoControls {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.logoControls button {
+  padding: 10px 14px;
+}
+.logoControls small {
+  color: #606978;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.brandCreator .logoFile {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  opacity: 0;
+  overflow: hidden;
+}
+.logoField p {
+  margin: 0;
+  color: #8b252f;
+  font-size: 13px;
+}
 .actions {
   display: flex;
   justify-content: flex-end;

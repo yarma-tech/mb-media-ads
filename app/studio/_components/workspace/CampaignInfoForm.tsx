@@ -7,6 +7,7 @@ import { useWorkspace } from "./WorkspaceProvider";
 import Icon from "../Icon";
 import w from "./workspace.module.css";
 import c from "./creation.module.css";
+import BrandLogoInput from "./BrandLogoInput";
 
 type Information = Pick<
   Campaign,
@@ -31,6 +32,8 @@ export default function CampaignInfoForm({
   const [baseline] = useState(() => information(campaign));
   const [draft, setDraft] = useState(() => information(campaign));
   const [brandForm, setBrandForm] = useState(false);
+  const [logoUpload, setLogoUpload] = useState("");
+  const [logoBusy, setLogoBusy] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(
     () => !!(campaign?.defaultUrl || campaign?.startDate || campaign?.endDate),
   );
@@ -40,6 +43,7 @@ export default function CampaignInfoForm({
   const creatingBrand = useRef(false);
   const formId = useId();
   const busy =
+    logoBusy ||
     status === "saving" ||
     pending("create_campaign") ||
     (campaign ? pending("campaign", campaign.id) : false) ||
@@ -105,7 +109,7 @@ export default function CampaignInfoForm({
   }
   async function createBrand(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (creatingBrand.current) return;
+    if (creatingBrand.current || logoBusy) return;
     creatingBrand.current = true;
     const fields = new FormData(e.currentTarget);
     setError("");
@@ -113,11 +117,13 @@ export default function CampaignInfoForm({
       const result = await run({
         type: "create_brand",
         name: fields.get("name"),
-        logo: fields.get("logo"),
+        logo: "",
+        ...(logoUpload ? { logoUpload } : {}),
         website: fields.get("website"),
       });
       change("brandId", (result.brand as Brand).id);
       setBrandForm(false);
+      setLogoUpload("");
     } catch (e) {
       setError(workspaceErrorMessage(e, "command"));
     } finally {
@@ -164,7 +170,10 @@ export default function CampaignInfoForm({
               type="button"
               aria-label="Créer une marque"
               aria-expanded={brandForm}
-              onClick={() => setBrandForm((value) => !value)}
+              onClick={() => {
+                setBrandForm((value) => !value);
+                setLogoUpload("");
+              }}
             >
               +
             </button>
@@ -226,22 +235,26 @@ export default function CampaignInfoForm({
             Nom
             <input name="name" required maxLength={200} disabled={busy} />
           </label>
-          <label>
-            Logo · URL
-            <input name="logo" type="url" maxLength={2048} disabled={busy} />
-          </label>
+          <BrandLogoInput
+            disabled={busy}
+            onChange={setLogoUpload}
+            onBusy={setLogoBusy}
+          />
           <label>
             Site web
             <input name="website" type="url" maxLength={2048} disabled={busy} />
           </label>
           <div className={w.inline}>
-            <button className={w.primary} disabled={busy}>
+            <button className={w.primary} disabled={busy || logoBusy}>
               {pending("create_brand") ? "Création…" : "Créer la marque"}
             </button>
             <button
               type="button"
-              disabled={busy}
-              onClick={() => setBrandForm(false)}
+              disabled={busy || logoBusy}
+              onClick={() => {
+                setBrandForm(false);
+                setLogoUpload("");
+              }}
             >
               Annuler
             </button>

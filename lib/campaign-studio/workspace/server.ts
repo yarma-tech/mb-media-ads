@@ -30,6 +30,7 @@ import {
 import type { Actor, AdFields, Campaign, Media } from "./types";
 import { createMediaAds } from "./media-batch";
 import { verifyMedia } from "./verify-media";
+import { logoImage, brandViews, campaignLogoView } from "./brand-logos";
 export class StudioError extends Error {
   constructor(
     message: string,
@@ -191,8 +192,8 @@ export async function state(actor: Actor) {
     actor,
     members: members ?? [],
     agents: agents ?? [],
-    campaigns: docs,
-    brands: brands ?? [],
+    campaigns: await Promise.all(docs.map((c) => campaignLogoView(db, c))),
+    brands: await brandViews(db, brands ?? []),
     locks: locks ?? [],
     catalog: CATALOG,
     channels: CHANNELS,
@@ -367,9 +368,26 @@ export async function execute(raw: unknown, actor: Actor) {
       website: command.website,
       logo: command.logo,
     };
+    if (command.logoUpload) {
+      const image = await logoImage(command.logoUpload);
+      brand.logo = `brand-logos/${brand.id}.png`;
+      const { error } = await db.storage
+        .from("studio-media")
+        .upload(brand.logo, image, { contentType: "image/png", upsert: false });
+      if (error)
+        throw new StudioError("Import du logo impossible. Réessayez.", 503);
+    }
     const { error } = await db.from("studio_brands").insert(brand);
-    if (error) throw error;
-    return { brand };
+    if (error) {
+      if (command.logoUpload)
+        await db.storage.from("studio-media").remove([brand.logo]);
+      throw error;
+    }
+    // Creation is already committed: a temporary signing failure must not invite duplicates.
+    const views = await brandViews(db, [brand]).catch(() => [
+      { ...brand, logo: command.logoUpload ? "" : brand.logo },
+    ]);
+    return { brand: views[0] };
   }
   if (command.type === "agent") {
     validator(actor);
@@ -863,7 +881,7 @@ export async function execute(raw: unknown, actor: Actor) {
       ],
     };
   await commit(c, next, actor);
-  return { campaign: next };
+  return { campaign: await campaignLogoView(db, next) };
 }
 
 async function snapshotBrands(

@@ -5,12 +5,15 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   read: vi.fn(),
   signed: vi.fn(),
+  download: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("./server", () => ({
   database: () => ({
     from: mocks.from,
-    storage: { from: () => ({ createSignedUrl: mocks.signed }) },
+    storage: {
+      from: () => ({ createSignedUrl: mocks.signed, download: mocks.download }),
+    },
   }),
   readCampaign: mocks.read,
   StudioError: class extends Error {
@@ -25,6 +28,7 @@ vi.mock("./server", () => ({
 import {
   changeShare,
   publicMedia,
+  publicLogo,
   presentationView,
   sharedCampaign,
   shareHash,
@@ -36,6 +40,28 @@ const actor: Actor = {
   name: "Validator",
 };
 const token = "a".repeat(43);
+it("sert uniquement le logo autorisé par un lien actif, sans cache public", async () => {
+  const id = "11111111-1111-4111-8111-111111111111";
+  campaign.ads[0].brandSnapshot = {
+    id,
+    name: "Marque",
+    website: "",
+    logo: `brand-logos/${id}.png`,
+  };
+  mocks.download.mockResolvedValue({
+    data: new Blob(["png"], { type: "image/png" }),
+    error: null,
+  });
+  const response = await publicLogo(token, id);
+  expect(response.headers.get("Content-Type")).toBe("image/png");
+  expect(response.headers.get("Cache-Control")).toContain("no-store");
+  await expect(publicLogo(token, "other-brand")).rejects.toThrow(
+    "Logo indisponible",
+  );
+  row = null;
+  await expect(publicLogo(token, id)).rejects.toThrow("Lien indisponible");
+  expect(mocks.download).toHaveBeenCalledTimes(1);
+});
 let campaign: Campaign;
 let row: { campaign_id: string } | null;
 let query: Record<string, ReturnType<typeof vi.fn>>;

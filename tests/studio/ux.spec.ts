@@ -1265,6 +1265,59 @@ test("reprendre au clavier ne valide jamais implicitement", async ({
   expect(f.commands.filter((c) => c.type === "decide")).toHaveLength(0);
 });
 
+for (const width of [390, 1440])
+  test(`marque : import du logo avec aperçu puis création ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const f = await fixture(page);
+    await page.getByRole("link").filter({ hasText: "Beta" }).click();
+    await openConfigurationSteps(page);
+    await page
+      .getByRole("navigation", { name: "Étapes de configuration", exact: true })
+      .getByRole("button", { name: "1 Campagne", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Créer une marque", exact: true })
+      .click();
+    const form = page.getByRole("form", { name: "Nouvelle marque" });
+    await expect(form.getByLabel("Logo", { exact: true })).toHaveAttribute(
+      "type",
+      "file",
+    );
+    await form.getByLabel("Nom", { exact: true }).fill("Marque avec logo");
+    await form.getByLabel("Logo", { exact: true }).setInputFiles({
+      name: "logo.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=",
+        "base64",
+      ),
+    });
+    await expect(
+      form.getByRole("img", { name: "Aperçu du logo" }),
+    ).toBeVisible();
+    await expect(
+      form.getByRole("button", { name: "Remplacer le logo" }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await form.screenshot({ path: test.info().outputPath("brand-logo.png") });
+    await form
+      .getByRole("button", { name: "Créer la marque", exact: true })
+      .click();
+    await expect
+      .poll(() => f.commands.find((c) => c.type === "create_brand")?.logoUpload)
+      .toMatch(/^data:image\/png;base64,/);
+    await expectFieldValue(
+      page.getByRole("combobox", { name: "Marque", exact: true }),
+      "created-brand",
+    );
+  });
+
 test("marque neuve affectée directement à sa campagne", async ({ page }) => {
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();

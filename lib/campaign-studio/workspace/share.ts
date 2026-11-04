@@ -60,10 +60,11 @@ export async function sharedCampaign(token: string): Promise<Campaign> {
   if (!data) throw new StudioError("Lien indisponible.", 404);
   return readCampaign(data.campaign_id);
 }
-function brandView(brand: Brand): Brand {
+function brandView(brand: Brand, token: string): Brand {
   // External logos are not proxied: only HTTPS URLs are accepted, never storage signed URLs.
-  const logo =
-    /^https:\/\//.test(brand.logo) && !brand.logo.includes("/storage/v1/")
+  const logo = /^brand-logos\/[0-9a-f-]{36}\.png$/.test(brand.logo)
+    ? `/api/studio/public/${token}/logo/${brand.id}`
+    : /^https:\/\//.test(brand.logo) && !brand.logo.includes("/storage/v1/")
       ? brand.logo
       : "";
   return { id: brand.id, name: brand.name, website: brand.website, logo };
@@ -87,7 +88,9 @@ export function presentationView(
     path1: ad.path1,
     path2: ad.path2,
     theme: ad.theme,
-    ...(ad.brandSnapshot ? { brandSnapshot: brandView(ad.brandSnapshot) } : {}),
+    ...(ad.brandSnapshot
+      ? { brandSnapshot: brandView(ad.brandSnapshot, token) }
+      : {}),
   }));
   const media = campaign.media
     .filter((m) => m.state === "ready" && ads.some((a) => a.mediaId === m.id))
@@ -108,7 +111,9 @@ export function presentationView(
       ads,
       media,
     },
-    brands: brands.filter((b) => b.id === campaign.brandId).map(brandView),
+    brands: brands
+      .filter((b) => b.id === campaign.brandId)
+      .map((b) => brandView(b, token)),
     thumbnailUrls: Object.fromEntries(
       campaign.media
         .filter(
@@ -135,6 +140,34 @@ export async function publicPresentation(token: string) {
     : { data: [], error: null };
   if (error) throw error;
   return presentationView(campaign, data ?? [], token);
+}
+export async function publicLogo(token: string, brandId: string) {
+  const campaign = await sharedCampaign(token);
+  let brand = currentAds(campaign).find(
+    (a) => a.brandSnapshot?.id === brandId,
+  )?.brandSnapshot;
+  if (!brand && campaign.brandId === brandId) {
+    const { data, error } = await database()
+      .from("studio_brands")
+      .select("id,name,logo,website")
+      .eq("id", brandId)
+      .maybeSingle();
+    if (error) throw error;
+    brand = data ?? undefined;
+  }
+  if (!brand || !/^brand-logos\/[0-9a-f-]{36}\.png$/.test(brand.logo))
+    throw new StudioError("Logo indisponible.", 404);
+  const { data, error } = await database()
+    .storage.from("studio-media")
+    .download(brand.logo);
+  if (error || !data) throw new StudioError("Logo indisponible.", 404);
+  return new Response(data, {
+    headers: {
+      ...PUBLIC_HEADERS,
+      "Content-Type": "image/png",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }
 export async function publicMedia(
   token: string,

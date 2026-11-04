@@ -18,6 +18,29 @@ const now = "2026-10-30T12:00:00Z";
 const campaign = () =>
   addAd(createCampaign("Recette", actor, now), "google", "search", actor, now);
 describe("import déterministe", () => {
+  it("accepte les nouveaux formats Meta sans modifier les anciens gabarits", () => {
+    for (const channel of ["facebook", "instagram"] as const) {
+      const formats = [
+        "landscape",
+        "landscape_16_9",
+        "square_video",
+        "portrait_video",
+        "story_video",
+        "reel_image",
+      ];
+      const rows = parseImportRows(channel, [
+        importHeaders(channel),
+        ...formats.map((format) => [format, `Annonce ${format}`]),
+      ]);
+      expect(rows.map((row) => row.format)).toEqual(formats);
+      expect(
+        parseImportRows(channel, [
+          importHeaders(channel),
+          ["square", "Ancienne annonce"],
+        ])[0].format,
+      ).toBe("square");
+    }
+  });
   it("accepte BOM, point-virgule, accents, virgule et texte multiligne échappé", () => {
     const matrix = parseCsv(
       '\uFEFFFormat;Nom;Thématique;Texte;Titre;CTA;URL\r\nsquare;Essai;Notoriété;"Texte, avec\nune \\"citation\\"";Titre;Découvrir;https://leyon.pro/\r\n'.replaceAll(

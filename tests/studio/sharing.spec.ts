@@ -106,6 +106,64 @@ async function fixture(page: Page) {
     },
   };
 }
+for (const format of ["landscape", "reel_image"])
+  test(`public : aperçu Meta ${format} sans déformation`, async ({ page }) => {
+    const control = await fixture(page);
+    control.activate();
+    const c = structuredClone(campaign);
+    const width = format === "landscape" ? 1200 : 1080,
+      height = format === "landscape" ? 628 : 1920;
+    const id = "22222222-2222-4222-8222-222222222222";
+    c.ads[0].format = format;
+    c.ads[0].mediaId = id;
+    c.media = [
+      {
+        id,
+        name: "meta.png",
+        path: "private-not-exposed",
+        channel: "facebook",
+        mime: "image/png",
+        bytes: 10000,
+        width,
+        height,
+        duration: null,
+        state: "ready",
+        errors: [],
+      },
+    ];
+    const sharp = (await import("sharp")).default;
+    const png = await sharp({
+      create: { width, height, channels: 3, background: "#082b21" },
+    })
+      .png()
+      .toBuffer();
+    const src = `/api/studio/public/${token}/media/${id}`;
+    await page.route(`**${src}`, (route) =>
+      route.fulfill({ body: png, contentType: "image/png" }),
+    );
+    await page.route(`**/api/studio/public/${token}`, (route) =>
+      route.fulfill({
+        json: { campaign: c, brands: [], mediaUrls: { [id]: src } },
+      }),
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(base + `/partage/${token}`);
+    const img = page.locator(`img[src="${src}"]`).first();
+    await expect(img).toBeVisible();
+    await expect
+      .poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth))
+      .toBe(width);
+    await expect(img).toHaveCSS("object-fit", "contain");
+    await expect(
+      page.getByRole("button", { name: "Approuver", exact: true }),
+    ).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
 test("validator creates, copies and revokes a campaign link", async ({
   page,
   context,

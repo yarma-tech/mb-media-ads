@@ -359,6 +359,7 @@ async function fixture(
             cmd.channels,
             actor,
             now,
+            cmd.selections,
           );
           c = batch.campaign;
           result.created = batch.created;
@@ -1318,6 +1319,102 @@ for (const width of [390, 1440])
     );
   });
 
+for (const sample of [
+  {
+    name: "paysage-meta.jpg",
+    mime: "image/jpeg",
+    width: 1200,
+    height: 628,
+    format: "Fil paysage",
+  },
+  {
+    name: "carre-meta.mp4",
+    mime: "video/mp4",
+    width: 1080,
+    height: 1080,
+    format: "Vidéo carrée",
+  },
+])
+  test(`Meta : reconnaît ${sample.name} dans la bibliothèque`, async ({
+    page,
+  }) => {
+    const f = await fixture(page, "draft", true);
+    const campaign = f.campaigns.find((c) => c.name === "Beta")!;
+    Object.assign(campaign.media[0], sample, {
+      duration: sample.mime.startsWith("video") ? 8 : null,
+    });
+    await page.getByRole("link").filter({ hasText: "Beta" }).click();
+    await openLibrary(page);
+    const asset = page.locator('[data-library-media="ready-media"]');
+    await expect(
+      asset.getByRole("button", {
+        name: `Sélectionner ${sample.name}`,
+        exact: true,
+      }),
+    ).toBeEnabled();
+    await asset
+      .getByRole("button", { name: `Sélectionner ${sample.name}`, exact: true })
+      .click();
+    await expect(
+      asset.getByRole("button", {
+        name: `Sélectionner ${sample.name}`,
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+test("Meta : aperçu paysage conservé en création, validation et On air", async ({
+  page,
+}) => {
+  const f = await fixture(page, "draft", true);
+  const c = f.campaigns.find((c) => c.name === "Beta")!;
+  Object.assign(c.media[0], {
+    width: 1200,
+    height: 628,
+    name: "meta-landscape.png",
+  });
+  c.ads[0].format = "landscape";
+  c.ads[0].copy = "Notre campagne";
+  const sharp = (await import("sharp")).default;
+  const png = await sharp({
+    create: { width: 1200, height: 628, channels: 3, background: "#082b21" },
+  })
+    .png()
+    .toBuffer();
+  await page.route("**/__ux-meta.png", (route) =>
+    route.fulfill({ body: png, contentType: "image/png" }),
+  );
+  f.setMediaUrl("ready-media", "/__ux-meta.png");
+  await page.goto(
+    base + "/studio/configuration?campagne=" + c.id + "&canal=facebook",
+  );
+  await page
+    .getByRole("button", { name: "Aperçu de Beta annonce", exact: true })
+    .click();
+  async function checkImage() {
+    const image = page.locator('img[src="/__ux-meta.png"]').first();
+    await expect(image).toBeVisible();
+    await expect
+      .poll(() => image.evaluate((el: HTMLImageElement) => el.naturalWidth))
+      .toBe(1200);
+    await expect(image.locator("..")).toHaveCSS("aspect-ratio", "1200 / 628");
+    await expect(image).toHaveCSS("object-fit", "contain");
+  }
+  await checkImage();
+  c.ads[0].status = "pending";
+  await page.goto(base + "/studio/validation");
+  await chooseOption(page.getByLabel("Filtrer par campagne"), c.id);
+  await checkImage();
+  c.ads[0].status = "on_air";
+  await page.goto(base + "/studio/on-air");
+  await chooseOption(page.getByLabel("Filtrer par campagne"), c.id);
+  await checkImage();
+  await page.screenshot({
+    path: test.info().outputPath("meta-on-air.png"),
+    fullPage: true,
+  });
+});
+
 test("marque neuve affectée directement à sa campagne", async ({ page }) => {
   const f = await fixture(page);
   await page.getByRole("link").filter({ hasText: "Beta" }).click();
@@ -2008,6 +2105,67 @@ test("lot : un canal incompatible ne bloque pas les annonces compatibles", async
     }),
   ).toBeDisabled();
   expect(f.commands.filter((c) => c.type === "upload")).toHaveLength(1);
+});
+
+test("Meta : un placement alternatif est créé uniquement après sélection explicite", async ({
+  page,
+}) => {
+  const f = await fixture(page);
+  await startMediaBatch(page, "Meta choix explicite", ["Facebook"]);
+  const library = page.getByRole("region", {
+    name: "Bibliothèque des canaux sélectionnés",
+    exact: true,
+  });
+  await library
+    .locator("input[type=file]")
+    .setInputFiles(
+      "Media Test/01-Studio/Facebook/facebook-square-1080x1080.png",
+    );
+  await expect(
+    page.getByRole("button", { name: "Créer l’annonce", exact: true }),
+  ).toBeEnabled();
+  await library
+    .getByLabel("Formats reconnus pour facebook-square-1080x1080.png", {
+      exact: true,
+    })
+    .click();
+  await library
+    .getByRole("checkbox", {
+      name: "Facebook · Story pour facebook-square-1080x1080.png",
+      exact: true,
+    })
+    .check();
+  await page.setViewportSize({ width: 390, height: 900 });
+  const optionsBox = await library
+    .getByRole("checkbox", {
+      name: "Facebook · Story pour facebook-square-1080x1080.png",
+      exact: true,
+    })
+    .locator("..")
+    .locator("..")
+    .locator("..")
+    .boundingBox();
+  expect(optionsBox!.x).toBeGreaterThanOrEqual(8);
+  expect(optionsBox!.x + optionsBox!.width).toBeLessThanOrEqual(382);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await library.screenshot({
+    path: test.info().outputPath("meta-placements.png"),
+  });
+  await page
+    .getByRole("button", { name: "Créer les 2 annonces", exact: true })
+    .click();
+  await expect(page.getByRole("table")).toBeVisible();
+  expect(
+    f.campaigns
+      .find((c) => c.name === "Meta choix explicite")
+      ?.ads.map((a) => a.format),
+  ).toEqual(["square", "story"]);
+  const command = f.commands.find((c) => c.type === "add_media_batch");
+  expect(command?.selections).toHaveLength(2);
 });
 
 test("lot : une erreur de création permet une reprise explicite sans doublon", async ({

@@ -12,6 +12,8 @@ import {
   compatibleFormats,
   mediaChannels,
   CHANNELS,
+  preferredFormats,
+  mediaCompatibilityMessages,
 } from "@/lib/campaign-studio/workspace/catalog";
 import { useWorkspace } from "./WorkspaceProvider";
 import w from "./workspace.module.css";
@@ -62,8 +64,41 @@ export default function MediaLibrary({
     { name: string; mediaId: string | null; message: string }[]
   >([]);
   const [choices, setChoices] = useState<Record<string, string[]>>({});
+  const [batchChoices, setBatchChoices] = useState<Record<string, string[]>>(
+    {},
+  );
   const targets = channels ?? [channel];
-  const placements = mediaAdPlan(campaign, targets);
+  const suggestions = mediaAdPlan(campaign, targets);
+  const placements = campaign.media
+    .filter((m) => m.state === "ready")
+    .flatMap((m) =>
+      targets
+        .filter((target) => mediaChannels(m).includes(target))
+        .flatMap((target) => {
+          const ids =
+            batchChoices[`${m.id}:${target}`] ??
+            suggestions
+              .filter((p) => p.mediaId === m.id && p.channel === target)
+              .map((p) => p.format);
+          return compatibleFormats(m, target)
+            .filter(
+              (f) =>
+                ids.includes(f.id) &&
+                !campaign.ads.some(
+                  (ad) =>
+                    ad.mediaId === m.id &&
+                    ad.channel === target &&
+                    ad.format === f.id,
+                ),
+            )
+            .map((f) => ({
+              mediaId: m.id,
+              channel: target,
+              format: f.id,
+              label: f.label,
+            }));
+        }),
+    );
   const selectedMedia = campaign.media.filter(
     (m) =>
       m.state === "ready" &&
@@ -114,6 +149,11 @@ export default function MediaLibrary({
         campaignId: campaign.id,
         channels: targets,
         mediaIds: [...new Set(placements.map((p) => p.mediaId))],
+        selections: placements.map(({ mediaId, channel, format }) => ({
+          mediaId,
+          channel,
+          format,
+        })),
       });
       notify(
         `${result.created} ${result.created === 1 ? "annonce créée" : "annonces créées"}.`,
@@ -435,7 +475,7 @@ export default function MediaLibrary({
           className={batchMode || variant === "library" ? w.srOnly : undefined}
         >
           {placements.length
-            ? "Tous les formats compatibles, sans sélection fichier par fichier."
+            ? "Un format suggéré par fichier et canal. Les autres placements restent disponibles."
             : campaign.media.some(
                   (m) =>
                     m.state === "ready" &&
@@ -508,7 +548,7 @@ export default function MediaLibrary({
                         ...current,
                         [m.id]: current[m.id]?.length
                           ? []
-                          : formats.map((f) => f.id),
+                          : preferredFormats(m, channel).map((f) => f.id),
                       }))
                     }
                   >
@@ -530,6 +570,30 @@ export default function MediaLibrary({
                     variant !== "library" &&
                     ` · ${(m.bytes / 1000000).toFixed(1)} Mo`}
                 </small>
+                {m.state === "ready" &&
+                  targets
+                    .filter((target) => mediaChannels(m).includes(target))
+                    .map((target) => {
+                      const messages = mediaCompatibilityMessages(m, target);
+                      if (!messages.length) return null;
+                      return compatibleFormats(m, target).length ? (
+                        <details key={target} className={mstyles.compatibility}>
+                          <summary>
+                            {messages.some((message) =>
+                              message.startsWith("À vérifier"),
+                            )
+                              ? "À vérifier dans Meta"
+                              : "Conseil Meta"}
+                            {targets.length > 1 ? ` · ${CHANNELS[target]}` : ""}
+                          </summary>
+                          <p>{messages.join(" ")}</p>
+                        </details>
+                      ) : (
+                        <p key={target} className={mstyles.incompatible}>
+                          {CHANNELS[target]} · {messages.slice(0, 2).join(" ")}
+                        </p>
+                      );
+                    })}
                 {m.state === "invalid" && (
                   <p className={w.error}>{m.errors.join(" ")}</p>
                 )}
@@ -543,7 +607,19 @@ export default function MediaLibrary({
                     {batchMode ? (
                       <div className={mstyles.recognized}>
                         <span>
-                          <Icon name="check" size={15} /> Format reconnu
+                          <Icon
+                            name={
+                              targets.some(
+                                (t) => compatibleFormats(m, t).length,
+                              )
+                                ? "check"
+                                : "info"
+                            }
+                            size={15}
+                          />{" "}
+                          {targets.some((t) => compatibleFormats(m, t).length)
+                            ? "Format reconnu"
+                            : "Format non reconnu"}
                         </span>
                         <span className={mstyles.mediaChannels}>
                           {targets
@@ -575,7 +651,52 @@ export default function MediaLibrary({
                                   <p key={target}>
                                     <b>{CHANNELS[target]}</b>
                                     <span>
-                                      {detected.map((f) => f.label).join(" · ")}
+                                      {detected.map((f) => {
+                                        const key = `${m.id}:${target}`;
+                                        const selected =
+                                          batchChoices[key] ??
+                                          suggestions
+                                            .filter(
+                                              (p) =>
+                                                p.mediaId === m.id &&
+                                                p.channel === target,
+                                            )
+                                            .map((p) => p.format);
+                                        const exists = campaign.ads.some(
+                                          (ad) =>
+                                            ad.mediaId === m.id &&
+                                            ad.channel === target &&
+                                            ad.format === f.id,
+                                        );
+                                        return (
+                                          <label key={f.id}>
+                                            <input
+                                              type="checkbox"
+                                              aria-label={`${CHANNELS[target]} · ${f.label} pour ${m.name}`}
+                                              disabled={
+                                                exists ||
+                                                activity.type !== "idle"
+                                              }
+                                              checked={
+                                                exists ||
+                                                selected.includes(f.id)
+                                              }
+                                              onChange={(e) =>
+                                                setBatchChoices((current) => ({
+                                                  ...current,
+                                                  [key]: e.target.checked
+                                                    ? [...selected, f.id]
+                                                    : selected.filter(
+                                                        (id) => id !== f.id,
+                                                      ),
+                                                }))
+                                              }
+                                            />
+                                            {f.label}
+                                            {exists ? " · déjà créée" : ""}
+                                          </label>
+                                        );
+                                      })}
                                     </span>
                                   </p>
                                 );

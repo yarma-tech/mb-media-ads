@@ -1,4 +1,4 @@
-import { compatibleFormats, mediaChannels } from "./catalog";
+import { compatibleFormats, mediaChannels, preferredFormats } from "./catalog";
 import { addAd } from "./workflow";
 import type { Actor, Campaign, Channel } from "./types";
 
@@ -8,6 +8,10 @@ export interface MediaAdPlacement {
   format: string;
   label: string;
 }
+export type MediaAdSelection = Pick<
+  MediaAdPlacement,
+  "mediaId" | "channel" | "format"
+>;
 
 /** Every compatible, assigned placement not already represented by an ad. */
 export function mediaAdPlan(
@@ -25,7 +29,7 @@ export function mediaAdPlan(
       [...new Set(channels)]
         .filter((channel) => mediaChannels(media).includes(channel))
         .flatMap((channel) =>
-          compatibleFormats(media, channel)
+          preferredFormats(media, channel)
             .filter(
               (format) => !existing.has(`${media.id}:${channel}:${format.id}`),
             )
@@ -46,15 +50,41 @@ export function createMediaAds(
   channels: Channel[],
   actor: Actor,
   now: string,
+  selections?: MediaAdSelection[],
 ): { campaign: Campaign; created: number } {
   if (campaign.status !== "active") throw new Error("Campagne terminée.");
   if (mediaIds.some((id) => !campaign.media.some((m) => m.id === id)))
     throw new Error("Média introuvable dans cette campagne.");
-  const placements = mediaAdPlan(campaign, channels, mediaIds);
+  const placements = selections ?? mediaAdPlan(campaign, channels, mediaIds);
+  // Validate the entire request before creating anything. A caller cannot smuggle
+  // an unrelated channel, unselected file, unfinished upload or invented format.
+  for (const choice of placements) {
+    const media = campaign.media.find((m) => m.id === choice.mediaId);
+    if (
+      !mediaIds.includes(choice.mediaId) ||
+      !channels.includes(choice.channel) ||
+      !media ||
+      media.state !== "ready" ||
+      !mediaChannels(media).includes(choice.channel) ||
+      !compatibleFormats(media, choice.channel).some(
+        (f) => f.id === choice.format,
+      )
+    )
+      throw new Error("Sélection de média ou de format incompatible.");
+  }
   let next = campaign;
   for (const placement of placements) {
+    if (
+      next.ads.some(
+        (ad) =>
+          ad.mediaId === placement.mediaId &&
+          ad.channel === placement.channel &&
+          ad.format === placement.format,
+      )
+    )
+      continue;
     next = addAd(next, placement.channel, placement.format, actor, now);
     next.ads[next.ads.length - 1].mediaId = placement.mediaId;
   }
-  return { campaign: next, created: placements.length };
+  return { campaign: next, created: next.ads.length - campaign.ads.length };
 }

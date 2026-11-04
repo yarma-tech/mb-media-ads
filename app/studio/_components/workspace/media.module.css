@@ -171,6 +171,18 @@
   padding: 12px;
   border-radius: 8px;
   width: 210px;
+  max-height: 360px;
+  overflow-y: auto;
+}
+@media (max-width: 650px) {
+  .formats > div {
+    position: fixed;
+    inset: auto 16px calc(86px + env(safe-area-inset-bottom)) 16px;
+    width: auto;
+    max-height: min(50dvh, 360px);
+    box-sizing: border-box;
+    z-index: 65;
+  }
 }
 .formats p {
   display: grid;
@@ -379,4 +391,31 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 22px 14px;
   }
+}
+
+.compatibility {
+  font-size: 12px;
+  color: #6a5b36;
+}
+.compatibility summary {
+  cursor: pointer;
+}
+.compatibility p {
+  margin: 6px 0;
+}
+.formats label {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 8px 0;
+  font-size: 12px;
+}
+.formats input[type="checkbox"] {
+  accent-color: #082b21;
+  width: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
 }

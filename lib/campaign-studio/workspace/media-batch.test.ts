@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createMediaAds, mediaAdPlan } from "./media-batch";
 import { createCampaign, isComplete } from "./workflow";
-import { compatibleFormats, mediaChannels } from "./catalog";
+import { compatibleFormats, mediaChannels, preferredFormats } from "./catalog";
 import { CommandSchema } from "./commands";
 import type { Actor, Media } from "./types";
 const actor: Actor = {
@@ -33,6 +33,25 @@ const campaign = () => ({
 });
 
 describe("création groupée depuis les médias", () => {
+  it("suggère une seule annonce par fichier/canal, puis accepte les alternatives explicitement choisies", () => {
+    const c = campaign();
+    expect(mediaAdPlan(c, ["facebook"], ["square"])).toHaveLength(1);
+    const result = createMediaAds(c, ["square"], ["facebook"], actor, now, [
+      { mediaId: "square", channel: "facebook", format: "story" },
+    ]);
+    expect(result.created).toBe(1);
+    expect(result.campaign.ads[0].format).toBe("story");
+    expect(() =>
+      createMediaAds(c, ["square"], ["facebook"], actor, now, [
+        { mediaId: "square", channel: "youtube", format: "instream" },
+      ]),
+    ).toThrow();
+    expect(() =>
+      createMediaAds(c, ["square"], ["facebook"], actor, now, [
+        { mediaId: "square", channel: "facebook", format: "invented" },
+      ]),
+    ).toThrow();
+  });
   it("crée quatre annonces pour deux fichiers et deux canaux, avec un seul média physique par fichier", () => {
     const c = campaign();
     const result = createMediaAds(
@@ -134,7 +153,7 @@ describe("création groupée depuis les médias", () => {
     };
     expect(compatibleFormats(m, "display")).toEqual([]);
     expect(
-      compatibleFormats({ ...m, width: 1080, height: 1080 }, "facebook"),
+      preferredFormats({ ...m, width: 1080, height: 1080 }, "facebook"),
     ).toHaveLength(1);
   });
   it("valide une commande de lot bornée et une affectation multiple à l’upload", () => {

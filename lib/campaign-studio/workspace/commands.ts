@@ -113,6 +113,19 @@ export const CommandSchema = z.discriminatedUnion("type", [
     type: z.literal("add_media_batch"),
     ...target,
     mediaIds: z.array(uuid).min(1).max(200),
+    selections: z
+      .array(
+        z
+          .object({
+            mediaId: uuid,
+            channel: ChannelSchema.exclude(["google"]),
+            format: z.string().min(1).max(50),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(1000)
+      .optional(),
     channels: z
       .array(ChannelSchema.exclude(["google"]))
       .min(1)

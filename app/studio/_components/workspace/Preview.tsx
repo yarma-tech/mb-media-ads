@@ -10,6 +10,7 @@ import ChannelIcon from "./ChannelIcon";
 import PreviewCopy, { previewExcerpt } from "./PreviewCopy";
 import Icon from "../Icon";
 import s from "./preview.module.css";
+import { CATALOG } from "@/lib/campaign-studio/workspace/catalog";
 
 export function MediaPreview({
   ad,
@@ -25,14 +26,14 @@ export function MediaPreview({
   const { data } = usePreviewData();
   const media = campaign.media.find((m) => m.id === ad.mediaId);
   const src = media ? data?.mediaUrls[media.id] : undefined;
-  const vertical = [
-    "reel",
-    "story",
-    "story_video",
-    "vertical",
-    "short",
-    "halfpage",
-  ].includes(ad.format);
+  const metaPlacement = CATALOG[ad.channel]?.find((f) => f.id === ad.format)
+    ?.meta?.placement;
+  const vertical =
+    metaPlacement === "story" ||
+    metaPlacement === "reel" ||
+    ["reel", "story", "story_video", "vertical", "short", "halfpage"].includes(
+      ad.format,
+    );
   return (
     <div
       className={`${s.media} ${vertical ? s.vertical : ""} ${thumbnail ? s.thumbnail : ""}`}
@@ -355,8 +356,11 @@ export default function Preview({
       ))}
     </div>
   );
-  const isStory = ["story", "story_video"].includes(ad.format);
-  const isReel = ad.format === "reel";
+  const placement = CATALOG[ad.channel]?.find((f) => f.id === ad.format)?.meta
+    ?.placement;
+  const isStory =
+    placement === "story" || ["story", "story_video"].includes(ad.format);
+  const isReel = placement === "reel" || ad.format === "reel";
   const short = ad.channel === "youtube" && ad.format === "short";
   if (ad.channel === "google")
     return (

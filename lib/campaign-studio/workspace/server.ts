@@ -550,6 +550,7 @@ export async function execute(raw: unknown, actor: Actor) {
         command.channels,
         actor,
         now,
+        command.selections,
       );
       if (result.campaign !== c) await commit(c, result.campaign, actor);
       return result;

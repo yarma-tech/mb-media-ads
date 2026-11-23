@@ -39,7 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </header>
         <main className="page">{children}</main>
         <footer className="footer">
-          Opéré par <strong>MB Média</strong>. Prototype : les valeurs affichées sont illustratives, jamais des garanties.
+          Opéré par <strong>MB Média</strong>.
         </footer>
       </body>
     </html>

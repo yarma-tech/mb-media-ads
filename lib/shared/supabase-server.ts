@@ -39,32 +39,3 @@ export async function getUser(): Promise<User | null> {
   } = await sb.auth.getUser();
   return user;
 }
-
-export type Profile = {
-  id: string;
-  email: string;
-  nom_entreprise: string;
-  secteur: string;
-  type_entreprise: string;
-  is_admin: boolean;
-  // Score 0..10 du capital marque, feature des modèles ML. Défaut 5.0 (médiane
-  // neutre) tant que la colonne n'a pas été éditée.
-  score_historique_marque?: number | null;
-};
-
-// Renvoie le profil de l'utilisateur connecté, ou null. Résilient si la table
-// `profiles` n'existe pas encore (migration non appliquée) -> null.
-export async function getProfile(): Promise<Profile | null> {
-  if (!authConfigured) return null;
-  const sb = await createServerSupabase();
-  const {
-    data: { user },
-  } = await sb.auth.getUser();
-  if (!user) return null;
-  try {
-    const { data } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
-    return (data as Profile | null) ?? null;
-  } catch {
-    return null;
-  }
-}

@@ -2,25 +2,44 @@
   "name": "karata-ads",
   "version": "0.1.0",
   "private": true,
+  "overrides": {
+    "exceljs": {
+      "uuid": "11.1.1"
+    }
+  },
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.68.0",
+    "@radix-ui/react-select": "^2.4.1",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.106.1",
-    "next": "^16.2.6",
+    "exceljs": "^4.4.0",
+    "ffmpeg-static": "5.3.0",
+    "ffprobe-static": "^3.1.0",
+    "next": "^16.4.6",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "stripe": "^22.1.1"
+    "sharp": "0.35.5",
+    "tus-js-client": "^4.3.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^25.9.1",
     "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
-    "typescript": "^6.0.3"
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.6",
+    "prettier": "^3.9.9",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
+    "vitest": "4.1.12"
   }
 }

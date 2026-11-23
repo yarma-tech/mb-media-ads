@@ -5,13 +5,31 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = new Set(["/", "/connexion", "/inscription"]);
+// Pages accessible sans session.
+const PUBLIC_PATHS = new Set([
+  "/",
+  "/connexion",
+  "/inscription",
+  "/decks/apercu",
+  "/decks/presentation",
+  "/studio",
+  "/studio/validation",
+  "/studio/on-air",
+  "/studio/statistiques",
+]);
 
 function isPublic(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
-  // Callback d'auth + webhook de paiement (Stripe) doivent rester accessibles sans session.
+  // Studio API authenticates bearer identities itself; connected UI contains no private SSR data.
+  if (pathname === "/api/studio" || pathname.startsWith("/api/studio/"))
+    return true;
+  if (
+    process.env.STUDIO_CONNECTED === "true" &&
+    (pathname === "/studio" || pathname.startsWith("/studio/"))
+  )
+    return true;
+  // Le callback d'auth doit rester accessible sans session.
   if (pathname.startsWith("/auth")) return true;
-  if (pathname.startsWith("/api/stripe")) return true;
   // Lien public de validation Social Ads : accessible sans compte (par TOKEN).
   if (pathname.startsWith("/preview/")) return true;
   return false;
@@ -19,6 +37,15 @@ function isPublic(pathname: string): boolean {
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
+  if (
+    request.nextUrl.pathname.startsWith("/partage/") ||
+    request.nextUrl.pathname.startsWith("/api/studio/public/")
+  ) {
+    response.headers.set("Cache-Control", "private, no-store, max-age=0");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return response;
+  }
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -31,9 +58,13 @@ export async function proxy(request: NextRequest) {
         return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        cookiesToSet.forEach(({ name, value }) =>
+          request.cookies.set(name, value),
+        );
         response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options),
+        );
       },
     },
   });

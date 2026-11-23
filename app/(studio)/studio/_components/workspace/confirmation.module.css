@@ -1,0 +1,121 @@
+.dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 28px;
+  border: 0;
+  border-radius: 24px;
+  background: #fff;
+  color: #082b21;
+  color-scheme: light;
+  box-shadow: 0 24px 90px #082b2126;
+  font:
+    14px/1.55 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  animation: enter 180ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dialog *,
+.dialog *::before,
+.dialog *::after {
+  box-sizing: border-box;
+}
+.dialog::backdrop {
+  background: #082b2145;
+  backdrop-filter: blur(7px);
+}
+.symbol {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 18px;
+  border-radius: 14px;
+  background: #eaf1ed;
+}
+.symbol[data-intent="danger"] {
+  color: #923d3d;
+  background: #fbefee;
+}
+.dialog h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  line-height: 1.25;
+  letter-spacing: -0.6px;
+  font-weight: 600;
+}
+.dialog p {
+  margin: 0;
+  color: #5a6b62;
+  overflow-wrap: anywhere;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 26px;
+}
+.dialog button {
+  border: 0;
+  border-radius: 13px;
+  padding: 12px 18px;
+  min-height: 46px;
+  background: #eff3f0;
+  color: #082b21;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.dialog .confirm {
+  background: #082b21;
+  color: #fff;
+}
+.dialog .confirm[data-intent="danger"] {
+  background: #963e3e;
+}
+.dialog button:hover {
+  filter: brightness(0.96);
+}
+.dialog button:focus-visible {
+  outline: none;
+  background: #dfe8e2;
+  box-shadow: none;
+}
+.dialog .confirm:focus-visible {
+  box-shadow: none;
+  filter: brightness(0.88);
+}
+:global(body):has(.dialog[open]) {
+  overflow: hidden;
+}
+@supports (corner-shape: squircle) {
+  .dialog button {
+    corner-shape: squircle;
+    border-radius: 18px;
+  }
+}
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (max-width: 420px) {
+  .dialog {
+    padding: 24px;
+  }
+  .actions button {
+    flex: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog {
+    animation: none;
+  }
+}

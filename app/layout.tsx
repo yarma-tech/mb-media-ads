@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { signOutAction } from "@/lib/auth-actions";
-import { getProfile, getUser } from "@/lib/supabase-server";
+import { signOutAction } from "@/lib/shared/auth-actions";
+import { getUser } from "@/lib/shared/supabase-server";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MB Média Ads : la campagne idéale",
+  title: "MB Média",
   description:
-    "Plateforme d'agence média multi-média opérée par MB Média. Décrivez votre projet, obtenez la campagne idéale.",
+    "Outils MB Média : Studio campagnes, Social Ads, Decks.",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [user, profile] = await Promise.all([getUser(), getProfile()]);
+  const user = await getUser();
 
   return (
     <html lang="fr">
@@ -24,9 +24,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <nav className="topbar-nav">
               {user ? (
                 <>
-                  <Link href="/campagne">Lancer une campagne</Link>
                   <Link href="/social">Social Ads</Link>
-                  {profile?.is_admin ? <Link href="/admin">Espace MB Média</Link> : null}
                   <form action={signOutAction}>
                     <button className="navlink" type="submit">
                       Se déconnecter
@@ -41,7 +39,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </header>
         <main className="page">{children}</main>
         <footer className="footer">
-          Opéré par <strong>MB Média</strong>. Prototype : les valeurs affichées sont illustratives, jamais des garanties.
+          Opéré par <strong>MB Média</strong>.
         </footer>
       </body>
     </html>

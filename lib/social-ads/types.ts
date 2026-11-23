@@ -1,6 +1,14 @@
 // Module Social Ads — types & référentiels partagés (client + serveur).
 
-export const PLATEFORMES = ["facebook", "instagram", "linkedin", "tiktok"] as const;
+import { getVariantSpec, legacyVariant } from "./specs";
+import type { Placement, AdVariant } from "./specs";
+export const PLATEFORMES = [
+  "facebook",
+  "instagram",
+  "linkedin",
+  "tiktok",
+  "youtube",
+] as const;
 export type Plateforme = (typeof PLATEFORMES)[number];
 
 export const PLATEFORME_LABEL: Record<Plateforme, string> = {
@@ -8,9 +16,16 @@ export const PLATEFORME_LABEL: Record<Plateforme, string> = {
   instagram: "Instagram",
   linkedin: "LinkedIn",
   tiktok: "TikTok",
+  youtube: "YouTube",
 };
 
-export const FORMATS = ["feed_image", "feed_carrousel", "feed_video", "story", "reel"] as const;
+export const FORMATS = [
+  "feed_image",
+  "feed_carrousel",
+  "feed_video",
+  "story",
+  "reel",
+] as const;
 export type Format = (typeof FORMATS)[number];
 
 export const FORMAT_LABEL: Record<Format, string> = {
@@ -23,10 +38,11 @@ export const FORMAT_LABEL: Record<Format, string> = {
 
 // Formats proposés par plateforme (pour restreindre l'UI).
 export const FORMATS_PAR_PLATEFORME: Record<Plateforme, Format[]> = {
-  facebook: ["feed_image", "feed_carrousel", "feed_video", "story"],
+  facebook: ["feed_image", "feed_carrousel", "feed_video", "story", "reel"],
   instagram: ["feed_image", "feed_carrousel", "feed_video", "story", "reel"],
   linkedin: ["feed_image", "feed_carrousel", "feed_video"],
   tiktok: ["reel"],
+  youtube: ["feed_video", "reel"],
 };
 
 // Boutons d'appel à l'action courants (libellés FR).
@@ -47,9 +63,12 @@ export type Media = {
   url: string;
   largeur?: number;
   hauteur?: number;
+  creative_ref?: string;
+  titre?: string;
+  description?: string;
 };
 
-export const RATIOS = ["1:1", "4:5", "1.91:1", "9:16"] as const;
+export const RATIOS = ["1:1", "4:5", "1.91:1", "9:16", "16:9"] as const;
 export type Ratio = (typeof RATIOS)[number];
 
 // Valeur numérique largeur/hauteur pour la boîte média.
@@ -58,6 +77,7 @@ export const RATIO_VALUE: Record<Ratio, number> = {
   "4:5": 0.8,
   "1.91:1": 1.91,
   "9:16": 0.5625,
+  "16:9": 16 / 9,
 };
 
 export type Ad = {
@@ -67,6 +87,12 @@ export type Ad = {
   plateforme: Plateforme;
   format: Format;
   ratio: Ratio;
+  placement?: Placement | null;
+  type_media?: AdVariant["type_media"] | null;
+  variant_status?: "valid" | "needs_review";
+  destination_url?: string | null;
+  creative_ref?: string | null;
+  import_meta?: Record<string, string | number | null>;
   marque_nom: string | null;
   marque_handle: string | null;
   marque_logo: string | null;
@@ -148,70 +174,36 @@ export type FormatSpec = {
   safeZone?: { top: number; right: number; bottom: number };
 };
 
-const META_FEED = { texteShown: 125, texteMax: 63206, texteHard: false, titreMax: 40, titreHard: true };
-const META_SAFE = { top: 0.14, right: 0.06, bottom: 0.2 };
-
-export const SPECS: Record<Plateforme, Partial<Record<Format, FormatSpec>>> = {
-  facebook: {
-    feed_image: { ...META_FEED, ratios: ["1:1", "4:5", "1.91:1"], resolution: "1080×1080" },
-    feed_carrousel: { ...META_FEED, titreMax: 40, ratios: ["1:1"], resolution: "1080×1080" },
-    feed_video: { ...META_FEED, ratios: ["1:1", "4:5", "1.91:1"], resolution: "1080×1080" },
-    story: { ...META_FEED, ratios: ["9:16"], resolution: "1080×1920", safeZone: META_SAFE },
-  },
-  instagram: {
-    feed_image: { texteShown: 125, texteMax: 2200, texteHard: false, titreMax: 40, titreHard: true, ratios: ["1:1", "4:5"], resolution: "1080×1080" },
-    feed_carrousel: { texteShown: 125, texteMax: 2200, texteHard: false, titreMax: 40, titreHard: true, ratios: ["1:1", "4:5"], resolution: "1080×1080" },
-    feed_video: { texteShown: 125, texteMax: 2200, texteHard: false, titreMax: 40, titreHard: true, ratios: ["1:1", "4:5"], resolution: "1080×1080" },
-    story: { texteShown: 125, texteMax: 2200, texteHard: false, titreMax: 40, titreHard: true, ratios: ["9:16"], resolution: "1080×1920", safeZone: META_SAFE },
-    reel: { texteShown: 125, texteMax: 2200, texteHard: false, titreMax: 40, titreHard: true, ratios: ["9:16"], resolution: "1080×1920", safeZone: META_SAFE },
-  },
-  linkedin: {
-    feed_image: { texteShown: 150, texteMax: 600, texteHard: false, titreMax: 70, titreHard: true, ratios: ["1.91:1", "1:1", "4:5"], resolution: "1200×627" },
-    feed_carrousel: { texteShown: 255, texteMax: 600, texteHard: false, titreMax: 45, titreHard: true, ratios: ["1:1"], resolution: "1080×1080" },
-    feed_video: { texteShown: 150, texteMax: 600, texteHard: false, titreMax: 70, titreHard: true, ratios: ["1:1", "4:5", "1.91:1"], resolution: "1200×627" },
-  },
-  tiktok: {
-    reel: { texteShown: 50, texteMax: 100, texteHard: true, titreMax: 0, titreHard: true, ratios: ["9:16"], resolution: "1080×1920", safeZone: { top: 0.1, right: 0.1, bottom: 0.2 } },
-  },
-};
-
 // Spec effective d'une annonce, avec repli raisonnable si le couple est absent.
 export function getSpec(plateforme: Plateforme, format: Format): FormatSpec {
-  const s = SPECS[plateforme]?.[format];
-  if (s) return s;
-  const anyFormat = Object.values(SPECS[plateforme])[0];
-  return (
-    anyFormat ?? {
-      texteShown: 125,
-      texteMax: 2200,
-      texteHard: false,
-      titreMax: 40,
-      titreHard: true,
-      ratios: ["1:1"],
-      resolution: "1080×1080",
-    }
-  );
+  return getVariantSpec(legacyVariant(plateforme, format));
 }
 
 // Ratios d'image proposables pour un format donné.
-export function getAllowedRatios(plateforme: Plateforme, format: Format): Ratio[] {
+export function getAllowedRatios(
+  plateforme: Plateforme,
+  format: Format,
+): Ratio[] {
   return getSpec(plateforme, format).ratios;
 }
 
 // Tronque un texte à `shown` caractères en respectant les mots (pour « Voir plus »).
-export function tronquer(texte: string, shown: number): { visible: string; coupe: boolean } {
+export function tronquer(
+  texte: string,
+  shown: number,
+): { visible: string; coupe: boolean } {
   if (texte.length <= shown) return { visible: texte, coupe: false };
   const brut = texte.slice(0, shown);
   const espace = brut.lastIndexOf(" ");
-  return { visible: (espace > shown * 0.6 ? brut.slice(0, espace) : brut).trimEnd(), coupe: true };
+  return {
+    visible: (espace > shown * 0.6 ? brut.slice(0, espace) : brut).trimEnd(),
+    coupe: true,
+  };
 }
 
 // Génère un token public court et non devinable pour un lien de partage.
 export function genererToken(): string {
-  const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  const bytes = new Uint8Array(16);
+  const bytes = new Uint8Array(32);
   crypto.getRandomValues(bytes);
-  let out = "";
-  for (const b of bytes) out += alphabet[b % alphabet.length];
-  return out;
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }

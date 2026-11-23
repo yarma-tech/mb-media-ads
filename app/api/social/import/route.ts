@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getUser } from "@/lib/supabase-server";
+import { getUser } from "@/lib/shared/supabase-server";
 import { parseCampaignWorkbook } from "@/lib/social-ads/import";
 import { persistImportedPlan } from "@/lib/social-ads/db";
 export const runtime = "nodejs";

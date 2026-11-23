@@ -14,7 +14,7 @@ repo: mb-media-ads
 
 Le service marketing du Collège Universel produit régulièrement des campagnes sur les réseaux sociaux (Meta, YouTube, TikTok, LinkedIn), en SEM et en bannières display. Aujourd'hui, le chargé de campagne renseigne un fichier Excel (un fichier par campagne, une feuille par plateforme, une annonce par ligne : texte principal, titre, description, CTA, lien tracké, nom de la créa), puis assemble à la main un PowerPoint « annonces en situation » (mockups Facebook/Instagram avec en-tête « Commandité », cartes carrousel, barre J'aime / Commenter / Partager) qu'il envoie à la directrice marketing pour validation. Elle consulte souvent depuis son téléphone, via Teams.
 
-MB Média Ads possède déjà un module « Social Ads » (plans, annonces, mockups Facebook / Instagram / LinkedIn / TikTok, lien public de validation avec commentaires et décisions Approuver / Réviser, assistant de rédaction IA, stockage des médias). Les tables `sa_*`, la RLS owner-only et le bucket `social-ads` sont en production. Un inventaire exhaustif des formats publicitaires (bureau et mobile, specs officielles, composants d'UI à reproduire) a été établi et sert de référentiel : `docs/ads-formats-inventory.md`.
+MB Média Ads possède déjà un module « Social Ads » (plans, annonces, mockups Facebook / Instagram / LinkedIn / TikTok, lien public de validation avec commentaires et décisions Approuver / Réviser, assistant de rédaction IA, stockage des médias). Les tables `sa_*`, la RLS owner-only et le bucket `social-ads` sont en production. Un inventaire exhaustif des formats publicitaires (bureau et mobile, specs officielles, composants d'UI à reproduire) a été établi et sert de référentiel : `docs/social-ads/ads-formats-inventory.md`.
 
 Ce PRD couvre la V1 : le workflow complet pour les réseaux sociaux. Le SEM, le display / bannières et ChatGPT Ads font l'objet de PRD ultérieurs (V2, V3).
 
@@ -214,7 +214,7 @@ Un seul geste par campagne : déposer l'Excel. L'outil génère automatiquement 
 - Une seule marque (Collège Universel) pour un usage interne ; le paramétrage est fait une fois.
 - L'Excel ne contient pas d'images ; les visuels sont fournis à part, nommés d'après la référence de créa.
 - Le projet Supabase de production actuel (`xxfqvbvyasnnvmycpogx`) est conservé ; forfait Free : plafond d'upload de 50 Mo par fichier, suffisant pour des images et captures d'écran.
-- L'inventaire `docs/ads-formats-inventory.md` est la source des specs et des composants d'UI ; ses valeurs marquées « non trouvé » sont calées sur des captures réelles lors de la construction des mockups.
+- L'inventaire `docs/social-ads/ads-formats-inventory.md` est la source des specs et des composants d'UI ; ses valeurs marquées « non trouvé » sont calées sur des captures réelles lors de la construction des mockups.
 - Tailwind CSS est adopté pour la nouvelle interface et coexiste avec le CSS existant.
 - Faible concurrence d'édition : dernière écriture gagnante sans verrou est acceptable.
 
@@ -251,6 +251,6 @@ Un seul geste par campagne : déposer l'Excel. L'outil génère automatiquement 
 
 ## Notes complémentaires
 
-- Référentiel des formats : `docs/ads-formats-inventory.md` (spec, sources datées, composants d'UI, arbitrages validés le 2026-09-06).
+- Référentiel des formats : `docs/social-ads/ads-formats-inventory.md` (spec, sources datées, composants d'UI, arbitrages validés le 2026-09-06).
 - Prochains PRD prévus : V2 « SEM et display / bannières », V3 « ChatGPT Ads et placements de longue traîne ».
 - Enchaînement prévu : plan d'implémentation cadré (modules, ordre, fichiers) puis exécution ; les migrations sont appliquées en production au fil des features avec vérifications.

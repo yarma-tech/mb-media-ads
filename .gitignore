@@ -28,12 +28,6 @@ next-env.d.ts
 # claude code local settings (perso, non partagé)
 .claude/settings.local.json
 
-# Artefacts ML & données lourdes — hors git (pas de Git LFS).
-# Modèles servis en prod via `fly deploy` (Dockerfile COPY models/), jamais via GitHub.
-/modeles/
-/ml-service/models/
-/data/dataset ml final.xlsx
-/data/dataset_pub_enrichi_v4-6.xlsx
 /PRD.pdf
 /PRODUCT.pdf
 
@@ -44,8 +38,8 @@ __pycache__/
 
 # Studio connected development, isolated from the V1
 /.next-studio/
-/dev/studio/supabase/.temp/
-/dev/studio/supabase/.branches/
+/studio/dev/supabase/.temp/
+/studio/dev/supabase/.branches/
 
 # Browser test artifacts
 /test-results/
@@ -57,3 +51,6 @@ __pycache__/
 /.vercel-check.env
 /recovery-codes.txt
 /supabase/.temp/
+
+# Livrables locaux (non versionnes)
+/livrables/

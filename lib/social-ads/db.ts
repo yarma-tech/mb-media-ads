@@ -7,8 +7,8 @@
 //     validation du TOKEN côté serveur. Le destinataire anonyme n'a jamais de
 //     client Supabase — tout passe par ces fonctions.
 import "server-only";
-import { getAdminClient } from "@/lib/supabase";
-import { createServerSupabase } from "@/lib/supabase-server";
+import { getAdminClient } from "@/lib/shared/supabase";
+import { createServerSupabase } from "@/lib/shared/supabase-server";
 import type { Ad, Approval, Comment, Decision, Plan, ShareLink } from "./types";
 import {
   legacyFormat,

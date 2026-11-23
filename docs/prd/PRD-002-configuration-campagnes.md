@@ -155,6 +155,6 @@ Le design V1 livré reste la base. La piste atelier éditorial a été abandonn�
 
 ## État de réalisation - 23 octobre 2026
 
-Version connectée disponible en recette locale, isolée de la V1 publique. Les points techniques du cadrage sont désormais précisés dans `docs/STUDIO-CONNECTE.md` : Supabase Auth/Postgres/Storage local séparé, TUS direct, vérification serveur avec ffprobe, verrou temporaire libéré après inactivité, reprise explicite et sauvegarde des champs modifiés. Les marques sont créées par les deux profils ; leur modification ultérieure n’est pas exposée.
+Version connectée disponible en recette locale, isolée de la V1 publique. Les points techniques du cadrage sont désormais précisés dans `docs/studio/STUDIO-CONNECTE.md` : Supabase Auth/Postgres/Storage local séparé, TUS direct, vérification serveur avec ffprobe, verrou temporaire libéré après inactivité, reprise explicite et sauvegarde des champs modifiés. Les marques sont créées par les deux profils ; leur modification ultérieure n’est pas exposée.
 
 Les comptes, tableaux, validations, versions, historique, invitations locales, API et outils MCP partagent la même base et les mêmes autorisations. Les détails de validation et les limites de recette sont consignés dans `docs/superpowers/plans/2026-10-23-configuration-campagnes.md`. L’environnement distant, le SMTP distant et une publication de cette version ne sont pas compris dans cette livraison locale.

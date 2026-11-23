@@ -131,8 +131,8 @@ Le backend retenu est Supabase Docker séparé (`mb-media-studio-dev`, ports 554
 - Domaine et service : `lib/campaign-studio/workspace/{types,commands,catalog,workflow,server,verify-media}.ts`.
 - Écrans connectés : `app/studio/_components/workspace/` et routes configuration, accès, terminées.
 - API : `app/api/studio/`, commandes, MCP et expiration.
-- Persistance additive : cinq migrations dans `dev/studio/supabase/migrations/`, campagnes conservées en documents JSONB avec CAS transactionnel ; anciennes tables intactes.
-- Amorçage : `scripts/studio-dev-accounts.mjs` ; documentation d’exploitation : `docs/STUDIO-CONNECTE.md`.
+- Persistance additive : cinq migrations dans `studio/dev/supabase/migrations/`, campagnes conservées en documents JSONB avec CAS transactionnel ; anciennes tables intactes.
+- Amorçage : `studio/scripts/studio-dev-accounts.mjs` ; documentation d’exploitation : `docs/studio/STUDIO-CONNECTE.md`.
 
 ### Preuves
 

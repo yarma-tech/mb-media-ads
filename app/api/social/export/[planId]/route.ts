@@ -1,5 +1,5 @@
 import { getPlanForOwner } from "@/lib/social-ads/db";
-import { getUser } from "@/lib/supabase-server";
+import { getUser } from "@/lib/shared/supabase-server";
 import { exportPlanText } from "@/lib/social-ads/export";
 export async function GET(
   _request: Request,

@@ -8,8 +8,8 @@ export default defineConfig([
   // Mockups et logos: pixels d'origine, sans optimisation ni recadrage.
   {
     files: [
-      "app/social/_components/previews/*.tsx",
-      "app/social/_components/BrandSettings.tsx",
+      "app/(social-ads)/social/_components/previews/*.tsx",
+      "app/(social-ads)/social/_components/BrandSettings.tsx",
     ],
     rules: { "@next/next/no-img-element": "off" },
   },

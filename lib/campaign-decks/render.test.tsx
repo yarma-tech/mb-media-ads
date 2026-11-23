@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import DeckSlide from "@/app/decks/apercu/_components/DeckSlide";
+import DeckSlide from "@/app/(decks)/decks/apercu/_components/DeckSlide";
 import { demoCampaign } from "./fixtures";
 import { buildSlides } from "./slides";
 

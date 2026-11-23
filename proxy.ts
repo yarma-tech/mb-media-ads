@@ -5,7 +5,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Démonstration statique uniquement : aucune campagne réelle ni donnée admin.
+// Pages accessible sans session.
 const PUBLIC_PATHS = new Set([
   "/",
   "/connexion",
@@ -28,9 +28,8 @@ function isPublic(pathname: string): boolean {
     (pathname === "/studio" || pathname.startsWith("/studio/"))
   )
     return true;
-  // Callback d'auth + webhook de paiement (Stripe) doivent rester accessibles sans session.
+  // Le callback d'auth doit rester accessible sans session.
   if (pathname.startsWith("/auth")) return true;
-  if (pathname.startsWith("/api/stripe")) return true;
   // Lien public de validation Social Ads : accessible sans compte (par TOKEN).
   if (pathname.startsWith("/preview/")) return true;
   return false;

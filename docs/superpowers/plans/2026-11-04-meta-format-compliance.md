@@ -70,7 +70,7 @@ Les tolérances des autres couples placement/type doivent être relevées avant 
 
 ### Task 3: Reconnaissance, erreurs et création en lot
 
-**Files:** Modify `lib/campaign-studio/workspace/media-batch.ts`, `media-batch.test.ts`, `workflow.ts`, `commands.ts`, `server.ts`, `verify-media.ts`, `app/studio/_components/workspace/MediaLibrary.tsx`, `upload.ts`, `tests/studio/ux.spec.ts`.
+**Files:** Modify `lib/campaign-studio/workspace/media-batch.ts`, `media-batch.test.ts`, `workflow.ts`, `commands.ts`, `server.ts`, `verify-media.ts`, `app/studio/_components/workspace/MediaLibrary.tsx`, `upload.ts`, `studio/tests/ux.spec.ts`.
 
 **Interfaces:** `mediaAdPlan` conserve ses sorties `{mediaId, channel, format, label}`. Ajouter aux commandes de création en lot une sélection explicite de ces triplets, validée par le serveur. La suggestion par défaut contient au plus une annonce par média/canal ; les autres placements sont des choix, pas des créations implicites.
 
@@ -82,7 +82,7 @@ Les tolérances des autres couples placement/type doivent être relevées avant 
 
 ### Task 4: Prévisualisations et compatibilité des campagnes existantes
 
-**Files:** Modify `app/studio/_components/workspace/Preview.tsx`, `preview.module.css`, `lib/campaign-studio/workspace/share-types.ts` si la projection exige les nouvelles métadonnées ; tests `tests/studio/ux.spec.ts`, `tests/studio/sharing.spec.ts` et tests unitaires de partage existants.
+**Files:** Modify `app/studio/_components/workspace/Preview.tsx`, `preview.module.css`, `lib/campaign-studio/workspace/share-types.ts` si la projection exige les nouvelles métadonnées ; tests `studio/tests/ux.spec.ts`, `studio/tests/sharing.spec.ts` et tests unitaires de partage existants.
 
 **Interfaces:** Les prévisualisations consomment les métadonnées du format et les dimensions du média, plutôt qu’une liste de quelques identifiants `story`/`reel` codée dans chaque composant. La projection partagée ne révèle pas les chemins privés.
 

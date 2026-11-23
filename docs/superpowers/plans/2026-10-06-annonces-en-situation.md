@@ -8,7 +8,7 @@
 
 **Tech Stack:** Next.js 16, React 19, TypeScript strict, Supabase Auth/Postgres/Storage ; ajout de Tailwind, Vitest et d'un lecteur XLSX serveur lors de l'implémentation.
 
-**Spec:** `docs/prd/PRD-001-annonces-en-situation-v1.md`, complété par `docs/ads-formats-inventory.md` et les conventions ci-dessous.
+**Spec:** `docs/prd/PRD-001-annonces-en-situation-v1.md`, complété par `docs/social-ads/ads-formats-inventory.md` et les conventions ci-dessous.
 
 ## Contraintes et état de départ
 
@@ -82,7 +82,7 @@ Ordre : 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. Le modèle et les contraint
 ### 2. Persistance additive et compatibilité - FR-011, socle F1/F3/F4/F7
 
 **Modifier :** `lib/social-ads/db.ts`, `app/social/actions.ts`.
-**Créer :** `lib/social-ads/legacy.ts`, `supabase/migrations/20261006120000_social_ads_situation.sql`, `docs/social-ads-migration-checks.sql`.
+**Créer :** `lib/social-ads/legacy.ts`, `supabase/migrations/20261006120000_social_ads_situation.sql`, `docs/social-ads/social-ads-migration-checks.sql`.
 **Test pur associé :** étendre `lib/social-ads/specs.test.ts` pour la conversion legacy.
 
 **Interfaces :** `convertLegacyAd(row):` résultat discriminé `converted` ou `needs_review` avec données sources intactes et motif. `getPlanForOwner` et `getReviewByToken` conservent leur rôle, avec annonces normalisées et diagnostics legacy. `persistImportedPlan(imported, brand): Promise<{planId: string}>` persiste plan et annonces/cartes dans une transaction PostgreSQL owner-validée. `updateAd` vérifie le tuple résultant complet, pas seulement les champs du patch.
@@ -150,8 +150,8 @@ Ordre : 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. Le modèle et les contraint
 
 ### 8. Export texte et recette finale - F8, FR-045 à FR-048
 
-**Créer :** `lib/social-ads/export.ts`, `lib/social-ads/export.test.ts`, `app/api/social/export/[planId]/route.ts`, `docs/social-ads-import-template.md`, `docs/social-ads-situation-recette.md`.
-**Modifier :** `app/social/_components/PlanEditor.tsx`, `docs/SOCIAL_ADS.md`.
+**Créer :** `lib/social-ads/export.ts`, `lib/social-ads/export.test.ts`, `app/api/social/export/[planId]/route.ts`, `docs/social-ads/social-ads-import-template.md`, `docs/social-ads/social-ads-situation-recette.md`.
+**Modifier :** `app/social/_components/PlanEditor.tsx`, `docs/social-ads/SOCIAL_ADS.md`.
 
 **Interfaces :** `exportPlanText(plan: Plan, ads: Ad[], approvals: Approval[], exportedAt: Date): string` est pur ; utilise `groupAdsByPlatform` et `decisionForAd`. `GET /api/social/export/[planId]` lit les dernières données avec session/RLS et renvoie UTF-8 `text/plain`, Content-Disposition attachment, nom nettoyé ; refus pour non-owner. Le lien public ne permet pas l'export.
 

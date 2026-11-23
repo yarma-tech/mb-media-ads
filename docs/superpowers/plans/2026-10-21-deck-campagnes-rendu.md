@@ -2,7 +2,7 @@
 
 **Objectif :** livrer le rendu de référence avec données factices, pour validation visuelle avant la construction du reste, comme demandé dans le prompt.
 
-**Source :** `prompt/PROMPT_Generateur_Decks_Campagnes.md`.
+**Source :** `docs/decks/PROMPT_Generateur_Decks_Campagnes.md`.
 
 **Architecture :** route Next.js `/decks/apercu`, composants de présentation isolés, modèles TypeScript et configuration de marques indépendants du module Social Ads existant. Aucun accès aux campagnes réelles. Les GIF passent directement dans des éléments `img`.
 

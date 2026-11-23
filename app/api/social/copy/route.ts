@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { copyConfigured, genererCopy } from "@/lib/social-ads/copy";
 import { FORMATS, PLATEFORMES, type Format, type Plateforme } from "@/lib/social-ads/types";
-import { getUser } from "@/lib/supabase-server";
+import { getUser } from "@/lib/shared/supabase-server";
 import { parseVariant, legacyVariant } from "@/lib/social-ads/specs";
 
 // Génération de copy marketing par LLM. Réservée aux partenaires connectés.
